@@ -5,6 +5,7 @@
   "main": "dist/wex.js",
   "scripts": {
     "build": "webpack",
+    "build:docs": "webpack --env.docs",
     "dev": "webpack-dev-server --config webpack.dev.config.js",
     "test": "jest"
   },

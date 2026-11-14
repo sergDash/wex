@@ -299,6 +299,22 @@ $('#app')
 Если Вы используете ИИ в своём обучении/разработке, то настоятельно Вам рекомендуем взять файл `ai.txt` <br>
 Который находится по следующиму пути: `book/ai.txt`. В нём собрана вся книга в одном файле понятном ИИ.
 
+## 🌲Плагины
+
+### Wysiwyg редактор
+
+<img src="Wysiwyg.png">
+
+```html
+<script src="https://cdn.jsdelivr.net/gh/wemmbley/wex@master/dist/wex-editor.js"></script>
+```
+### Wysiwyg просмотрщик
+```html
+<script src="https://cdn.jsdelivr.net/gh/wemmbley/wex@master/dist/wex-doc.js"></script>
+```
+
+**Подробнее о Wysiwyg смотрите в `book/17. Wysiwyg.md`**
+
 ## Поддержка.
 
 На 2027 год фреймворк активно поддерживается и разрабатывается. <br>
