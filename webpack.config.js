@@ -128,5 +128,16 @@ module.exports = (env = {}) => {
   const doc = plugin('wex-doc', 'WexDoc', { '../wex.js': core });
   const editor = plugin('wex-editor', 'WexEditor', { '../wex.js': core, './wex-doc.js': docLib });
 
+  // DataTable: самодостаточный скрипт, сам вешает createDataTable на window,
+  // поэтому без library/externals (в отличие от doc и editor)
+  const datatable = {
+    ...bundle,
+    entry: path.join(__dirname, 'src/datatable/wex-datatable.js'),
+    output: { path: dist, filename: 'wex-datatable.js' },
+    plugins: [],
+  };
+
+  return [bundle, mini, doc, minify(doc), editor, minify(editor), datatable, minify(datatable)];
+
   return [bundle, mini, doc, minify(doc), editor, minify(editor)];
 };

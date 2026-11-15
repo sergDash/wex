@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wex DataTable demo</title>
+    <script>try{const t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.classList.toggle('dark',t==='dark')}catch(e){}</script>
+    <script>window.Quas = { AutoDarkMode: false };</script>
+    <script src="https://cdn.jsdelivr.net/gh/wemmbley/quas@master/Source/Quas.js"></script>
+    <script src="https://unpkg.com/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/wemmbley/wex-js@master/dist/wex.min.js"></script>
+    <script src="../../src/datatable/wex-datatable.js"></script>
+</head>
+<body class="min-h-screen bg-slate-100 p-4 antialiased sm:p-8 dark:bg-slate-950">
+
+<div class="mx-auto mb-3 flex max-w-[1100px] justify-end">
+    <button id="theme" class="rounded border border-slate-300 bg-white px-3 py-1 text-xs text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300">light / dark</button>
+</div>
+
+<template id="app" attrs="{ class: 'mx-auto max-w-[1100px]' }">
+    <DataTable url="/api/products" title="Products" :columns="columns" @select="onSelect"></DataTable>
+</template>
+
+<script src="FakeServer.js"></script>
+<script src="Renderers.js"></script>
+<script src="ThemeChanger.js"></script>
+<script>
+    const { createRouter } = jqvm
+    const router = createRouter({ mode: 'hash', routes: { home: '/' } })
+    const dt = createDataTable({
+        renderers: { StatusBadge, Thumb, RowActions },
+        perPageOptions: [5, 10, 25],
+        transport: fakeServer
+    })
+
+    $('#app')
+        .state({
+            columns: [
+                { field: 'id', label: 'ID', type: 'number' },
+                { field: 'name', label: 'Name', type: 'text' },
+                { field: 'image', label: 'Image', renderer: 'Thumb', sortable: false, filterable: false },
+                { field: 'status', label: 'Status', type: 'text', renderer: 'StatusBadge', operators: ['equals', 'not_equals', 'in', 'not_in'] },
+                { field: 'price', label: 'Price', type: 'number' },
+                { field: 'created_at', label: 'Created', type: 'date' },
+                { field: 'actions', label: 'Actions', renderer: 'RowActions', virtual: true }
+            ]
+        })
+        .method('onSelect', state => function (keys) { console.log('selected', keys) })
+        .plugin(router)
+        .plugin(dt)
+        .mount()
+</script>
+</body>
+</html>

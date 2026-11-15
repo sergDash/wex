@@ -315,6 +315,19 @@ $('#app')
 
 **Подробнее о Wysiwyg смотрите в `book/17. Wysiwyg.md`**
 
+### DataTable
+
+<img src="DataTable.png">
+
+Требуется Quas, и при желании сохранения URL ссылок пагинации плагин Wex:Router
+
+```html
+<script src="https://cdn.jsdelivr.net/gh/wemmbley/quas@master/Source/Quas.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/wemmbley/wex@master/dist/wex-datatable.min.js"></script>
+```
+
+**Подробнее о DataTable смотрите в `book/18. DataTable.md`**
+
 ## Поддержка.
 
 На 2027 год фреймворк активно поддерживается и разрабатывается. <br>
