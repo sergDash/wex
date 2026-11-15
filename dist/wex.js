@@ -1525,12 +1525,10 @@ function vm() {
       actions.forEach(function (item) {
         var event = item.event,
           selector = item.selector,
-          action = item.action;
-        if (event[0] === '$') {
-          return;
-        }
+          handle = item.handle;
+        if (event[0] === '$') return;
         var info = [event, selector].filter(Boolean);
-        $root.off.apply($root, _toConsumableArray(info).concat([action]));
+        $root.off.apply($root, _toConsumableArray(info).concat([handle]));
       });
     });
   }
@@ -1896,10 +1894,8 @@ directive('w-transition', null, function ($el, attrs) {
   };
 });
 component('w-static', function () {
-  return $('<template><slot></slot></template>').vm().on('$update', function () {
-    return function (e, state, prevent) {
-      prevent();
-    };
+  return $('<template><slot></slot></template>').vm().on('$update', function (state, e, prevent) {
+    prevent();
   });
 });
 

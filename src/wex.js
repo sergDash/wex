@@ -1257,13 +1257,14 @@ function vm(initState = {}) {
 
     $template.on('$unmount', () => {
       const $root = getMountNode()
+
       actions.forEach((item) => {
-        const { event, selector, action } = item
-        if (event[0] === '$') {
-          return
-        }
+        const { event, selector, handle } = item
+
+        if (event[0] === '$') return
+
         const info = [event, selector].filter(Boolean)
-        $root.off(...info, action)
+        $root.off(...info, handle)
       })
     })
   }
@@ -1614,12 +1615,12 @@ directive('w-transition', null, function ($el, attrs) {
 })
 
 component(
-  'w-static',
-  () => $('<template><slot></slot></template>')
-    .vm()
-    .on('$update', () => (e, state, prevent) => {
-      prevent()
-    })
+    'w-static',
+    () => $('<template><slot></slot></template>')
+        .vm()
+        .on('$update', (state, e, prevent) => {
+          prevent()
+        })
 )
 
 // --------------------------------
