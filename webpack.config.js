@@ -151,5 +151,15 @@ module.exports = (env = {}) => {
     plugins: [],
   };
 
-  return [bundle, mini, doc, minify(doc), editor, minify(editor), datatable, minify(datatable), datepicker, minify(datepicker), select, minify(select)];
+  const gallery = {
+    ...bundle,
+    entry: path.join(__dirname, 'src/gallery/w-gallery.js'),
+    output: { path: dist, filename: 'wex-carousel.js' },
+    plugins: [],
+  };
+
+  return [bundle, mini, doc, minify(doc), editor, minify(editor), datatable,
+    minify(datatable), datepicker, minify(datepicker), select, minify(select),
+    gallery, minify(gallery)
+  ];
 };

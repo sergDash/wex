@@ -327,6 +327,8 @@ $('#app')
 
 **Подробнее о Wysiwyg смотрите в `book/17. Wysiwyg.md`**
 
+**Пример реализации ищите в `demo/Wysiwyg`**
+
 ### DataTable
 
 <img src="DataTable.png">
@@ -339,6 +341,8 @@ $('#app')
 ```
 
 **Подробнее о DataTable смотрите в `book/18. DataTable.md`**
+
+**Пример реализации ищите в `demo/DataTable`**
 
 ### Smart Select
 
@@ -355,6 +359,8 @@ $('#app')
 
 **Подробнее о DataTable смотрите в `book/20. SmartSelect.md`**
 
+**Пример реализации ищите в `demo/SmartSelect`**
+
 ### DatePicker
 
 Умный дейтпикер с возможностью так же сделать дейтпикер с выбором времени (чч:мм).
@@ -367,7 +373,31 @@ $('#app')
 <script src="https://cdn.jsdelivr.net/gh/wemmbley/wex-js@master/dist/wex-datepicker.min.js"></script>                                  <!-- после Wex -->
 ```
 
-**Подробнее о DataTable смотрите в `book/19. DatePicker.md`**
+**Подробнее о DatePicker смотрите в `book/19. DatePicker.md`**
+
+**Пример реализации ищите в `demo/DatePicker`**
+
+### Carousel
+
+Тонко настраиваемый слайдер. Аналог Slick, OwlCarousel, Swiper в 1м флаконе.
+
+Пример обычного слайдера: 
+
+<img src="Slider_1.png">
+
+Пример адаптивной карусели с превью изображений на выбор:
+
+<img src="Slider_2.png">
+
+Подключение:
+
+```html
+<script src="https://cdn.jsdelivr.net/gh/wemmbley/wex-js@master/dist/wex-carousel.min.js"></script>                                  <!-- после Wex -->
+```
+
+**Подробнее о Carousel смотрите в `book/21. Carousel.md`**
+
+**Пример реализации ищите в `demo/Gallery`**
 
 ## Поддержка.
 
