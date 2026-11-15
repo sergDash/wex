@@ -328,6 +328,35 @@ $('#app')
 
 **Подробнее о DataTable смотрите в `book/18. DataTable.md`**
 
+### Smart Select
+
+Умный select с полностью кастомизированным выпадающим списком, с поиском и 
+мультивыбором. Тонкая настройка позволит сделать из него обычный select 
+с поиском. Требует `Quas` в зависимостях.
+
+<img src="SmartSelect.png">
+
+```html
+<script src="https://cdn.jsdelivr.net/gh/wemmbley/quas@master/Source/Quas.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/wemmbley/wex-js@master/dist/wex-select.js"></script>                                              <!-- после Wex -->
+```
+
+**Подробнее о DataTable смотрите в `book/20. SmartSelect.md`**
+
+### DatePicker
+
+Умный дейтпикер с возможностью так же сделать дейтпикер с выбором времени (чч:мм).
+Требует `Quas` в зависимостях.
+
+<img src="DatePicker.png">
+
+```html
+<script src="https://cdn.jsdelivr.net/gh/wemmbley/quas@master/Source/Quas.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/wemmbley/wex-js@master/dist/wex-datepicker.min.js"></script>                                  <!-- после Wex -->
+```
+
+**Подробнее о DataTable смотрите в `book/19. DatePicker.md`**
+
 ## Поддержка.
 
 На 2027 год фреймворк активно поддерживается и разрабатывается. <br>

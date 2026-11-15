@@ -137,7 +137,19 @@ module.exports = (env = {}) => {
     plugins: [],
   };
 
-  return [bundle, mini, doc, minify(doc), editor, minify(editor), datatable, minify(datatable)];
+  const datepicker = {
+    ...bundle,
+    entry: path.join(__dirname, 'src/datepicker/wex-datepicker.js'),
+    output: { path: dist, filename: 'wex-datepicker.js' },
+    plugins: [],
+  };
 
-  return [bundle, mini, doc, minify(doc), editor, minify(editor)];
+  const select = {
+    ...bundle,
+    entry: path.join(__dirname, 'src/select/wex-select.js'),
+    output: { path: dist, filename: 'wex-select.js' },
+    plugins: [],
+  };
+
+  return [bundle, mini, doc, minify(doc), editor, minify(editor), datatable, minify(datatable), datepicker, minify(datepicker), select, minify(select)];
 };
