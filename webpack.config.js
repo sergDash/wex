@@ -2,10 +2,10 @@ const path = require('path');
 const fs = require('fs');
 
 class MergeMdPlugin {
-  constructor(options) {
-    this.src = options.src;       // папка с md
-    this.output = options.output; // путь до файла назначения
-    this.enabled = !!options.enabled; // без флага плагин ничего не делает
+  constructor(options = {}) {
+    this.src = options.src;
+    this.output = options.output;
+    this.enabled = !!options.enabled;
   }
 
   apply(compiler) {
@@ -14,24 +14,36 @@ class MergeMdPlugin {
     compiler.hooks.emit.tapAsync('MergeMdPlugin', (compilation, callback) => {
       try {
         const files = fs.readdirSync(this.src)
-            .filter(f => f.endsWith('.md'))
-            .sort(); // если нужно строго по алфавиту
+            .filter(file => file.endsWith('.md'))
+            .sort();
 
         const content = files
-            .map(f => fs.readFileSync(path.join(this.src, f), 'utf-8'))
-            .join('\n\n'); // разделитель между файлами
+            .map(file => fs.readFileSync(
+                path.join(this.src, file),
+                'utf-8'
+            ))
+            .join('\n\n');
 
-        // записываем в файл назначения
-        fs.writeFileSync(path.join(this.src, this.output), content, 'utf-8');
+        // Создаём директорию назначения, если её нет
+        fs.mkdirSync(path.dirname(this.output), {
+          recursive: true
+        });
 
-        console.log(`Merged ${files.length} MD files into ${this.output}`);
+        // Записываем результат непосредственно в output
+        fs.writeFileSync(this.output, content, 'utf-8');
+
+        console.log(
+            `Merged ${files.length} MD files into ${this.output}`
+        );
+
+        callback();
       } catch (err) {
-        console.error(err);
+        callback(err);
       }
-      callback();
     });
   }
 }
+
 
 // npm run build        — только код (доку не трогаем)
 // npm run build:docs   — код + сборка доки (webpack --env.docs)
@@ -68,8 +80,8 @@ module.exports = (env = {}) => {
     },
     plugins: [
       new MergeMdPlugin({
-        src: path.join(__dirname, 'book'),
-        output: 'ai.txt',
+        src: path.join(__dirname, 'education/Книга'),
+        output: path.join(__dirname, 'education/') + 'AI.txt',
         enabled: docs,
       }),
     ],
@@ -111,7 +123,7 @@ module.exports = (env = {}) => {
 
   const plugin = (file, library, externals) => ({
     ...bundle,
-    entry: path.join(__dirname, `src/editor/${file}.js`),
+    entry: path.join(__dirname, `src/plugins/editor/${file}.js`),
     output: { path: dist, filename: `${file}.js`, library, libraryTarget: 'umd' },
     plugins: [],
     externals,
@@ -132,28 +144,28 @@ module.exports = (env = {}) => {
   // поэтому без library/externals (в отличие от doc и editor)
   const datatable = {
     ...bundle,
-    entry: path.join(__dirname, 'src/datatable/wex-datatable.js'),
+    entry: path.join(__dirname, 'src/plugins/datatable/wex-datatable.js'),
     output: { path: dist, filename: 'wex-datatable.js' },
     plugins: [],
   };
 
   const datepicker = {
     ...bundle,
-    entry: path.join(__dirname, 'src/datepicker/wex-datepicker.js'),
+    entry: path.join(__dirname, 'src/plugins/datepicker/wex-datepicker.js'),
     output: { path: dist, filename: 'wex-datepicker.js' },
     plugins: [],
   };
 
   const select = {
     ...bundle,
-    entry: path.join(__dirname, 'src/select/wex-select.js'),
-    output: { path: dist, filename: 'wex-select.js' },
+    entry: path.join(__dirname, 'src/plugins/smart-select/wex-smart-select.js'),
+    output: { path: dist, filename: 'wex-smart-select.js' },
     plugins: [],
   };
 
   const gallery = {
     ...bundle,
-    entry: path.join(__dirname, 'src/gallery/w-gallery.js'),
+    entry: path.join(__dirname, 'src/plugins/carousel/wex-carousel.js'),
     output: { path: dist, filename: 'wex-carousel.js' },
     plugins: [],
   };

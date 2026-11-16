@@ -10,7 +10,7 @@
  * useJQuery() через хук который мы сюда экспортируем.
  */
 
-import { directive } from './wex.js'
+import { directive } from '../../wex.js'
 
 // ─── $.fn.modal патчится при вызове useJQuery ─────────────────────────────
 // Экспортируем функцию-установщик. index.js передаёт её в useJQuery

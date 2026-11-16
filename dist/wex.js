@@ -123,10 +123,10 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _async_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(19);
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "createAsyncComponent", function() { return _async_js__WEBPACK_IMPORTED_MODULE_2__["a"]; });
 
-/* harmony import */ var _router_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(20);
-/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "createRouter", function() { return _router_js__WEBPACK_IMPORTED_MODULE_3__["a"]; });
+/* harmony import */ var _plugins_router_router_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(20);
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "createRouter", function() { return _plugins_router_router_js__WEBPACK_IMPORTED_MODULE_3__["a"]; });
 
-/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "route", function() { return _router_js__WEBPACK_IMPORTED_MODULE_3__["b"]; });
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "route", function() { return _plugins_router_router_js__WEBPACK_IMPORTED_MODULE_3__["b"]; });
 
 /* harmony import */ var _wire__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(21);
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "createWire", function() { return _wire__WEBPACK_IMPORTED_MODULE_4__["b"]; });
@@ -137,7 +137,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "createLazy", function() { return _w_lazy_js__WEBPACK_IMPORTED_MODULE_5__["a"]; });
 
 /* harmony import */ var _w_prefetch_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(24);
-/* harmony import */ var _modal_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(25);
+/* harmony import */ var _plugins_modal_modal_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(25);
 
 
 
@@ -150,7 +150,7 @@ __webpack_require__.r(__webpack_exports__);
 // use in browser
 if (typeof jQuery !== 'undefined') {
   Object(_wex_js__WEBPACK_IMPORTED_MODULE_0__[/* useJQuery */ "g"])(jQuery);
-  Object(_modal_js__WEBPACK_IMPORTED_MODULE_7__[/* setupModal */ "a"])(jQuery);
+  Object(_plugins_modal_modal_js__WEBPACK_IMPORTED_MODULE_7__[/* setupModal */ "a"])(jQuery);
 }
 
 if (typeof window !== 'undefined') {

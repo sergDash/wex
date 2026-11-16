@@ -12,7 +12,7 @@
 //            link { url, children }, linebreak
 //   meta:    { classes: ['text-sm', ...] }  необязательное, только для рендера в UI
 
-import { directive, report } from '../wex.js'
+import { directive, report } from '../../wex.js'
 
 export const FORMATS = ['bold', 'italic', 'underline', 'strikethrough', 'code', 'subscript', 'superscript']
 const FORMAT_TAG = {

@@ -15,7 +15,7 @@
 // Свой пункт тулбара — объект прямо в массиве toolbar или Editor.register(name, def):
 //   { name, title, icon: '<svg…>', hotkey: 'mod+alt+k', isActive(ed) {…}, run(ed) {…} }
 
-import { directive } from '../wex.js'
+import { directive } from '../../wex.js'
 import {
     FORMATS, esc, safeUrl, classOk, renderDoc, renderNodes,
     stable, emptyDoc, isDoc, clone, protect, addStyle,

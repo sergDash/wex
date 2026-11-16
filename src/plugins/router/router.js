@@ -134,9 +134,9 @@ class Navigation extends Base {
 
 const navigation = new Navigation()
 
-import { getNodeName } from './utils.js'
-import { directive, component, preloadComponent } from './wex.js'   // путь к ядру
-import { $wire } from './wire.js'
+import { getNodeName } from '../../utils.js'
+import { directive, component, preloadComponent } from '../../wex.js'   // путь к ядру
+import { $wire } from '../../wire.js'
 import { matchRoute, buildRoute } from './route-pattern.js'
 
 let activeRouter = null

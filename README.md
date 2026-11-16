@@ -62,6 +62,10 @@ Wex — самостоятельный реактивный JavaScript-фрей�
 
 ## Примеры кода
 
+Мы настоятельно рекомендуем ознакомиться с книгой `./education/Книга` а так же 
+с реальными примерами готовых компонентов в `./education/Демонстрация`. Далее 
+будет показана лишь небольшая часть возможностей Wex.
+
 ### ⚡Использование компонентов отдельно из другого HTML-файла! (работает на GitHub Pages!)
 `Components/MyComponent.html`:
 ```html 
@@ -313,9 +317,13 @@ $('#app')
 
 ## 🌲Плагины
 
+Все плагины в Wex являются самостоятельными и независмыми. Они могли вдохновиться 
+от знаменитых решений, но, тем не менее, ими не являются. Это всё - самопис, как 
+и сам Wex.
+
 ### Wysiwyg редактор
 
-<img src="Wysiwyg.png">
+<img src="Education/Картинки/Wysiwyg.png">
 
 ```html
 <script src="https://cdn.jsdelivr.net/gh/wemmbley/wex@master/dist/wex-editor.js"></script>
@@ -325,13 +333,9 @@ $('#app')
 <script src="https://cdn.jsdelivr.net/gh/wemmbley/wex@master/dist/wex-doc.js"></script>
 ```
 
-**Подробнее о Wysiwyg смотрите в `book/17. Wysiwyg.md`**
-
-**Пример реализации ищите в `demo/Wysiwyg`**
-
 ### DataTable
 
-<img src="DataTable.png">
+<img src="Education/Картинки/DataTable.png">
 
 Требуется Quas, и при желании сохранения URL ссылок пагинации плагин Wex:Router
 
@@ -340,42 +344,30 @@ $('#app')
 <script src="https://cdn.jsdelivr.net/gh/wemmbley/wex@master/dist/wex-datatable.min.js"></script>
 ```
 
-**Подробнее о DataTable смотрите в `book/18. DataTable.md`**
-
-**Пример реализации ищите в `demo/DataTable`**
-
 ### Smart Select
 
 Умный select с полностью кастомизированным выпадающим списком, с поиском и 
 мультивыбором. Тонкая настройка позволит сделать из него обычный select 
 с поиском. Требует `Quas` в зависимостях.
 
-<img src="SmartSelect.png">
+<img src="Education/Картинки/SmartSelect.png">
 
 ```html
 <script src="https://cdn.jsdelivr.net/gh/wemmbley/quas@master/Source/Quas.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/wemmbley/wex-js@master/dist/wex-select.js"></script>                                              <!-- после Wex -->
+<script src="https://cdn.jsdelivr.net/gh/wemmbley/wex-js@master/dist/wex-smart-select.js"></script>                                              <!-- после Wex -->
 ```
-
-**Подробнее о DataTable смотрите в `book/20. SmartSelect.md`**
-
-**Пример реализации ищите в `demo/SmartSelect`**
 
 ### DatePicker
 
 Умный дейтпикер с возможностью так же сделать дейтпикер с выбором времени (чч:мм).
 Требует `Quas` в зависимостях.
 
-<img src="DatePicker.png">
+<img src="Education/Картинки/DatePicker.png">
 
 ```html
 <script src="https://cdn.jsdelivr.net/gh/wemmbley/quas@master/Source/Quas.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/wemmbley/wex-js@master/dist/wex-datepicker.min.js"></script>                                  <!-- после Wex -->
 ```
-
-**Подробнее о DatePicker смотрите в `book/19. DatePicker.md`**
-
-**Пример реализации ищите в `demo/DatePicker`**
 
 ### Carousel
 
@@ -383,11 +375,11 @@ $('#app')
 
 Пример обычного слайдера: 
 
-<img src="Slider_1.png">
+<img src="Education/Картинки/Slider_1.png">
 
 Пример адаптивной карусели с превью изображений на выбор:
 
-<img src="Slider_2.png">
+<img src="Education/Картинки/Slider_2.png">
 
 Подключение:
 
@@ -395,9 +387,16 @@ $('#app')
 <script src="https://cdn.jsdelivr.net/gh/wemmbley/wex-js@master/dist/wex-carousel.min.js"></script>                                  <!-- после Wex -->
 ```
 
-**Подробнее о Carousel смотрите в `book/21. Carousel.md`**
+# 💼 Другие продукты
 
-**Пример реализации ищите в `demo/Gallery`**
+### Neo
+Автономный PHP-движок без внешних зависимостей, лёгкий аналог Laravel.
+<br><a href="https://github.com/wemmbley/neo">Ссылка на GitHub репозиторий</a>
+
+### Quas
+Независимый Tailwind подобный движок утилитарных классов для CDN.
+<br><a href="https://github.com/wemmbley/quas">Ссылка на GitHub репозиторий</a>
+<br><a href="https://codeberg.org/wemmbley/quas">Ссылка на CodeBerg репозиторий</a>
 
 ## Поддержка.
 
