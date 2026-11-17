@@ -326,7 +326,7 @@ $('#app')
 Область для перетаскивания или выбора файлов кликом, с предпросмотром и 
 обрезкой изображений, если нужно. 
 
-<img src="Education/Картинки/Dropzone.png">
+<img src="./education/Картинки/Dropzone.png">
 
 ```html 
 <script src="https://cdn.jsdelivr.net/gh/wemmbley/wex@master/dist/wex-dropzone.min.js"></script>
@@ -337,7 +337,7 @@ $('#app')
 Автоматически доступен после перетаскивания файла картинок в Dropzone. 
 Так же доступен к использованию самовольно, в отрыве от Dropzone.
 
-<img src="Education/Картинки/ImageEditor.png">
+<img src="./education/Картинки/ImageEditor.png">
 
 ```html 
 <script src="https://cdn.jsdelivr.net/gh/wemmbley/wex@master/dist/wex-image-editor.min.js"></script>
@@ -347,7 +347,7 @@ $('#app')
 
 Имеет встроенное JSON ASM-дерево с рекурсивными дочерними узлами.
 
-<img src="Education/Картинки/Wysiwyg.png">
+<img src="./education/Картинки/Wysiwyg.png">
 
 ```html
 <script src="https://cdn.jsdelivr.net/gh/wemmbley/wex@master/dist/wex-editor.js"></script>
@@ -362,7 +362,7 @@ $('#app')
 
 ### DataTable
 
-<img src="Education/Картинки/DataTable.png">
+<img src="./education/Картинки/DataTable.png">
 
 Требуется Quas, и при желании сохранения URL ссылок пагинации плагин Wex:Router
 
@@ -377,7 +377,7 @@ $('#app')
 мультивыбором. Тонкая настройка позволит сделать из него обычный select 
 с поиском. Требует `Quas` в зависимостях.
 
-<img src="Education/Картинки/SmartSelect.png">
+<img src="./education/Картинки/SmartSelect.png">
 
 ```html
 <script src="https://cdn.jsdelivr.net/gh/wemmbley/quas@master/Source/Quas.js"></script>
@@ -389,7 +389,7 @@ $('#app')
 Умный дейтпикер с возможностью так же сделать дейтпикер с выбором времени (чч:мм).
 Требует `Quas` в зависимостях.
 
-<img src="Education/Картинки/DatePicker.png">
+<img src="./education/Картинки/DatePicker.png">
 
 ```html
 <script src="https://cdn.jsdelivr.net/gh/wemmbley/quas@master/Source/Quas.js"></script>
@@ -402,11 +402,11 @@ $('#app')
 
 Пример обычного слайдера: 
 
-<img src="Education/Картинки/Slider_1.png">
+<img src="./education/Картинки/Slider_1.png">
 
 Пример адаптивной карусели с превью изображений на выбор:
 
-<img src="Education/Картинки/Slider_2.png">
+<img src="./education/Картинки/Slider_2.png">
 
 Подключение:
 
