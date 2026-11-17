@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wex DatePicker demo</title>
+    <script>try{const t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.classList.toggle('dark',t==='dark')}catch(e){}</script>
+    <script>window.Quas = { AutoDarkMode: false };</script>
+    <script src="https://cdn.jsdelivr.net/gh/wemmbley/quas@master/Source/Quas.js"></script>
+    <script src="https://unpkg.com/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script src="../../../dist/wex.js"></script>
+    <script src="../../../dist/plugins/wex-datepicker.js"></script>
+</head>
+<body class="min-h-screen bg-slate-100 p-4 text-slate-800 antialiased sm:p-8 dark:bg-slate-950 dark:text-slate-100">
+
+<div class="mx-auto mb-6 flex max-w-6xl items-center justify-between">
+    <h1 class="text-2xl font-semibold tracking-tight">DatePicker</h1>
+    <button id="theme" class="rounded border border-slate-300 bg-white px-3 py-1 text-xs text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300">light / dark</button>
+</div>
+
+<template id="app" attrs="{ class: 'mx-auto max-w-6xl' }">
+    <section class="grid gap-x-8 gap-y-12 md:grid-cols-2 xl:grid-cols-4">
+
+        <div>
+            <h2 class="mb-1 text-xl font-medium">Date</h2>
+            <p class="mb-4 text-xs text-slate-500 dark:text-slate-400">Флаги выключены: клик в инпут открывает календарь</p>
+            <DatePicker :value="d1" @change="onD1"></DatePicker>
+            <p class="mt-3 text-xs text-slate-500 dark:text-slate-400">value: <b>{{ d1 }}</b></p>
+            <div class="mt-2 flex gap-2 text-xs">
+                <button w-on="click:fillD1" class="rounded border border-slate-300 bg-white px-2 py-1 dark:border-slate-600 dark:bg-slate-900">22.12.2000 снаружи</button>
+                <button w-on="click:clearD1" class="rounded border border-slate-300 bg-white px-2 py-1 dark:border-slate-600 dark:bg-slate-900">Сбросить</button>
+            </div>
+        </div>
+
+        <div>
+            <h2 class="mb-1 text-xl font-medium">DateTime</h2>
+            <p class="mb-4 text-xs text-slate-500 dark:text-slate-400">Оба флага, часы и минуты сбоку</p>
+            <DateTimePicker :clickableMonth="true" :clickableYear="true" :value="dt" @change="onDt"></DateTimePicker>
+            <p class="mt-3 text-xs text-slate-500 dark:text-slate-400">value: <b>{{ dt }}</b></p>
+        </div>
+
+        <div>
+            <h2 class="mb-1 text-xl font-medium">Month Clicked</h2>
+            <p class="mb-4 text-xs text-slate-500 dark:text-slate-400">:clickableMonth="true": клик по месяцу в инпуте</p>
+            <DatePicker :clickableMonth="true" :value="d2" @change="onD2"></DatePicker>
+            <p class="mt-3 text-xs text-slate-500 dark:text-slate-400">value: <b>{{ d2 }}</b></p>
+        </div>
+
+        <div>
+            <h2 class="mb-1 text-xl font-medium">Year Clicked</h2>
+            <p class="mb-4 text-xs text-slate-500 dark:text-slate-400">:clickableYear="true": клик по году в инпуте</p>
+            <DatePicker :clickableYear="true" :value="d3" @change="onD3"></DatePicker>
+            <p class="mt-3 text-xs text-slate-500 dark:text-slate-400">value: <b>{{ d3 }}</b></p>
+        </div>
+
+    </section>
+    <div class="h-[420px]"></div>
+</template>
+
+<script>
+    document.getElementById('theme').onclick = () => {
+        const dark = document.documentElement.classList.toggle('dark')
+        try { localStorage.setItem('theme', dark ? 'dark' : 'light') } catch (e) {}
+    }
+
+    // все настройки задаются здесь; ниже показаны значения по умолчанию, которые чаще всего меняют
+    const dp = createDatePicker({
+        // clickableMonth: false, clickableYear: false,
+        // formats: { date: 'dd.MM.yyyy', datetime: 'dd.MM.yyyy HH:mm' },
+        // weekStart: 1, yearsBefore: 60, yearsAfter: 60,
+    })
+
+    $('#app')
+        .state({ d1: '2026-11-12', d2: '2026-03-12', d3: '2027-11-12', dt: '2026-11-12 23:32' })
+        .method('onD1', state => function (v) { state.d1 = v })
+        .method('onD2', state => function (v) { state.d2 = v })
+        .method('onD3', state => function (v) { state.d3 = v })
+        .method('onDt', state => function (v) { state.dt = v })
+        .method('fillD1', state => { state.d1 = '2000-12-22' })
+        .method('clearD1', state => { state.d1 = '' })
+        .plugin(dp)
+        .mount()
+</script>
+</body>
+</html>

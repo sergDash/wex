@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wex Select demo</title>
+    <script>try{const t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.classList.toggle('dark',t==='dark')}catch(e){}</script>
+    <script>window.Quas = { AutoDarkMode: false };</script>
+    <script src="https://cdn.jsdelivr.net/gh/wemmbley/quas@master/Source/Quas.js"></script>
+    <script src="https://unpkg.com/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script src="../../../dist/wex.js"></script>
+    <script src="../../../dist/plugins/wex-smart-select.js"></script>
+</head>
+<body class="min-h-screen bg-slate-100 p-4 text-slate-800 antialiased sm:p-8 dark:bg-slate-950 dark:text-slate-100">
+
+<div class="mx-auto mb-6 flex max-w-3xl items-center justify-between">
+    <h1 class="text-2xl font-semibold tracking-tight">Smart Select</h1>
+    <button id="theme" class="rounded border border-slate-300 bg-white px-3 py-1 text-xs text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300">light / dark</button>
+</div>
+
+<template id="app" attrs="{ class: 'mx-auto max-w-3xl space-y-6' }">
+
+    <!-- всегда в DOM, прячем через display: w-if ПЕРЕД блоками с компонентами сдвинул бы индексы и пересоздал их -->
+    <div class="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900" style="display:{{ notice ? 'block' : 'none' }}">{{ notice }}</div>
+
+    <section class="rounded-md border border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+        <h2 class="mb-1 text-sm font-semibold">1. Search (mode: search, position: fixed)</h2>
+        <p class="mb-3 text-xs text-slate-500">Внутри блока с overflow-hidden. Минимум 2 символа. Enter / клик ведут на href; товары «не в наличии» (каждый 4-й) перехватывает onPick. Ctrl+клик открывает в новой вкладке. Примеры запросов: shoe</p>
+        <div class="overflow-hidden rounded border border-dashed border-slate-300 p-3 dark:border-slate-600">
+            <ProductSearch placeholder="Find a product (try: sh, bag, wool)" @select="onSelect"></ProductSearch>
+        </div>
+    </section>
+
+    <section class="rounded-md border border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+        <h2 class="mb-1 text-sm font-semibold">2. Multiple (max 4, подгрузка по 5 при прокрутке)</h2>
+        <p class="mb-3 text-xs text-slate-500">Начальное значение приходит из state. Backspace в пустом поле снимает последний чип. В форме уйдёт как category_id[].</p>
+        <Category name="category_id" :value="form.categories" @change="onCats"></Category>
+    </section>
+
+    <section class="rounded-md border border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+        <h2 class="mb-1 text-sm font-semibold">3. Single, статический массив, строка по умолчанию</h2>
+        <p class="mb-3 text-xs text-slate-500">Без рендерера и без сервера. Прокрути страницу так, чтобы селект оказался внизу окна: список раскроется вверх (placement: auto).</p>
+        <Country name="country" :value="form.country" @change="onCountry"></Country>
+    </section>
+
+    <section class="rounded-md border border-slate-300 bg-white p-4 text-xs dark:border-slate-700 dark:bg-slate-900">
+        <h2 class="mb-2 text-sm font-semibold">События</h2>
+        <div w-for="l in log traceby l.id" class="border-b border-slate-100 py-1 font-mono dark:border-slate-800">{{ l.text }}</div>
+        <div w-if="!log.length" class="text-slate-400">пока пусто</div>
+    </section>
+
+    <div style="height:520px"></div>
+    <section class="rounded-md border border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+        <h2 class="mb-3 text-sm font-semibold">4. Single у нижнего края страницы</h2>
+        <Country name="country2"></Country>
+    </section>
+</template>
+
+<script src="FakeServer.js"></script>
+<script>
+    document.getElementById('theme').onclick = () => {
+        const dark = document.documentElement.classList.toggle('dark')
+        try { localStorage.setItem('theme', dark ? 'dark' : 'light') } catch (e) {}
+    }
+
+    // рендерер строки: state обязан содержать row; query и selected приходят в момент создания строки
+    const ProductRow = $(`<template><div class="flex items-center gap-3">
+  <img w-src="row.image" alt="" class="h-9 w-9 shrink-0 rounded object-cover">
+  <div class="min-w-0"><div class="truncate">{{ row.label }}</div><div class="truncate text-xs text-slate-500">{{ row.description }}</div></div>
+</div></template>`).state(() => ({ row: null, query: '', selected: false }))
+
+    createSelect({
+        tag: 'ProductSearch', mode: 'search',
+        source: '/api/products?q={q}', transport: fakeServer, item: ProductRow,
+        position: 'fixed', minChars: 2, minPanelWidth: 320,
+        href: row => row.url,
+        onPick(row, api) { if (!row.inStock) { api.close(); return false } }   // false = без перехода; @select всё равно придёт
+    })
+
+    createSelect({
+        tag: 'Category', multiple: true, max: 4,
+        source: '/api/categories', transport: fakeServer, pageSize: 5, debounce: 200, item: ProductRow
+    })
+
+    createSelect({
+        tag: 'Country', mode: 'select',
+        source: [
+            { id: 'ua', label: 'Ukraine' }, { id: 'pl', label: 'Poland' }, { id: 'de', label: 'Germany' },
+            { id: 'fr', label: 'France' }, { id: 'it', label: 'Italy' }, { id: 'es', label: 'Spain' },
+            { id: 'se', label: 'Sweden' }, { id: 'no', label: 'Norway' }, { id: 'pt', label: 'Portugal' }
+        ]
+    })
+
+    let logId = 0
+    const push = (state, text) => { state.log.unshift({ id: ++logId, text }); if (state.log.length > 8) state.log.pop() }
+
+    $('#app')
+        .state({
+            notice: '',
+            log: [],
+            form: {
+                categories: [{ id: 1, label: 'Shoes', description: '6 products', image: '' }],
+                country: { id: 'ua', label: 'Ukraine' }
+            }
+        })
+        .method('onSelect', state => function (row) {
+            state.notice = row.inStock ? '' : '«' + row.label + '» is out of stock (onPick cancelled the navigation)'
+            push(state, 'select  ' + row.id + ' ' + row.label + (row.inStock ? '' : '  [out of stock]'))
+        })
+        .method('onCats', state => function (rows) {
+            state.form.categories = rows
+            push(state, 'categories  [' + rows.map(r => r.id).join(', ') + ']')
+        })
+        .method('onCountry', state => function (row) {
+            state.form.country = row
+            push(state, 'country  ' + (row ? row.id : 'null'))
+        })
+        .mount()
+</script>
+</body>
+</html>

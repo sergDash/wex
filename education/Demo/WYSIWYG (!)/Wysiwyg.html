@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <template id="app">
+        <div w-editor="post.body"></div>
+        <div w-doc="post.body"></div>
+    </template>
+</body>
+<footer>
+    <script src="https://unpkg.com/jquery/dist/jquery.min.js"></script>
+    <script src="../../../dist/wex.js"></script>
+    <script src="../../../dist/plugins/wex-doc.js"></script>
+    <script src="../../../dist/plugins/wex-editor.js"></script>
+    <script>
+        const { createEditor, HotKeys } = WexEditor
+
+        $('#app')
+            .state({ post: { body: null } })
+            .plugin(createEditor({ modules: [HotKeys] }))
+            .mount()
+    </script>
+</footer>
+</html>

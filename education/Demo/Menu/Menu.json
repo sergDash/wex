@@ -1,0 +1,77 @@
+[
+  { "id": "home", "title": "Главная", "href": "/" },
+
+  {
+    "id": "astro",
+    "title": "Астрология",
+    "href": "/astrology",
+    "svg": "<svg viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.5 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z\"/></svg>",
+    "badge": { "text": "new" },
+    "panel": {
+      "type": "dropdown",
+      "align": "left",
+      "children": [
+        { "id": "natal", "title": "Натальная карта", "href": "/natal", "icon": "fa fa-star" },
+        {
+          "id": "forecast",
+          "title": "Прогнозы",
+          "href": "/forecast",
+          "panel": {
+            "type": "dropdown",
+            "children": [
+              { "id": "solar", "title": "Солнечный возврат", "href": "/solar" },
+              { "id": "transits", "title": "Транзиты", "href": "/transits" }
+            ]
+          }
+        },
+        { "id": "synastry", "title": "Синастрия", "href": "/synastry" }
+      ]
+    }
+  },
+
+  {
+    "id": "tools",
+    "title": "Инструменты",
+    "panel": {
+      "type": "monster",
+      "grid": { "cols": 12, "gap": 6, "width": "container" },
+      "blocks": [
+        {
+          "id": "b-cards", "type": "links", "span": 3, "title": "Карты",
+          "items": [
+            { "id": "l-natal", "title": "Натальная", "href": "/natal", "desc": "Полный разбор карты", "icon": "fa fa-star" },
+            { "id": "l-comp", "title": "Композит", "href": "/composite", "desc": "Карта пары" }
+          ]
+        },
+        {
+          "id": "b-forecasts", "type": "links", "span": 3, "title": "Прогнозы",
+          "items": [
+            { "id": "l-solar", "title": "Соляр", "href": "/solar", "desc": "Год от дня рождения" },
+            { "id": "l-trans", "title": "Транзиты", "href": "/transits", "desc": "Текущие аспекты" }
+          ]
+        },
+        {
+          "id": "b-promo", "type": "promo", "start": 7, "span": 6, "rowSpan": 2,
+          "image": "/img/promo.jpg", "title": "Нумерология", "desc": "Число судьбы за минуту", "href": "/numerology"
+        },
+        { "id": "b-quote", "type": "quote", "span": 6, "text": "Как наверху, так и внизу." },
+        { "id": "b-html", "type": "html", "span": 12, "mobile": false, "html": "<p>Любой санитайзимый HTML</p>" }
+      ]
+    }
+  },
+
+  { "id": "blog", "title": "Блог", "href": "/blog" },
+
+  {
+    "id": "more",
+    "title": "Ещё",
+    "panel": {
+      "type": "dropdown",
+      "align": "right",
+      "children": [
+        { "id": "about", "title": "О проекте", "href": "/about" },
+        { "id": "contacts", "title": "Контакты", "href": "/contacts" }
+      ]
+    }
+  }
+]

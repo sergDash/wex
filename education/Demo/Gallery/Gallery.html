@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Gallery demo</title>
+    <style>
+        body { font: 16px/1.5 system-ui, sans-serif; margin: 0; padding: 24px; background: #f4f4f5; color: #18181b; }
+        h2 { margin: 40px 0 12px; font-size: 18px; }
+        .page { max-width: 960px; margin: 0 auto; }
+        .row { display: flex; gap: 16px; }
+        .card { background: #fff; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+        .single { width: 260px; height: 180px; border-radius: 8px; }
+        .hero { aspect-ratio: 16 / 9; border-radius: 8px; overflow: hidden; background: #ddd; }
+        .hero .wg-image, .hero .wg-image img { width: 100%; height: 100%; }
+        .product { display: flex; gap: 16px; height: 420px; }
+        .product .thumbs { width: 96px; flex: none; }
+        .product .main { flex: 1; min-width: 0; }
+        .product .main .wg-carousel, .product .main .wg-track, .product .main .wg-slide, .product .main .wg-image { height: 100%; }
+        .hthumbs { margin-top: 8px; }
+        .slide-photo { aspect-ratio: 4 / 3; }
+        .slide-photo .wg-image, .slide-photo img { width: 100%; height: 100%; }
+        .prod { background: #fff; border: 1px solid #e4e4e7; border-radius: 8px; padding: 16px; text-align: center; }
+        .prod b { display: block; margin-top: 8px; }
+        .nav { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: #18181b; color: #fff; font-size: 22px; }
+        .gal { display: flex; gap: 8px; }
+        .gal .wg-image { width: 120px; height: 90px; border-radius: 6px; }
+        .pills { display: flex; gap: 6px; margin-top: 8px; }
+        .pills span { padding: 2px 10px; border-radius: 999px; background: #18181b; color: #fff; font-size: 13px; }
+    </style>
+</head>
+<body>
+<template id="gallery">
+    <div class="page">
+
+        <h1>w-gallery demo</h1>
+
+        <!-- 1. Одиночная картинка: клик открывает лайтбокс, alt ставится из имени файла -->
+        <h2>1. Одиночные картинки</h2>
+        <div class="row">
+            <w-image :url="photos[0].thumb" :full="photos[0].full" class="single"></w-image>
+
+            <!-- лупа при наведении -->
+            <w-image :url="photos[1].thumb" :full="photos[1].full" class="single" w-zoom-lense></w-image>
+
+            <!-- лупа и на странице, и внутри лайтбокса -->
+            <w-image :url="photos[2].thumb" :full="photos[2].full" class="single" w-zoom-lense w-lightbox-lense></w-image>
+
+            <!-- без лайтбокса -->
+            <w-image :url="photos[3].thumb" :lightbox="false" class="single"></w-image>
+        </div>
+
+        <!-- 2. Директивы на обычном img; w-gallery объединяет их в одну группу лайтбокса -->
+        <h2>2. Обычные img + группа w-gallery</h2>
+        <div class="gal">
+            <img w-for="p in photos traceby p.id" w-src="p.thumb" alt="{{ p.title }}"
+                 w-zoom-lightbox w-gallery="trip" data-wg-full="{{ p.full }}" w-caption="{{ p.title }}"
+                 style="width:120px;height:90px;object-fit:cover;border-radius:6px">
+        </div>
+
+        <!-- 3. Простая карусель -->
+        <h2>3. Карусель: автослайд, loop, точки, стрелки, пауза при hover</h2>
+        <Carousel :autoslide="true" :interval="3000" :loop="true" :hover-pause="true"
+                  :navigate-arrows="true" :navigate-dots="true" @slide="onSlide">
+            <div class="slide-photo" w-for="p in photos traceby p.id">
+                <w-image :url="p.thumb" :full="p.full"></w-image>
+            </div>
+        </Carousel>
+        <div class="pills"><span>слайд: {{ current }}</span></div>
+
+        <!-- 4. Полностью своя навигация -->
+        <h2>4. Своя навигация (w-navigate-left / right / dots / w-goto)</h2>
+        <Carousel :loop="true">
+            <div w-navigate-left class="nav">&lsaquo;</div>
+            <div class="slide-photo" w-for="p in photos traceby p.id"><w-image :url="p.thumb" :full="p.full"></w-image></div>
+            <div w-navigate-right class="nav">&rsaquo;</div>
+            <div w-navigate-dots></div>
+            <button w-goto="2">Перейти к третьему</button>
+        </Carousel>
+
+        <!-- 5. Карточки товаров: адаптив через призрачный div (классы копируются на слайды) -->
+        <h2>5. Карточки: 1 / 2 / 4 в ряд, свои стили через w-carousel-adaptive</h2>
+        <Carousel :gap="16" :navigate-arrows="true" :navigate-dots="true">
+            <div w-carousel-adaptive style="width:100%"></div>
+            <div class="prod" w-for="p in products traceby p.id"><w-image :url="p.img" :lightbox="false"></w-image><b>{{ p.title }}</b>{{ p.price }}</div>
+        </Carousel>
+
+        <!-- 6. Адаптив без Quas: именованные пороги -->
+        <h2>6. Адаптив через :breakpoints и :per-view</h2>
+        <Carousel :breakpoints="{ sm: 600, md: 900 }" :per-view="{ base: 1, sm: 2, md: 4 }" :gap="16" :navigate-arrows="true">
+            <div class="prod" w-for="p in products traceby p.id"><w-image :url="p.img" :lightbox="false"></w-image><b>{{ p.title }}</b>{{ p.price }}</div>
+        </Carousel>
+
+        <!-- 7. Галерея товара: вертикальные превью слева, большая картинка справа -->
+        <h2>7. Галерея товара (вертикальные превью)</h2>
+        <div class="card product">
+            <div class="thumbs">
+                <Carousel :thumbs-of="product" direction="vertical" :per-view="4" :gap="8"></Carousel>
+            </div>
+            <div class="main">
+                <Carousel name="product" :navigate-arrows="true">
+                    <w-image w-for="p in photos traceby p.id" :url="p.full" :thumb="p.thumb" :full="p.full" w-zoom-lense></w-image>
+                </Carousel>
+            </div>
+        </div>
+
+        <!-- 8. Превью снизу -->
+        <h2>8. Превью снизу</h2>
+        <div class="card">
+            <Carousel name="bottom" :navigate-dots="false">
+                <div class="hero" w-for="p in photos traceby p.id"><w-image :url="p.full" :thumb="p.thumb" :full="p.full"></w-image></div>
+            </Carousel>
+            <div class="hthumbs">
+                <Carousel :thumbs-of="bottom" :per-view="{ base: 4, md: 6 }" :gap="8"></Carousel>
+            </div>
+        </div>
+
+    </div>
+</template>
+</body>
+<footer>
+    <script src="https://unpkg.com/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script src="../../../dist/wex.js"></script>
+    <script src="../../../dist/plugins/wex-carousel.js"></script>
+    <script>
+        const seed = (id, w, h) => 'https://picsum.photos/id/' + id + '/' + w + '/' + h
+        const ids = [10, 20, 30, 40, 50, 60]
+        const titles = ['Forest', 'Desk', 'Coast', 'Road', 'Lake', 'Hills']
+
+        $('#gallery')
+            .state({
+                current: 1,
+                photos: ids.map((id, i) => ({ id: id, title: titles[i], thumb: seed(id, 400, 300), full: seed(id, 1600, 1200) })),
+                products: ids.map((id, i) => ({ id: id, title: 'Item ' + (i + 1), price: (19 + i * 10) + ' $', img: seed(id, 300, 300) })),
+            })
+            .method('onSlide', function (state) {
+                return function (e) { state.current = e.detail.index + 1 }
+            })
+            .mount()
+    </script>
+</footer>
+</html>

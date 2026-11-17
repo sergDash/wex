@@ -1,5 +1,5 @@
-WEX - AI CODING REFERENCE (compact). Reactive template engine on top of jQuery.
-Read RULES and COMMON MISTAKES before generating code. Do not invent directives, methods or options that are not listed here.
+WEX 1.3.5 - AI CODING REFERENCE (compact). Reactive template engine on top of jQuery.
+Read RULES (section 16) before generating code. Do not invent directives, methods or options that are not listed here.
 Items marked (unverified) come from reading source, not from running it.
 
 === 0. SETUP ===
@@ -9,89 +9,142 @@ Globals: window.jqvm = { component, directive, filter, View, useJQuery, shareSta
   createRouter, route, createLazy, createWire, $wire }   and   window.$wire
 Entry:   $('#app').state(initState)...chain...mount()     (.vm() is an alias of .state())
 Root must be <template id="app">...</template> (otherwise the browser renders it before Wex). Mount renders after the
-template into <div w-name="app">. Root attrs: <template id="app" attrs="{ class: 'flex flex-col' }"> (object expression;
-class/style/other attrs are applied to the mount node).
-initState = plain object OR function returning a plain object. Never class instances. Use a function for components,
-remounted views and anything instantiated more than once.
+template into <div w-name="app"> (name = template id or w-id). Root attrs: <template id="app" attrs="{ class: 'flex flex-col' }">
+(object expression; class/style/other attrs are applied to the mount node after every render).
+initState = plain object OR function returning a plain object (called with this = view). Never class instances.
+Register GLOBAL component()/directive()/filter() BEFORE creating views: each view copies the global lists when it is created.
+Debug: console diagnostics ("Wex" groups with component chain, expression, scope) are ON only on localhost/127.x by default.
+  Force: window.WEX_DEBUG = true (or false) BEFORE wex loads. Errors are always logged, warnings only in debug.
+Profile: window.WEX_PROFILE = true before load -> window.WEX_STATS = { compile, diff, affect, renders } (ms).
 
 === 1. TEMPLATE SYNTAX ===
-- Interpolation {{ expr }} works in text and in attribute values. Filters: {{ price | currency }}, {{ n | plural:'a,b,c' }}, chains allowed.
-- Expressions are JS-like (ScopeX): property access, [], ||, &&, !, ===, <, >=, +, ?: . Keep them simple: no statements,
-  no arrow functions. Use !!x for non-boolean values in w-if / w-class / w-disabled / w-checked.
+- Interpolation {{ expr }} in text and attribute values. Filters: {{ price | currency }}, {{ n | plural:'a,b,c' }}, chains allowed.
+- Each {{ }} must be on ONE line (multi-line mustaches are not interpolated).
+- undefined/null in TEXT prints the word "undefined"/"null": write {{ x || '' }}. In an attribute whose whole value is one
+  {{ }} that yields undefined/null the attribute is removed.
+- Expressions are JS-like (ScopeX): property access, [], ||, &&, !, ===, <, >=, +, ?: . No statements, no arrow functions.
+  Use !!x for non-boolean values in w-if / w-class / w-disabled / w-checked.
 - Fallback for maybe-undefined arrays: w-for="x in top.children||[]" (NO spaces inside the w-for source).
 - HTML lowercases attribute names. Component tags need an explicit closing tag: <Menu></Menu>, never <Menu/>.
-- State changes by assignment are reactive (Proxy). Re-render is batched (~16ms). push/unshift/splice on state arrays work;
-  for non-plain objects (Chart.js etc.) mutate then call view.update().
+- State changes by plain assignment are reactive (Proxy), see section 5. Render is batched in a microtask.
+- Templates are parsed inside a <div>: a component whose template root is <tr>/<td>/<option> loses those tags (unverified).
+  Keep table/select markup inside ONE template.
 - Inside Blade/PHP templates escape Wex mustaches: @{{ x }} or @verbatim ... @endverbatim.
 
 === 2. BUILT-IN DIRECTIVES ===
 w-for="item in list" | "item,index in list" | "item in list traceby item.id"
-    - names start with a lowercase letter; "item,index" has no space; data is one token without spaces.
-    - put it on the element that must repeat (not on a wrapper). Works on arrays and objects (second var = key). Works on component tags.
-    - ALWAYS add traceby for lists of objects (stable DOM, no flicker).
-w-if="expr"            element is removed from DOM when falsy.
+    - names start with a lowercase letter; "item,index" has no space; the source is ONE token without spaces and starts
+      with a lowercase letter (not $ or uppercase); traceby is a path like item.id.
+    - put it on the element that must repeat (not on a wrapper). Arrays and objects (second var = key). Works on component tags.
+      Wex inserts <!-- ... begin/end --> comments around the list. Other directives on the same element (w-if, w-class...)
+      run per item.
+    - ALWAYS add traceby for lists of objects. It writes data-id="{{ item.id }}" on the element (do not set data-id yourself)
+      and gives a view-wide key: same list expression + same node name in different containers share keys, so the DOM node
+      and its component MOVE between containers (kanban) instead of being recreated. Without traceby: positional diff.
+w-if="expr"            falsy -> element replaced by a comment. A component inside is destroyed and gets FRESH state when shown again.
 w-class="{ 'active': !!on, 'big': n > 5 }"   adds classes; coexists with class="".
-w-bind="path"          two-way: input, textarea, select, checkbox, radio. path must be assignable (form.name).
+w-bind="path"          two-way: input, textarea, select, checkbox (boolean), radio (assigns its value). path must be assignable
+                       (form.name, item.done). Listens 'input' for text-like fields, 'change' for checkbox, radio, select, file,
+                       color, date, datetime-local, week. Value is a STRING (type=number too): convert yourself.
 w-value="expr"         one-way state -> input/textarea/select.
 w-checked="!!expr"     checkbox/radio.   w-selected="expr"  option.   w-disabled="!!expr"  input/select/textarea/button.
-w-src="expr"           dynamic image src (plain src="{{x}}" would be requested literally). Not set when value is null/undefined.
-w-html="expr"          sets sanitized HTML (removes script/style/iframe, on* attrs, external hrefs). For SVG icons.
-w-id="expr"            stable node id for diffing.
-w-on="click:fn" | "click:fn(a, b)"   needs .method('fn', ...). Args are evaluated in scope. Works inside w-for.
-w-transition[="opacity 0.25s ease"]  fade-in once per element (on component tags too).
-w-static               freeze a block after first render. Source defines it as a COMPONENT tag <w-static>..</w-static>,
-                       and its $update/prevent hook looks non-functional (unverified). Avoid it.
-w-route / w-navigate / <Link>   see ROUTER.      w-lazy   see LAZY.      w-modal   see MODALS.
+w-src="expr"           dynamic image src (src="{{x}}" is requested literally by the browser -> 404). Not set when null/undefined.
+w-html="expr"          sets SANITIZED html (written for SVG icons). Removed: script, style, iframe, object, embed, foreignObject,
+                       animate, set, on* attrs, every href/xlink:href except "#...". So links in w-html content are stripped.
+                       "{{ expr }}" wrapper is accepted too.
+w-id="expr"            sets id (null removes it, undefined leaves it). Elements with id are keyed globally in the view.
+w-on="click:fn" | "click:fn(a, b)"   needs .method('fn', ...). ONE w-on per element (one attribute = one event; use
+                       .on(event, selector, ...) or a child element for more). Args are scope expressions evaluated at event time.
+                       Delegated: one listener per event on the view root; works inside w-for. Silently does nothing if the
+                       method is missing.
+w-transition[="opacity 0.25s ease"]  fade-in once per element. Fade-out on removal is wired through el.remove() but the
+                       diff removes nodes with removeChild, so it probably does not run (unverified).
+w-static               a COMPONENT tag <w-static>..</w-static> whose $update is prevented (freezes after first render). Not tested
+                       (unverified); prefer a separate component or w-if.
+w-route / <Link> / w-navigate   see ROUTER.   w-lazy   see LAZY.   w-prefetch / w-to   see PREFETCH.   w-modal   see MODALS.
 
 === 3. EVENTS, METHODS, VIEW API ===
-.on(event, selector?, action)     action(state, ...) is called on every event; it may RETURN a handler(e) (this = DOM element).
+.on(event, selector?, action)     action(state, ...) runs on every event; it may RETURN a handler(e) (this = DOM element).
    .on('click', '.btn', state => { state.n++ })
    .on('click', '.btn', function (state) { return function (e) { ... } })
-   Use `function` (not arrow) whenever you need `this` (= view): this.emit, this.update, this.method(name).
+   Use `function` (not arrow) whenever you need `this` (= view): this.emit, this.update, this.hold, this.method(name).
 .once(...)  .off(...)
-.method(name, action) / .fn(name, action); .fn(name) returns the function. Call it: this.method('x')(state) (inside a `function`).
-   w-on without params: method = state => function (e) {...}  or  state => { ... } (runs on event).
-   w-on with params:    method = (state, id) => { ... }
-Lifecycle events start with $ and do NOT bubble; handler gets (state, ...extra):
-   $init  $mount(state)  $unmount  $change (mutating state inside it re-triggers it)  $render  $update (prevent is the LAST arg;
-   calling it cancels the render)  $beforeDestroy  $destroy  $route(state, url)  $lazy(state, lazy)  $modalShown/$modalHidden(state, key)
-View: .mount(el?)  .unmount()  .destroy()  .update(obj | fn(state) | true)  .find(sel)  .component(..)  .directive(..)  .filter(..)
-      .plugin(fn)  .emit(evt, ...args)  .clone()      All chainable.
-   update({a:1}) merges into state; update(true) forces render; update(state => {...}) mutates.
+.method(name, action) / .fn(name, action); .fn(name) returns the function. Call it: this.method('x')(state) (in a `function`).
+   w-on without params: method = state => function (e) {...}   or   state => { ... } (runs on the event).
+   w-on with params:    method = (state, id) => { ... }   (may also return function (e)). The returned handler returning false
+   = preventDefault + stopPropagation. e is a jQuery-fixed event (e.originalEvent, e.target).
+   non-bubbling events (focus, blur, mouseenter, mouseleave, scroll, load, error, toggle...) are handled without bubbling.
+Lifecycle events start with $ and do NOT bubble. They fire only if a handler is registered. Exact arguments:
+   $init(state)  $mount(state, state)  $unmount()  $render()  $beforeDestroy()  $destroy()
+   $change(state, state, info, prevent)   info = { target, key, type: 'set'|'add'|'delete' } or null; prevent() cancels the
+                                          render AND the storage save. Mutating state inside $change re-triggers it (loop).
+   $update(state, state, prevent)         runs before every render after the first; prevent() cancels that render
+   $route(state, url)   $lazy(state, lazy)   $modalShown / $modalHidden(state, key)
+View API (all chainable): .mount(el?) .unmount() .destroy() .update(obj | fn(state) | true) .find(sel) .component(..)
+   .directive(..) .filter(..) .plugin(fn) .emit(evt, ...args) .clone() .hold() .release()
+   update({a:1}) merges into state; update(true) forces a render; update(state => {...}) mutates (a non-object return value
+   marks the view dirty, use it for non-plain objects such as Chart.js instances).
+   hold() postpones renders (nestable, use on drag start); release() renders SYNCHRONOUSLY if something changed meanwhile.
 
 === 4. COMPONENTS ===
 Inline:  const c = $('<template><i class="icon-{{type}}"></i></template>').state(() => ({ type: 'eye' }))
          component('icon', c)            // global, from window.jqvm
-         view.component('icon', c)       // local: ONLY this view, children do not inherit it
-From file (any URL):  .component('Menu', 'Layouts/Menu.html')   // third arg { lazy: true } = load when first rendered/prefetched
+         view.component('icon', c)       // local: ONLY this view, children do NOT inherit it
+From file (any URL):  .component('Menu', 'Layouts/Menu.html')   // third arg { lazy: true } = load on first render/prefetch
    Menu.html:  <template>...</template>
                <script type="module">export default ($component) => $component.state(() => ({ items: [] })).method(...).on(...)</script>
-   No <script> = stateless component. Download retries 3x, errors go to console; a failed file is retried on next render.
-Props (parent -> child):
-   x="text"   string;   :x="expr"   evaluated in PARENT scope;   @evt="parentMethod"   handler for child's this.emit('evt', val)
+   No <script> = stateless component. Only the INNER html of <template> is used (attrs on that template are ignored).
+   The module is imported from a blob: URL, so use ABSOLUTE urls in its import statements.
+   Download retries 3x, errors go to console; a failed file is retried on the next render.
+The component tag stays in the DOM as a host element (<Menu w-name=..>): style it via class on the tag (class="block"/"contents").
+Props (parent -> child), passed BY REFERENCE (reactive objects stay shared):
+   x="text"   LITERAL string (never put {{ }} here: it is not interpolated);   :x="expr"   evaluated in PARENT scope;
+   @evt="parentMethod" | "parentMethod(a, b)"   handler for the child's this.emit('evt', val)
+   Parent method must RETURN a function to receive the emitted args: .method('onEvt', state => function (val) {...});
+   with params: (state, a, b) => function (val) {...}. A plain state => {...} runs but gets no args.
+   (@evt on a component tag is NOT a DOM event.) Attributes starting with _ are not props.
    ONLY keys that already exist in the child's state are accepted (case-insensitive: :mobileMenu -> mobileMenu). Others are ignored.
-Child -> parent: inside a `function` action: this.emit('change', value)  =>  parent .method('onChange', state => function (value) {...})
-Slot: <slot></slot> in the child; whatever is written between the parent's tags goes there.
-Each instance must have its own state: pass a FUNCTION to .state(). Recursion depth limit 50 (use w-if to stop recursion).
-Hundreds of components are mounted in batches (first 50 immediately). Components in hidden w-if / w-route blocks are not compiled or loaded.
-Async:  createAsyncComponent(loaderFn, callback?)   loaderFn returns a promise of a View or module (e.g. () => import('./x.js'));
-        callback runs with this = parent view after load (typically this.update({ loading: false })).
+   Prop changes after mount reach the child and re-render it (the child subscribes to its own state). An object literal
+   (:x="{a:1}") is compared by content, so it does not cause re-renders.
+Child -> parent: inside a `function` action: this.emit('change', value)  =>  parent method onChange (above).
+Slot: <slot></slot> in the child; what is written between the parent's tags goes there. Use parent variables in slot content;
+   w-on inside slot content and child variables in slots are (unverified).
+Each instance needs its own state: pass a FUNCTION to .state(). (A plain object state is deep-copied per instance, but non-plain
+   values are shared by reference.) Recursion depth limit 50 (stop it with w-if).
+A parent never re-diffs a component host's inner DOM while the host keeps the same set of attribute NAMES (class/style/w-name
+   ignored); the child renders itself.
+Hundreds of components are mounted in batches: first 50 synchronously, the rest over frames (10ms budget each).
+Components inside hidden w-if / w-route blocks are not compiled or loaded.
+Async:  createAsyncComponent(loaderFn, callback?)   loaderFn returns a promise of a module/View whose default export is a View
+        (e.g. () => import('./x.js')). callback(component, $el, attrs, slot) runs after load with this = parent view; a truthy
+        return value replaces the component. The parent re-renders itself afterwards. Until loaded the tag stays as written.
         .component('editor', createAsyncComponent(() => import('./editor.js'), function () { this.update({ loading: false }) }))
-KNOWN ISSUE (unresolved): a prop that changes AFTER the child is mounted (e.g. parent fills {} from $wire on slow networks)
-   may not reach the child. Prefer: fetch data in the same view that renders it, or create the app after the data has loaded.
 
-=== 5. SHARED STATE / STORAGE ===
-const store = shareState({ count: 0 });  $('<template>..</template>').state(store)   // same store object in many components -> all re-render
+=== 5. REACTIVITY, SHARED STATE, STORAGE ===
+state is a Proxy over plain objects/arrays (nested too). Assignment, delete, push/splice/etc. on state arrays all trigger a render
+(microtask, batched; many changes = one render). NOT reactive: class instances, Map/Set/Date, frozen objects, objects created
+outside state until assigned. For those mutate, then this.update(state => {}) or view.update(true).
+Shared store: const store = shareState({ count: 0 })   // returns a FUNCTION usable as initState
+   $('<template>..</template>').state(store)   // same store -> every view using it re-renders on change
+   shareState(obj, { onChange(key, value) {}, drive(update) {} })   drive gets a callback that forwards to that view's .update(arg) (unverified).
 Persistence: put keys under `storage` -> { storage: { score: 0 } }; saved to localStorage on $change, restored on $mount.
-   Read as state.storage.score / {{ storage.score }}. Values are JSON-serialized (~5MB limit). Keys outside `storage` are not saved.
+   Read as state.storage.score / {{ storage.score }}. Values are JSON (~5MB). Keys outside `storage` are not saved.
+   The localStorage key is 'JQVM_ls_' + name WITHOUT the view name: two components with storage.score share it.
+   Restored values may show only after the next re-render (unverified; possible engine bug).
 Use: local state = one component; props = parent -> child; store = unrelated components (cart, auth, theme).
 
 === 6. $wire (HTTP) ===
-$wire.get(url).to(target)       copies the response INTO an existing state object/array. Array target is replaced in place,
-                                object target gets Object.assign. Initialize state with the SAME shape as the JSON ([] for arrays, {} for objects).
-.done(fn(data)) .fail(fn(jqXHR, status)) .always(fn)        $wire.post(url, data) / .put(url, data) / .delete(url)  (JSON body)
-$wire.prefetch(url)             GET into a one-shot cache (30 s); next $wire.get(SAME url string) takes it. $wire() = any request pending.
-createWire({ ajax, csrf, prefetchTtl }). Prefer $wire to $.get. Use .done(d => state.x = d) when you need to transform data.
+$wire.get(url, strategy?).to(target)     copies the response INTO existing state: array target is replaced in place, object target
+                                         gets Object.assign. Initialize state with the SAME shape as the JSON ([] or {}).
+$wire.get(url).to(state, 'posts')        assignment through a strategy: 'drop' (default, replace) | 'push' (concat arrays: pagination)
+                                         | 'error' (fail handler gets an Error if the key already has data) | 'nomerge' (write nothing)
+                                         | 'merge' (reserved, = push). With .to(array) 'push' appends instead of clearing.
+chain: .done(fn(data))  .fail(fn(jqXHR, status))  .always(fn)  .before(fn) (fn runs immediately)
+$wire.post(url, data, strategy?) / .put(url, data, strategy?) (JSON body)  /  .delete(url, strategy?)
+$wire.prefetch(url)    GET into a one-shot cache (30s). The next $wire.get with the IDENTICAL url string takes it.
+$wire() = any request pending; $wire('/url') = that url pending.  $wire.on('$wiring', (phase 'start'|'end', url) => {})
+createWire({ ajax, csrf, prefetchTtl })  csrf is sent as X-CSRF-TOKEN. Uses jQuery $.ajax by default. Failures are console.error'ed.
+Prefer $wire to $.get. Use .done(d => state.x = d) when you need to transform data.
 
 === 7. FILTERS ===
 filter('currency', (value, ...args) => String)   // global (window.jqvm.filter) or view.filter('name', fn) (local)
@@ -99,70 +152,149 @@ Usage {{ v | name:arg1 }} ; chain {{ v | a | b }}. Filters only format output; d
 
 === 8. CUSTOM DIRECTIVES ===
 directive(name, compile, affect, priority = 10)     // higher priority runs first; local: view.directive(...)
-compile($el, attrs)  runs on the virtual tree (element not in DOM). this = { scope, view, compile, interpolate }.
-                     May edit attrs; RETURN a string or element to replace the element. Never attach events here.
-affect($el, attrs)   runs on the live DOM. Attach events/plugins here and RETURN a cleanup function (called before every re-render).
-Helpers: this.scope.parse(expr), this.scope.interpolate(str), this.scope.assign(path, value). attrs keys are lowercase.
+directive(name, { compile, mounted, updated, unmounted, priority })   // LIFECYCLE form (preferred for anything stateful)
+compile($el, attrs)  runs on the virtual tree (element not in DOM). this = { scope, view, compile(tpl, scope?, isolate?), interpolate }.
+                     RETURN a string or element to replace the element. Never attach events here.
+                     `fn.native = true` => compile receives the raw DOM element (no jQuery) and may return string/Node/NodeList.
+affect($el, attrs)   runs on the live DOM after EVERY render. this = { $root, scope, view, component }. Attach events here and
+                     RETURN a cleanup function (called before the next render). The element is the same live node across renders.
+mounted($el, attrs, data)   once, when the element first appears in the DOM        this = { $root, scope, view, component }
+updated($el, attrs, data)   on every later render (this is refreshed each time: re-read view/scope from it)
+unmounted($el, data)        when the element is removed by the diff or the view unmounts (clean listeners/timers here)
+   `data` is a per-element object that lives as long as the element.
+attrs are the RAW attribute strings: {{ }} is NOT interpolated yet. Expression -> this.scope.parse(attrs['w-x']);
+   template string -> this.scope.interpolate(attrs['w-x']); write -> this.scope.assign(path, value). Keys are lowercase.
+Elements are reused across renders: keep per-element state on `data` (lifecycle form) or on el.__something.
 
 === 9. ROUTER ===
 const router = createRouter({
-  mode: 'hash' | 'history',
+  mode: 'hash' | 'history',  baseUri?: '/app',
   routes: { home: '/', 'post.show': { path: '/post/{id:\\d+}', component: 'Components/Article.html', data: ({ id }) => ['Structures/Post-' + id + '.json'] } }
 })
 $('#app').state({...}).plugin(router).mount()
 Route string for w-route and routes: /post/{id} required | {id?} optional | {id:\d+} constrained (no {} inside the regex)
    | {path*} rest of path | "post.show" route name | "regex:/^\/a(\d+)/i" raw regex (params by index: $route.params[0]).
    In JS strings double the backslash ('\\d+'); in HTML attributes use one (\d+).
+   route.data may be a function(params) or an array of urls; "{id}" placeholders in the urls are filled from the matched params.
 <div w-route="/catalog">...</div>   shows the block only on a match; hidden blocks are not compiled (inner w-if is not evaluated).
    Old quoted form w-route="'/'" still works. Bare regex without "regex:" is NOT supported.
 First match in the routes table wins, then patterns found only in templates.
-$route (only in the ROOT view state; pass to children as props): .params (path params, strings), .query (after ?), .path, .name.
-$router (on the view): getLocation() -> { pathname, search, query }; setParams({ page: 2 }) merges into query and pushes;
-   go(name, params, 'push'|'replace'); navigate('push', '/path').    route(name, params) from window.jqvm builds an href
-   ('#/post/5' in hash mode, '/post/5' in history mode; extra params become ?query; missing required param throws).
-Links:  <a href="#/catalog" w-navigate="push|replace|back|forward|open">   or
-        <Link to="post.show" :params="{ id: 3 }" class="...">text</Link>   (also to="/about", :to="expr"). Renders <a>, other attrs pass through.
-        Link prefetch: hover >65ms, touchstart, focus -> loads route.component and route.data(...) urls ($wire.prefetch).
-        $wire.get(url) must be the identical string to hit the cache. :params object literal needs ScopeX support (unverified).
-Hook: .on('$route', (state, url) => {...}) fires on every URL change.
+$route (only in the ROOT view state; pass to children as props): .params (strings), .query, .path, .name.
+   $route.url(name, params) builds an href (use in a template only if ScopeX accepts the call, unverified; prefer <Link>).
+this.$router (inside `function` handlers of the root view): getLocation() -> { pathname, search, query };
+   setParams({ page: 2 }) merges into query and pushes; go(name, params, 'push'|'replace'); navigate('push'|'replace'|'back'|'forward'|'open', '/path').
+   route(name, params) from window.jqvm builds an href ('#/post/5' in hash mode, '/post/5' in history mode; extra params
+   become ?query; a missing required param throws).
+Links:  <Link to="post.show" :params="{ id: 3 }" class="...">text</Link>   (also to="/about", :to="expr"). Renders <a>, other attrs
+        pass through; in history mode it handles clicks (modifier keys / target respected).
+        Prefetch: hover >65ms, touchstart, focus -> route.component and route.data urls ($wire.prefetch). $wire.get(url) must use the
+        identical string to hit the cache. :params object literal needs ScopeX support (unverified).
+        <a href="#/catalog" w-navigate="push|replace|back|forward|open"> is documented in older versions; the directive is not in
+        the router source I have (unverified), prefer <Link> or this.$router.
+Hook: .on('$route', (state, url) => {...}) fires on every URL change (the view is also force-updated).
 hash mode needs no server config; history mode needs the server to return index.html for all paths.
 
-=== 10. LAZY LISTS ===
-<div w-lazy="down|up" w-lazy-margin="300px" w-lazy-root="#feed" w-lazy-key="query"><div w-for="c in comments">..</div></div>
+=== 10. PREFETCH (w-prefetch, w-to) ===
+<a href="#/posts" w-prefetch="/api/posts.json">                       hover/focus/touchstart warm the $wire cache
+<button w-prefetch="/api/posts.json" w-to="posts">Load</button>       click: $wire.get(url) (uses the cache) and assigns the response to state.posts
+URL may contain {{ }} (also inside w-for): w-prefetch="/api/posts/{{ p.id }}.json". w-to = path in state ("posts", "data.posts", a
+leading "state." is dropped); it REPLACES the value (declare the key in state). w-to without w-prefetch reports an error.
+Needs $wire (global) with wire.prefetch available.
+
+=== 11. LAZY LISTS (w-lazy) ===
+<div w-lazy="down|up" w-lazy-margin="300px" w-lazy-root="#feed" w-lazy-key="query"><div w-for="c in comments traceby c.id">..</div></div>
+- The repeated elements must be DIRECT element children of the w-lazy element (their count is the offset).
+- w-lazy-root = css selector of the scroll container (default: nearest ancestor with overflow-y auto/scroll, else the window).
+  The container needs a bounded height. w-lazy-margin / w-lazy-root are plain strings; w-lazy-key is an expression.
 .on('$lazy', (state, lazy) => { $wire.get('/api?p=' + lazy.page).done(items => {
       if (!items.length) return lazy.end();  state.comments.push(...items);  lazy.done() }).fail(() => lazy.fail()) })
-lazy: page (1..), offset (item count), direction, el; done() | end() | fail(ms=3000). Call exactly ONE of them, and call done() AFTER writing to state.
-Empty list loads page 1 automatically. "up" keeps scroll position (unshift older items to state). w-lazy-key change resets page counter
-(you clear the list yourself). Defaults: margin 200px, timeout 15000ms: createLazy({ margin, timeout }) (optional, via .plugin).
-Safeguards: no growth after 2 loads -> stops with a warning; forgotten done() -> unlocks after timeout.
-The list and the $lazy handler should live in the view that owns the state (do not rely on props arriving later).
+lazy: page (1..), offset (item count), direction, el; done() | end() | fail(ms=3000). Call exactly ONE of them, and call done()
+AFTER writing to state.
+Empty list loads page 1 automatically. "up": unshift OLDER items to state; scroll position is preserved. A change of w-lazy-key
+resets the page counter (you clear the list yourself). Defaults: margin 200px, timeout 15000ms; change with .plugin(createLazy({ margin, timeout })).
+Safeguards: no growth after 2 loads -> stops with a console warning; forgotten done() -> unlocks after the timeout.
+The list and the $lazy handler must live in the view that owns the state.
 
-=== 11. MODALS (Bootstrap 5 + jQuery loaded BEFORE Wex) ===
+=== 12. MODALS (Bootstrap 5 + jQuery loaded BEFORE Wex; source not re-checked for 1.3.5) ===
 Imperative:  $('#m').modal('show' | 'hide' | 'toggle')
 Declarative: <button w-modal="myModal"> + state { modal: { myModal: false } }   (state.modal must exist and contain the modal id;
              state.modal.myModal mirrors open/closed). Hooks: $modalShown / $modalHidden (state, modalKey).
 
-=== 12. SSR / BLADE ===
+=== 13. WRITING A PLUGIN / EXTENSION ===
+Three building blocks, usually combined (see router.js, w-lazy.js, w-prefetch.js):
+ 1. GLOBAL directive/component registered at module load: import { directive, component, report } from './wex.js';
+    directive('w-x', ...) works in every view. Import the file for its side effects (index.js: import './prefetch.js').
+    Core helpers importable from wex.js: directive, component, filter, View, report(title, ctx), preloadComponent(url), config.
+    report(title, { view, el, attr, expr, scope, hint, source, level: 'warn'|'error' }): 'warn' only in debug, 'error' always,
+    deduplicated. Use it for every misuse you can detect (see w-prefetch / w-to).
+ 2. PLUGIN FACTORY used with view.plugin(createX(options)): returns a function; inside, this = { view, scope } (scope is still null
+    at plugin time). It may return { $init, $mount, $destroy, $clone, ... } = lifecycle handlers registered with view.on.
+    Put the plugin's state under state.$name in $init (the router sets state.$route there) and unsubscribe in $destroy.
+ 3. OPTIONS: module-level cfg object mutated by the factory (createLazy only does Object.assign(cfg, options)).
+Directives: use the lifecycle form, keep everything per element in `data`, remove listeners/timers in unmounted.
+Talk to the owner view through view.emit('$event', payload) (handler: .on('$event', (state, payload) => ...)) or view.fn(name).
+
+Example (complete plugin file, w-clickoutside.js):
+  import { directive } from './wex.js'
+  const cfg = { capture: true }
+  // <div w-clickoutside="close">  ->  .method('close', state => { state.open = false })
+  directive('w-clickoutside', {
+    mounted($el, attrs, data) {
+      const el = $el[0]
+      data.view = this.view
+      data.name = attrs['w-clickoutside']
+      data.h = (e) => {
+        if (el.contains(e.target)) return
+        const fn = data.view.fn(data.name)
+        if (!fn) return
+        const res = fn.call(data.view, data.view.__state)
+        if (typeof res === 'function') res.call(el, e)
+      }
+      document.addEventListener('click', data.h, cfg.capture)
+    },
+    updated($el, attrs, data) { data.view = this.view; data.name = attrs['w-clickoutside'] },
+    unmounted($el, data) { document.removeEventListener('click', data.h, cfg.capture) },
+  })
+  export function createClickOutside(options = {}) {
+    Object.assign(cfg, options)
+    return function () {                       // optional: only for settings or lifecycle hooks
+      return { $init(state) { /* state.$x = ... */ }, $destroy() { /* cleanup */ } }
+    }
+  }
+  usage: import './w-clickoutside.js' once; optionally $('#app').state({...}).plugin(createClickOutside({ capture: false })).mount()
+
+=== 14. SSR / BLADE / CSS ===
 Server (Blade/PHP) renders SEO content; Wex adds interactivity to parts of the page. Escape Wex {{ }} in Blade (@{{ }}).
 Split large components into several <script> partials combined by @include; expose a factory (e.g. Obsidian.init(selector, overrides)).
-
-=== 13. CSS NOTES (Quas, utility classes) ===
 Quas does not understand text-sm/5 or text-lg/6.5: write text-sm leading-5 / text-lg leading-[1.625rem]. Pin CDN script versions.
 
-=== 14. COMMON MISTAKES (avoid) ===
+=== 15. DEBUGGING ===
+Open the console on localhost: "Wex" groups give the component chain (Root › Menu › Item), the attribute, expression, template
+fragment, the variables available in scope and a clickable element. Typical reports: {{ }} returned null/undefined, expression
+error, {{ }} inside img/iframe src, empty w-for list, a prop that received undefined/null, w-src/w-html got null, recursion over
+depth 50, w-prefetch/w-to misuse. A syntax error in an expression can abort that view's render: look for a red "Wex" group first.
+Elements/classes/styles changed manually (jQuery) outside directives can be overwritten by the next patch: do it in a directive.
+
+=== 16. RULES / COMMON MISTAKES (avoid) ===
 1. Arrow function where `this` (the view) is needed -> use `function`.
 2. .state({...}) with an object for a component used many times -> use .state(() => ({...})).
-3. src="{{ x }}" for dynamic images -> w-src. Raw HTML from data -> w-html.
-4. List of objects without traceby.
-5. Passing a prop that is not declared in the child's state (silently ignored).
-6. Self-closing component tags. Wrapping w-for on a container instead of the repeated element.
-7. Non-boolean in w-if / w-class / w-disabled without !!.
+3. src="{{ x }}" for dynamic images -> w-src. Raw HTML from data -> w-html (sanitized, links stripped).
+4. List of objects without traceby (and traceby item.id must be unique and stable).
+5. Passing a prop that is not declared in the child's state (silently ignored). Putting {{ }} in a plain x="..." prop.
+6. Self-closing component tags. w-for on a container instead of the repeated element.
+7. Non-boolean in w-if / w-class / w-disabled without !!. Printing a maybe-undefined value without || ''.
 8. Mutating state inside $change (loop). Expecting $ hooks to bubble to parents.
 9. $wire.get().to(state.x) when state.x is {} but the JSON is an array (becomes {0:..,1:..}); initialize as [].
-10. w-on without a matching .method(); w-on args written as JS (only simple scope expressions).
-11. Scripts order: jQuery before Wex; Bootstrap before Wex for modals.
-12. w-for variable names starting with uppercase / spaces inside the source expression.
-13. Local .component()/.directive() expected to work in child components (they do not inherit).
-14. Using $route in a child component directly (it lives in the root state; pass it down).
+10. w-on without a matching .method() (no error). Two w-on on one element. w-on args written as JS (only simple scope expressions).
+11. Script order: jQuery before Wex; Bootstrap before Wex for modals.
+12. w-for variable names starting with uppercase / spaces inside the source expression / source starting with $.
+13. Local .component()/.directive() expected to work in child components (they do not inherit). Global ones registered AFTER
+    the view was created are not seen by it.
+14. Using $route in a child component directly (it lives in the root state; pass it down as a prop).
 15. Unescaped {{ }} in Blade/PHP templates. Unsupported Quas utilities (slash line-height).
-16. Expecting persistence for keys outside `storage`.
+16. Expecting persistence for keys outside `storage`, or separate storage for same-named keys in different components.
+17. Expecting a w-if'ed component to keep its state when hidden and shown again (it is recreated).
+18. Parent method used in @evt that does not return a function but needs the emitted value.
+19. Multi-line {{ }}; <tr>/<td> as a component root template; w-lazy items wrapped in an extra element.
+20. Reading attrs in a directive as if they were interpolated (they are raw; use scope.parse / scope.interpolate).
+21. Mutating a non-plain object (Chart.js, Map, Date) and expecting a re-render without this.update(...).
