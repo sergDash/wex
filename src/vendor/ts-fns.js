@@ -10,6 +10,9 @@ export function isObject(value) {
 export function diffArray(a, b) {
     return a.filter(v => !b.includes(v))
 }
+export function unionArray(a, b) {
+    return a.concat(b.filter(v => !inArray(v, a)))
+}
 export function inArray(item, arr) {
     return Array.isArray(arr) && arr.includes(item)
 }

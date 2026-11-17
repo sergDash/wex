@@ -184,9 +184,16 @@ module.exports = (env = {}) => {
     plugins: [],
   };
 
+  const draggable = {
+    ...bundle,
+    entry: path.join(__dirname, 'src/plugins/draggable/wex-draggable.js'),
+    output: { path: dist, filename: 'wex-draggable.js' },
+    plugins: [],
+  };
+
   return [bundle, mini, doc, minify(doc), editor, minify(editor), datatable,
     minify(datatable), datepicker, minify(datepicker), select, minify(select),
     gallery, minify(gallery), dropzone, minify(dropzone), imageEditor,
-    minify(imageEditor)
+    minify(imageEditor), draggable, minify(draggable),
   ];
 };

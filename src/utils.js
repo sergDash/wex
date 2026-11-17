@@ -1,4 +1,4 @@
-import { isString, each } from 'ts-fns'
+import { isString, each } from './vendor/ts-fns'
 
 export function getOuterHTML(el) {
   const nodeName = el.nodeName.toLowerCase()

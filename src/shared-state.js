@@ -1,45 +1,10 @@
-import { assign, isFunction } from 'ts-fns'
+import { reactive, subscribe } from './reactive.js'
 
-/**
- *
- * @param {object} initState
- * @param {object} options
- * @param {function} options.onChange invoke when state change
- * @param {function} options.drive drive the state to be changed, i.e. (update) => { setInterval(() => update(state => state.age ++, 1000)) }
- * @returns
- */
-export function shareState(initState, options) {
-  const views = []
-  return function() {
-    const view = this
-    if (views.indexOf(view) === -1) {
-      views.push(view)
-    }
-    view.on('$change', () => (e, { keyPath, value }) => {
-      views.forEach((item) => {
-        if (item === view) {
-          if (options && isFunction(options.onChange)) {
-            options.onChange(keyPath, value)
-          }
-          return
-        }
-        item.update((state) => {
-          assign(state, keyPath, value)
-        })
-      })
-    })
-    view.on('$destroy', () => {
-      views.forEach((item, i) => {
-        if (item === view) {
-          views.splice(i, 1)
-        }
-      })
-    })
-
-    if (options && isFunction(options.drive)) {
-      options.drive((arg) => view.update(arg))
-    }
-
-    return initState
+export function shareState(initState, options = {}) {
+  const state = reactive(initState)
+  if (options.onChange) subscribe(state, ({ key, target }) => options.onChange(key, target[key]))
+  return function () {
+    if (options.drive) options.drive(arg => this.update(arg))
+    return state
   }
 }

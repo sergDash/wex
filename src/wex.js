@@ -1,10 +1,29 @@
-const WEX_VERSION = '2.0.0';
+const WEX_VERSION = '1.3.5';
 
 import { ScopeX } from './vendor/ScopeX'
-import { isNone, each, isObject, isFunction, isString, diffArray, uniqueArray, isEqual } from './vendor/ts-fns'
-import { getPath, camelCase, parseKey, getNodeName, getNodeAttrs, createAttrsText } from './utils.js'
+import { isNone, each, isObject, isFunction, isString, uniqueArray, isEqual } from './vendor/ts-fns'
+import { camelCase, parseKey, getNodeName, getNodeAttrs, createAttrsText } from './utils.js'
 import { VMLocalStorage } from './store.js'
 import { reactive, toRaw, isReactive, subscribe } from './reactive.js'
+
+// ScopeX.$new создавал полноценный ScopeX с НОВЫМ кэшем скомпилированных выражений: на каждую итерацию w-for
+// каждое выражение заново разбиралось и компилировалось через new Function. Дочерний scope теперь делит
+// compile (и кэш) с родителем. Семантика $new та же: locals получает прототип = данные родителя.
+if (!ScopeX.prototype.$new.__shared) {
+  const isPlainObj = v => v && typeof v === 'object' && v.constructor === Object
+  const sharedNew = function (locals) {
+    locals = locals || {}
+    const data = isPlainObj(locals) ? Object.setPrototypeOf(locals, this.data) : Object.assign({}, locals)
+    const child = Object.create(ScopeX.prototype)
+    child.options = this.options
+    child.filters = this.filters
+    child.compile = this.compile
+    child.data = data
+    return child
+  }
+  sharedNew.__shared = true
+  ScopeX.prototype.$new = sharedNew
+}
 
 let vmId = 0
 let $ = null
@@ -13,13 +32,20 @@ const SYMBOL = {}
 
 export const config = {
   // по умолчанию debug включён только на localhost
-  debug: typeof location !== 'undefined' && /^(localhost|127\.|\[::1\])/.test(location.hostname),
+  debug: typeof window !== 'undefined' && window.WEX_DEBUG !== undefined
+      ? !!window.WEX_DEBUG
+      : typeof location !== 'undefined' && /^(localhost|127\.|\[::1\])/.test(location.hostname),
   maxDepth: 50,     // максимальная вложенность компонентов
   syncMounts: 50,   // сколько компонентов монтировать синхронно за тик, остальные по кадрам (Infinity = как раньше)
   mountBudget: 10,  // мс на кадр для отложенного монтирования
 }
 
 const reported = new Set()
+
+// window.WEX_PROFILE = true до загрузки: время рендеров копится в window.WEX_STATS (мс)
+const profile = typeof window !== 'undefined' && window.WEX_PROFILE
+    ? (window.WEX_STATS = { compile: 0, diff: 0, affect: 0, renders: 0 })
+    : null
 
 function scopeSnapshot(scp) {
   const out = {}
@@ -291,49 +317,58 @@ function compile($root, components, directives, state, view, [template, scope, i
   const root = $root[0]
   const records = root.__jQvmCompiledRecords = root.__jQvmCompiledRecords || []
 
-  const $element = $(inertBox(template))
+  const entry = protoOf(template)
+  const box = entry.box.cloneNode(true)
+  let dynamic = false   // после compile-функции, вернувшей новую разметку, кэш наличия директив неточен
 
-  const interpolate = ($element, scp = scope) => {
-    $element.each(function() {
-      const attrs = [...this.attributes]
-      const $this = $(this)
-      attrs.forEach(({ name, value }) => {
-        if (name.indexOf('@') === 0) return
+  // пропускаем всё, где нет «{{»: раньше каждый атрибут и текст гонялся через regexp и перезаписывался
+  const interpolateNode = (el, scp) => {
+    if (el.attributes.length) {
+      const list = [...el.attributes]
+      for (let i = 0; i < list.length; i ++) {
+        const { name, value } = list[i]
+        if (name.charCodeAt(0) === 64 || value.indexOf('{{') === -1) continue   // '@'
 
-        checkInterpolation(value, scp, { view, el: this, attr: name })
-        const text = scp.interpolate(value)
+        checkInterpolation(value, scp, { view, el, attr: name })
+        const text = interpolateText(scp, value)
 
         // атрибут целиком из одного {{ }} и результат пустой: не пишем "undefined" в DOM
         if ((text === 'undefined' || text === 'null') && /^\{\{[^}]+\}\}$/.test(value.trim())) {
-          $this.removeAttr(name)
-          return
+          el.removeAttribute(name)
+          continue
         }
-        $this.attr(name, text)
-      })
+        setAttrSafe(el, name, text)
+      }
+    }
 
-      const children = [...this.childNodes]
-      children.forEach((child) => {
-        if (child.nodeName === '#text') {
-          checkInterpolation(child.textContent, scp, { view, el: this })
-          child.textContent = scp.interpolate(child.textContent)
+    for (let child = el.firstChild; child; child = child.nextSibling) {
+      if (child.nodeType === 3) {
+        const text = child.textContent
+        if (text.indexOf('{{') !== -1) {
+          checkInterpolation(text, scp, { view, el })
+          child.textContent = interpolateText(scp, text)
         }
-        else if (child.nodeName.indexOf('#') !== 0) {
-          interpolate($(child), scp)
-        }
-      })
-    })
+      }
+      else if (child.nodeType === 1) {
+        interpolateNode(child, scp)
+      }
+    }
   }
 
-  const createIterator = (onCompile, onAffect) => function(index) {
+  // для ctx.interpolate в пользовательских директивах (принимает jQuery, как раньше)
+  const interpolate = ($el, scp = scope) => {
+    $el.each(function() { interpolateNode(this, scp) })
+  }
+
+  const createIterator = (onCompile, onAffect, markDynamic) => function() {
     const el = this
     // уже обработан вложенным compile (w-for) — повторно не трогаем
     if (el.__jQvmIterated) return
-    const $el = $(el)
-    const attrs = getNodeAttrs(this)
-    const name = getNodeName(this)
+    const attrs = getNodeAttrs(el)
+    const name = getNodeName(el)
     const els = [el]
 
-    const inner = $el.html()
+    const inner = el.innerHTML
     const slot = (locals) => {
       const $root = $('<div />')
       const subScope = locals ? locals instanceof ScopeX ? scope.$new(locals.data) : scope.$new(locals) : scope
@@ -357,20 +392,21 @@ function compile($root, components, directives, state, view, [template, scope, i
 
       if (proto.tag !== 'template') {
         const { tag, attributes } = proto
-        const $tag = $(`<${tag} />`)
+        const doc = el.ownerDocument
+        const tagEl = doc.createElement(tag)
 
         const attrsText = createAttrsText(attrs)
-        const $commentBegin = $(`<!-- ${name} ${attrsText} begin -->`)
-        const $commentEnd = $(`<!-- ${name} ${attrsText} end -->`)
+        const begin = doc.createComment(` ${name} ${attrsText} begin `)
+        const end = doc.createComment(` ${name} ${attrsText} end `)
 
         Object.assign(attrs, attributes, { ['data-hoist']: name })
-        $tag.attr(attrs)
-        $el.replaceWith([$commentBegin, $tag, $commentEnd])
+        Object.keys(attrs).forEach(k => setAttrSafe(tagEl, k, attrs[k]))
+        el.replaceWith(begin, tagEl, end)
         els.length = 0
-        els.push($commentBegin[0], $tag[0], $commentEnd[0])
+        els.push(begin, tagEl, end)
       }
       else {
-        $el.empty()
+        el.textContent = ''
       }
     }
 
@@ -379,6 +415,8 @@ function compile($root, components, directives, state, view, [template, scope, i
       useComponent(onCompile)
     }
     else if (typeof onCompile === 'function') {
+      // функции-компоненты получают jQuery-обёртку, как раньше
+      const $el = $(el)
       // developers can recompile inside fn
       const boundCompile = compile.bind(null, $root, components, directives, state, view)
       const ctx = {
@@ -393,6 +431,7 @@ function compile($root, components, directives, state, view, [template, scope, i
         useComponent(output)
       }
       else if (!isNone(output) && $el !== output) {
+        if (markDynamic) markDynamic()
         const newEls = $('<div />').html(output)[0].childNodes
         $el.replaceWith(newEls)
         els.length = 0
@@ -411,11 +450,12 @@ function compile($root, components, directives, state, view, [template, scope, i
   // directives have higher priority than components
 
   directives.forEach(([name, onCompile, onAffect]) => {
-    const $els = $element.find(`[${name}]`)
-    $els.each(function() {
-      const el = this
-      const $el = $(el)
-      const attrs = getNodeAttrs(this)
+    const selector = selectorOf(name)
+    if (!dynamic && !protoHas(entry, selector)) return
+    const found = box.querySelectorAll(selector)
+    for (let i = 0; i < found.length; i ++) {
+      const el = found[i]
+      const attrs = getNodeAttrs(el)
 
       let els = [el]
       if (typeof onCompile === 'function') {
@@ -427,44 +467,130 @@ function compile($root, components, directives, state, view, [template, scope, i
           compile: (temp, scp = scope, isl = isolate) => boundCompile([temp, scp, isl]),
           interpolate,
         }
-        const output = onCompile.call(ctx, $el, attrs)
-        if (!isNone(output) && $el !== output) {
-          const $newEls = $(output)
-          $el.replaceWith($newEls)
-          els = [...$newEls]
+
+        if (onCompile.native) {
+          // встроенные директивы получают сам элемент и работают без jQuery
+          const output = onCompile.call(ctx, el, attrs)
+          if (!isNone(output) && output !== el) {
+            const nodes = toNodes(output)
+            if (!(nodes.length === 1 && nodes[0].nodeType === 8)) dynamic = true   // комментарий новой разметки не добавляет
+            el.replaceWith(...nodes)
+            els = nodes
+          }
+        }
+        else {
+          const $el = $(el)
+          const output = onCompile.call(ctx, $el, attrs)
+          if (!isNone(output) && $el !== output) {
+            dynamic = true
+            const $newEls = $(output)
+            $el.replaceWith($newEls)
+            els = [...$newEls]
+          }
         }
       }
 
       if (isolate) {
-        $el.removeAttr(name)
+        el.removeAttribute(name)
       }
 
       const record = { affect: onAffect, attrs, els, scope }
       records.push(record)
-      els.forEach(el => el.__jQvmCompiledRecord = record)
-    })
+      els.forEach(item => item.__jQvmCompiledRecord = record)
+    }
   })
 
   components.forEach(([name, compile, affect]) => {
     if (name === 'slot') {
       return
     }
-    const $els = $element.find(name)
-    $els.each(createIterator(compile, affect))
+    if (!dynamic && !protoHas(entry, name)) return
+    const iterate = createIterator(compile, affect, () => { dynamic = true })
+    const found = box.querySelectorAll(name)
+    for (let i = 0; i < found.length; i ++) iterate.call(found[i])
   })
 
-  interpolate($element, scope)
+  interpolateNode(box, scope)
 
   // slot will only render with the host scope
   const slotComponent = components.find(item => item[0] === 'slot')
-  if (slotComponent) {
+  if (slotComponent && (dynamic || protoHas(entry, 'slot'))) {
     const [name, compile, affect] = slotComponent
-    const $els = $element.find(name)
-    $els.each(createIterator(compile, affect))
+    const iterate = createIterator(compile, affect)
+    const found = box.querySelectorAll(name)
+    for (let i = 0; i < found.length; i ++) iterate.call(found[i])
   }
 
-  const nodes = [...$element[0].childNodes]
-  return nodes
+  return [...box.childNodes]
+}
+
+// ---------- интерполяция: строка с {{ }} разбирается один раз ----------
+// Раньше на каждый атрибут и текст каждого рендера: match + replace + trim + slice по regexp.
+// Порядок и результат те же, что у ScopeX.interpolate (undefined превращается в "undefined").
+const mustacheCache = new Map()
+
+function parseMustache(str) {
+  let parts = mustacheCache.get(str)
+  if (!parts) {
+    parts = []
+    const re = /\{\{(.*?)\}\}(?!\})/g
+    let last = 0, m
+    while ((m = re.exec(str))) {
+      if (m.index > last) parts.push(str.slice(last, m.index))
+      parts.push({ expr: m[1].trim() })
+      last = re.lastIndex
+    }
+    if (parts.length && last < str.length) parts.push(str.slice(last))
+    if (mustacheCache.size > 5000) mustacheCache.clear()
+    mustacheCache.set(str, parts)
+  }
+  return parts
+}
+
+function interpolateText(scp, str) {
+  const parts = parseMustache(str)
+  if (!parts.length) return str
+  let out = ''
+  for (let i = 0; i < parts.length; i ++) {
+    const part = parts[i]
+    out += typeof part === 'string' ? part : String(scp.parse(part.expr))
+  }
+  return out
+}
+
+// ---------- разбор шаблона один раз ----------
+// Дальше каждый рендер (и каждая итерация w-for) клонирует готовое дерево: cloneNode заметно быстрее innerHTML.
+let inertDoc = null
+const protoCache = new Map()
+
+function protoOf(html) {
+  let entry = protoCache.get(html)
+  if (!entry) {
+    inertDoc = inertDoc || document.implementation.createHTMLDocument('')
+    const box = inertDoc.createElement('div')
+    box.innerHTML = html
+    if (protoCache.size > 2000) protoCache.clear()
+    entry = { box, has: new Map() }
+    protoCache.set(html, entry)
+  }
+  return entry
+}
+
+const selCache = new Map()
+const selectorOf = (name) => {
+  let sel = selCache.get(name)
+  if (!sel) selCache.set(name, (sel = '[' + name + ']'))
+  return sel
+}
+
+// есть ли в шаблоне элементы по селектору; результат кэшируется на строку шаблона
+function protoHas(entry, selector) {
+  let v = entry.has.get(selector)
+  if (v === undefined) {
+    v = entry.box.querySelector(selector) !== null
+    entry.has.set(selector, v)
+  }
+  return v
 }
 
 // ---------- keyed diff ----------
@@ -480,6 +606,25 @@ function keyOf(node) {
   const d = node.getAttribute('data-id')
   if (d !== null) return 'l|' + node.nodeName + '|' + d
   return undefined
+}
+
+const IGNORE_ATTRS = ['style', 'class', 'w-name']
+const attrNames = el => [...el.attributes].map(a => a.name).filter(n => IGNORE_ATTRS.indexOf(n) === -1)
+
+// результат нативной директивы -> список узлов
+function toNodes(output) {
+  if (typeof output === 'string') {
+    const tpl = document.createElement('template')
+    tpl.innerHTML = output
+    return [...tpl.content.childNodes]
+  }
+  if (output.nodeType) return [output]
+  return [...output]
+}
+
+function setAttrSafe(el, name, value) {
+  try { el.setAttribute(name, value) }
+  catch (e) { $(el).attr(name, value) }
 }
 
 function diffAndPatch($root, nodes) {
@@ -554,82 +699,61 @@ function diffAndPatch($root, nodes) {
     current.__jQvmCompiledRecord = record
   }
 
-  const diffAndPatchNode = ($current, $next) => {
-    const current = $current[0]
-    const next = $next[0]
-
-    const currentAttrs = getNodeAttrs(current)
-    const nextAttrs = getNodeAttrs(next)
-
-    const currentAttrNames = Object.keys(currentAttrs)
-    const nextAttrNames = Object.keys(nextAttrs)
-
+  const patchAttrs = (current, next) => {
     // update/add attrs
-    nextAttrNames.forEach((name) => {
-      const currentValue = currentAttrs[name]
-      const nextValue = nextAttrs[name]
+    const na = next.attributes
+    for (let i = 0; i < na.length; i ++) {
+      const { name, value } = na[i]
+      if (current.getAttribute(name) !== value) setAttrSafe(current, name, value)
+    }
+    // remove no use attrs (style, class и w-name не трогаем)
+    const ca = current.attributes
+    for (let i = ca.length - 1; i >= 0; i --) {
+      const name = ca[i].name
+      if (name === 'style' || name === 'class' || name === 'w-name') continue
+      if (!next.hasAttribute(name)) current.removeAttribute(name)
+    }
+  }
 
-      if (currentValue !== nextValue) {
-        $current.attr(name, nextValue)
+  const patchNode = (current, next) => {
+    // для компонента сравниваем со снимком атрибутов ДО патча
+    const isComp = !!current.__jQvmComponent
+    let pre = null
+    if (isComp) {
+      pre = {
+        wName: current.getAttribute('w-name'),
+        id: current.getAttribute('id'),
+        dataId: current.getAttribute('data-id'),
+        names: attrNames(current),
       }
-    })
+    }
 
-    // remove no use attrs
-    const diffAttrNames = diffArray(currentAttrNames, nextAttrNames)
-    diffAttrNames.forEach((name) => {
-      // keep style and class attributes
-      if (name === 'style' || name === 'class' || name === 'w-name') {
-        return
-      }
-      $current.removeAttr(name)
-    })
-
+    patchAttrs(current, next)
     if (next.__wKey !== undefined) current.__wKey = next.__wKey
-
     transferRecord(current, next)
 
     // dont diff component inner content
-    if (current.__jQvmComponent) {
-      if (
-          current.nodeName === next.nodeName
-          && currentAttrs['w-name'] === nextAttrs['w-name']
-      ) {
-        return
-      }
+    if (isComp && current.nodeName === next.nodeName) {
+      if (pre.wName === next.getAttribute('w-name')) return
+
+      const nid = next.getAttribute('id')
+      if ((pre.id || nid) && pre.id === nid) return
+
+      const nd = next.getAttribute('data-id')
+      if ((pre.dataId || nd) && pre.dataId === nd) return
 
       if (
-          current.nodeName === next.nodeName
-          && (currentAttrs['id'] || nextAttrs['id'])
-          && currentAttrs['id'] === nextAttrs['id']
-      ) {
-        return
-      }
-
-      if (
-          current.nodeName === next.nodeName
-          && (currentAttrs['data-id'] || nextAttrs['data-id'])
-          && currentAttrs['data-id'] === nextAttrs['data-id']
-      ) {
-        return
-      }
-
-      const ignoreAttrs = ['style', 'class', 'w-name']
-      if (
-          current.nodeName === next.nodeName
-          && $current.attr('data-hoist') === $next.attr('data-hoist')
-          && isEqual(currentAttrNames.filter(item => !ignoreAttrs.includes(item)), nextAttrNames.filter(item => !ignoreAttrs.includes(item)))
+          current.getAttribute('data-hoist') === next.getAttribute('data-hoist')
+          && isEqual(pre.names, attrNames(next))
       ) {
         return
       }
     }
 
-    const nextChildren = [...next.childNodes]
-    diffAndPatchChildren($current, nextChildren)
+    diffAndPatchChildren(current, [...next.childNodes])
   }
 
-  const diffAndPatchChildren = ($parent, nextChildren) => {
-    const parentNode = $parent[0]
-
+  const diffAndPatchChildren = (parentNode, nextChildren) => {
     // пустой родитель без ключей: просто добавляем всё разом
     if (!parentNode.childNodes.length && !nextChildren.some(n => keyOf(n) !== undefined)) {
       nextChildren.forEach((child) => {
@@ -647,7 +771,7 @@ function diffAndPatch($root, nodes) {
         const found = take(key, parentNode)
         if (found) {
           if (found !== current) parentNode.insertBefore(found, current)
-          diffAndPatchNode($(found), $(next))
+          patchNode(found, next)
         }
         else {
           parentNode.insertBefore(next, current)
@@ -662,7 +786,7 @@ function diffAndPatch($root, nodes) {
       }
       // diff and patch element
       else if (next.nodeName.indexOf('#') !== 0) {
-        diffAndPatchNode($(current), $(next))
+        patchNode(current, next)
       }
       // diff and patch text
       else if (next.textContent !== current.textContent) {
@@ -676,7 +800,7 @@ function diffAndPatch($root, nodes) {
     }
   }
 
-  diffAndPatchChildren($root, nodes)
+  diffAndPatchChildren($root[0], nodes)
 
   pending.forEach((node) => {
     const parent = node.parentNode
@@ -684,14 +808,6 @@ function diffAndPatch($root, nodes) {
     disposeNode(node)
     parent.removeChild(node)
   })
-}
-
-let inertDoc = null
-function inertBox(html) {
-  inertDoc = inertDoc || document.implementation.createHTMLDocument('')
-  const box = inertDoc.createElement('div')
-  box.innerHTML = html
-  return box
 }
 
 // ---------- очередь отложенного монтирования ----------
@@ -886,6 +1002,10 @@ function vm(initState = {}) {
   let isMounted = false
   let isUnmounted = false
 
+  let rootEl = null
+  let templateHtml = null
+  const getTemplateHtml = () => (templateHtml === null ? (templateHtml = $template.html()) : templateHtml)
+
   const getMountNode = () => {
     return mountTo ? $(mountTo) : $template.next(root)
   }
@@ -1024,9 +1144,11 @@ function vm(initState = {}) {
 
     const $root = getMountNode()
 
+    const t0 = profile ? performance.now() : 0
     prepare($root)
 
-    const nodes = compile($root, components, directives, state, view, [$template.html(), scope])
+    const nodes = compile($root, components, directives, state, view, [getTemplateHtml(), scope])
+    const t1 = profile ? performance.now() : 0
 
     if (isUpdating) {
       diffAndPatch($root, nodes)
@@ -1034,8 +1156,16 @@ function vm(initState = {}) {
     else {
       $root.html(nodes)
     }
+    const t2 = profile ? performance.now() : 0
 
     affect($root, scope, view)
+
+    if (profile) {
+      profile.compile += t1 - t0
+      profile.diff += t2 - t1
+      profile.affect += performance.now() - t2
+      profile.renders ++
+    }
 
     const attrs = $template.attr('attrs')
     if (attrs) {
@@ -1122,6 +1252,7 @@ function vm(initState = {}) {
       $template.after($root)
     }
 
+    rootEl = $root[0]
     render()
     dirty = false
 
@@ -1159,6 +1290,7 @@ function vm(initState = {}) {
     }
 
     mountTo = null
+    rootEl = null
     isMounted = false
     isUnmounted = true
 
@@ -1484,6 +1616,8 @@ function vm(initState = {}) {
   Object.defineProperties(view, {
     tag: { value: tag },
     attributes: { value: attributes },
+    __state: { get: () => state },   // для делегированных обработчиков w-on
+    __root: { get: () => rootEl },
   })
 
   setup()
@@ -1493,14 +1627,16 @@ function vm(initState = {}) {
 
 // register inside directives
 
-directive('w-for', function($el, attrs) {
+const WFOR_RE = /^[a-z][a-zA-Z0-9_$]*(,[a-z][a-zA-Z0-9_$]*){0,1} in [a-z][a-zA-Z0-9_$]*( traceby [a-z][a-zA-Z0-9_$.]*)?/
+
+function wFor(el, attrs) {
   const attr = attrs['w-for']
 
-  if (!/^[a-z][a-zA-Z0-9_$]*(,[a-z][a-zA-Z0-9_$]*){0,1} in [a-z][a-zA-Z0-9_$]+( traceby [a-z][a-zA-Z0-9_$.]*)?/.test(attr)) {
+  if (!WFOR_RE.test(attr)) {
     throw new Error('w-for should match formatter `value,key in data traceby id`!')
   }
 
-  const el = $el[0]
+  const doc = el.ownerDocument
   const nodeName = getNodeName(el)
 
   const [kv, , dataKey, , traceBy] = attr.split(' ')
@@ -1517,16 +1653,17 @@ directive('w-for', function($el, attrs) {
   }
 
   // make it not be able to compile again
-  $el.removeAttr('w-for')
+  el.removeAttribute('w-for')
   if (traceBy) {
-    $el.attr('data-id', `{{${traceBy}}}`) // modify the template, this will be compiled
+    el.setAttribute('data-id', `{{${traceBy}}}`) // modify the template, this will be compiled
   }
 
   // глобальный ключ: один и тот же список в разных контейнерах (колонки канбана) даёт совместимые ключи,
   // поэтому keyed diff переносит узел и компонент между контейнерами
   const keyScope = nodeName + '|' + dataKey + '|' + traceBy
 
-  const $els = []
+  const frag = doc.createDocumentFragment()
+  frag.appendChild(doc.createComment(` ${nodeName} w-for="${attr}" begin `))
 
   const temp = el.outerHTML
   each(isNone(data) ? [] : data, (value, key) => {
@@ -1539,21 +1676,22 @@ directive('w-for', function($el, attrs) {
     const scope = parentScope.$new(newScope)
 
     const nodes = compile(temp, scope, true)
-    if (traceBy) {
-      nodes.forEach((n) => {
-        if (n.nodeType !== 1) return
+    for (let i = 0; i < nodes.length; i ++) {
+      const n = nodes[i]
+      if (traceBy && n.nodeType === 1) {
         const id = n.getAttribute('data-id')
         if (id !== null) n.__wKey = 'g|' + keyScope + '|' + id
-      })
+      }
+      frag.appendChild(n)
     }
-    $els.push(...nodes)
   })
 
-  const $commentBegin = $(`<!-- ${nodeName} w-for="${attr}" begin -->`)
-  const $commentEnd = $(`<!-- ${nodeName} w-for="${attr}" end -->`)
+  frag.appendChild(doc.createComment(` ${nodeName} w-for="${attr}" end `))
+  el.replaceWith(frag)
+}
+wFor.native = true
+directive('w-for', wFor)
 
-  $el.replaceWith([$commentBegin, ...$els, $commentEnd])
-})
 function sanitizeSvg(str) {
   const tpl = document.createElement('template')
   tpl.innerHTML = str
@@ -1575,37 +1713,46 @@ function sanitizeSvg(str) {
 
   return tpl.innerHTML
 }
-directive('w-html', function ($el, attrs) {
+function wHtml(el, attrs) {
   // принимаем и w-html="item.icon", и w-html="{{ item.icon }}"
   const exp = attrs['w-html'].replace(/^\{\{\s*|\s*\}\}$/g, '')
-  const ctx = { view: this.view, el: $el[0], attr: 'w-html', expr: exp }
+  const ctx = { view: this.view, el, attr: 'w-html', expr: exp }
   const html = safeParse(this.scope, exp, ctx)
   if (isNone(html)) report(`w-html получил ${html}`, { ...ctx, scope: this.scope })
 
-  $el.removeAttr('w-html')
-  $el.html(sanitizeSvg(isNone(html) ? '' : String(html)))
-})
-directive('w-if', function($el, attrs) {
+  el.removeAttribute('w-html')
+  el.innerHTML = sanitizeSvg(isNone(html) ? '' : String(html))
+}
+wHtml.native = true
+directive('w-html', wHtml)
+
+function wIf(el, attrs) {
   const attr = attrs['w-if']
   const value = this.scope.parse(attr)
-  return value ? $el : `<!-- ${getNodeName($el[0])} w-if="${attr}" (hidden) -->`
-})
+  return value ? el : el.ownerDocument.createComment(` ${getNodeName(el)} w-if="${attr}" (hidden) `)
+}
+wIf.native = true
+directive('w-if', wIf)
 
-directive('w-id', function($el, attrs) {
-  const attr = attrs['w-id']
-  const value = this.scope.parse(attr)
-  $el.attr('id', value)
-})
+function wId(el, attrs) {
+  const value = this.scope.parse(attrs['w-id'])
+  if (value === null) el.removeAttribute('id')
+  else if (value !== undefined) el.setAttribute('id', value)   // как jQuery.attr: undefined ничего не меняет
+}
+wId.native = true
+directive('w-id', wId)
 
-directive('w-class', function($el, attrs) {
-  const attr = attrs['w-class']
-  const obj = this.scope.parse(attr)
-  each(obj, (value ,key) => {
+function wClass(el, attrs) {
+  const obj = this.scope.parse(attrs['w-class'])
+  each(obj, (value, key) => {
     if (value) {
-      $el.addClass(key)
+      const names = key.split(/\s+/).filter(Boolean)
+      if (names.length) el.classList.add(...names)
     }
   })
-})
+}
+wClass.native = true
+directive('w-class', wClass)
 
 directive('w-value', null, function($el, attrs) {
   const attr = attrs['w-value']
@@ -1631,37 +1778,40 @@ directive('w-selected', null, function($el, attrs) {
   $el.prop('selected', !!value)
 })
 
-directive(
-    'w-bind',
-    null,
-    function($el, attrs) {
-      const attr = attrs['w-bind']
-      const value = this.scope.parse(attr)
+const BIND_CHANGE = '[type=checkbox],[type=radio],[type=color],[type=date],[type=datetime-local],[type=week],[type=file],select'
 
-      const event = $el.is('[type=checkbox],[type=radio],[type=color],[type=date],[type=datetime-local],[type=week],[type=file],select') ? 'change' : 'input'
-      const checkbox = $el.is('[type=checkbox]')
-      const radio = $el.is('[type=radio]')
+function bindSync($el, ctx, attrs, data) {
+  const attr = attrs['w-bind']
+  const value = ctx.scope.parse(attr)
+  data.scope = ctx.scope
+  data.attr = attr
 
-      if (checkbox) {
-        $el.prop('checked', !!value)
-      }
-      else if (radio) {
-        $el.prop('checked', value === $el.val())
-      }
-      else {
-        $el.val(value)
-      }
+  if ($el.is('[type=checkbox]')) {
+    $el.prop('checked', !!value)
+  }
+  else if ($el.is('[type=radio]')) {
+    $el.prop('checked', value === $el.val())
+  }
+  else {
+    $el.val(value)
+  }
+}
 
-      const callback = (e) => {
-        const value = checkbox ? $el.prop('checked') : e.target.value
-        this.scope.assign(attr, value)
-      }
-
-      $el.on(event, callback)
-      return () => $el.off(event, callback)
-    },
-)
-
+directive('w-bind', {
+  mounted($el, attrs, data) {
+    const el = $el[0]
+    const checkbox = el.matches('[type=checkbox]')
+    bindSync($el, this, attrs, data)
+    // scope и путь обновляются на каждом рендере (w-for пересоздаёт локальный scope), слушатель один
+    data.listener = (e) => {
+      data.scope.assign(data.attr, checkbox ? el.checked : e.target.value)
+    }
+    el.addEventListener(el.matches(BIND_CHANGE) ? 'change' : 'input', data.listener)
+  },
+  updated($el, attrs, data) {
+    bindSync($el, this, attrs, data)
+  },
+})
 directive('w-src', null, function($el, attrs) {
   const attr = attrs['w-src']
   const ctx = { view: this.view, el: $el[0], attr: 'w-src', expr: attr }
@@ -1673,32 +1823,69 @@ directive('w-src', null, function($el, attrs) {
   $el.attr('src', value)
 })
 
+// Делегирование: один слушатель на событие на корень view, обработчик ищется по expando элемента (el.__wOn).
+// Раньше на каждый рендер для каждого w-on строился путь nth-of-type и заново вешался jQuery-обработчик.
+const NON_BUBBLING = ['focus', 'blur', 'mouseenter', 'mouseleave', 'pointerenter', 'pointerleave', 'scroll', 'load', 'error', 'toggle']
+
+function delegateOn(root, event) {
+  const set = root.__wDelegates || (root.__wDelegates = new Set())
+  if (set.has(event)) return
+  set.add(event)
+
+  const direct = NON_BUBBLING.indexOf(event) !== -1
+  root.addEventListener(event, (e) => {
+    let je = null
+    for (let el = e.target; el && el !== root; el = el.parentNode) {
+      if (direct && el !== e.target) break
+      const h = el.__wOn && el.__wOn[event]
+      // обработчик чужого view (компонент внутри нашего DOM) обслуживает его собственный корень
+      if (!h || h.root !== root) continue
+
+      if (!je) {
+        je = $.event && $.event.fix ? $.event.fix(e) : e   // jQuery.Event: originalEvent, which и т.д., как раньше
+        if (je !== e) je.delegateTarget = root
+      }
+      if (je !== e) je.currentTarget = el
+
+      const state = h.view.__state
+      let res
+      if (h.params) {
+        const args = h.params.map(arg => h.scope.parse(arg))
+        res = h.fn.call(h.view, state, ...args)
+      }
+      else {
+        res = h.fn.call(h.view, state)
+      }
+      if (typeof res === 'function') res = res.call(el, je)
+
+      if (res === false) {
+        je.preventDefault()
+        je.stopPropagation()
+      }
+      if (je.isPropagationStopped ? je.isPropagationStopped() : e.cancelBubble) break
+    }
+  }, direct)
+}
+
 directive('w-on', null, function($el, attrs) {
+  const el = $el[0]
   const attr = attrs['w-on']
   const [event, method] = attr.split(':')
   const [name, params] = parseKey(method)
 
-  const { view, $root, scope } = this
+  const { view, scope } = this
   const fn = view.fn(name)
-  if (!fn) {
+  const root = view.__root
+  if (!fn || !root) {
     return
   }
 
-  let f = fn
-  if (params) {
-    f = function(state) {
-      const args = params.map(arg => scope.parse(arg))
-      return fn.call(this, state, ...args)
-    }
-  }
+  const handlers = el.__wOn || (el.__wOn = {})
+  handlers[event] = { root, fn, params, scope, view }
+  delegateOn(root, event)
 
-  const path = getPath($el, $root)
-  if (!path) {
-    return
-  }
-
-  view.on(event, path, f)
-  return () => view.off(event, path, f)
+  // prepare() вызывает перед следующим рендером: не остаётся обработчиков от пропавших атрибутов
+  return () => { delete handlers[event] }
 })
 
 directive('w-transition', null, function ($el, attrs) {
