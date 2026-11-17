@@ -321,7 +321,31 @@ $('#app')
 от знаменитых решений, но, тем не менее, ими не являются. Это всё - самопис, как 
 и сам Wex.
 
+### Dropzone
+
+Область для перетаскивания или выбора файлов кликом, с предпросмотром и 
+обрезкой изображений, если нужно. 
+
+<img src="Education/Картинки/Dropzone.png">
+
+```html 
+<script src="https://cdn.jsdelivr.net/gh/wemmbley/wex@master/dist/wex-dropzone.min.js"></script>
+```
+
+### Image Editor
+
+Автоматически доступен после перетаскивания файла картинок в Dropzone. 
+Так же доступен к использованию самовольно, в отрыве от Dropzone.
+
+<img src="Education/Картинки/ImageEditor.png">
+
+```html 
+<script src="https://cdn.jsdelivr.net/gh/wemmbley/wex@master/dist/wex-image-editor.min.js"></script>
+```
+
 ### Wysiwyg редактор
+
+Имеет встроенное JSON ASM-дерево с рекурсивными дочерними узлами.
 
 <img src="Education/Картинки/Wysiwyg.png">
 
@@ -329,6 +353,9 @@ $('#app')
 <script src="https://cdn.jsdelivr.net/gh/wemmbley/wex@master/dist/wex-editor.js"></script>
 ```
 ### Wysiwyg просмотрщик
+
+Нужен для просмотра сгенерированного JSON от Wysiwyg редактора.
+
 ```html
 <script src="https://cdn.jsdelivr.net/gh/wemmbley/wex@master/dist/wex-doc.js"></script>
 ```

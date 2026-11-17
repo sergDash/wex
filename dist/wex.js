@@ -91,7 +91,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /******/
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 6);
+/******/ 	return __webpack_require__(__webpack_require__.s = 7);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -101,12 +101,13 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 3 */,
 /* 4 */,
 /* 5 */,
-/* 6 */
+/* 6 */,
+/* 7 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony import */ var _wex_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(7);
+/* harmony import */ var _wex_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(8);
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "component", function() { return _wex_js__WEBPACK_IMPORTED_MODULE_0__["b"]; });
 
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "directive", function() { return _wex_js__WEBPACK_IMPORTED_MODULE_0__["c"]; });
@@ -117,27 +118,27 @@ __webpack_require__.r(__webpack_exports__);
 
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "useJQuery", function() { return _wex_js__WEBPACK_IMPORTED_MODULE_0__["g"]; });
 
-/* harmony import */ var _shared_state_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(17);
+/* harmony import */ var _shared_state_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(19);
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "shareState", function() { return _shared_state_js__WEBPACK_IMPORTED_MODULE_1__["a"]; });
 
-/* harmony import */ var _async_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(19);
+/* harmony import */ var _async_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(21);
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "createAsyncComponent", function() { return _async_js__WEBPACK_IMPORTED_MODULE_2__["a"]; });
 
-/* harmony import */ var _plugins_router_router_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(20);
+/* harmony import */ var _plugins_router_router_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(22);
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "createRouter", function() { return _plugins_router_router_js__WEBPACK_IMPORTED_MODULE_3__["a"]; });
 
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "route", function() { return _plugins_router_router_js__WEBPACK_IMPORTED_MODULE_3__["b"]; });
 
-/* harmony import */ var _wire__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(21);
+/* harmony import */ var _wire__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(23);
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "createWire", function() { return _wire__WEBPACK_IMPORTED_MODULE_4__["b"]; });
 
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "$wire", function() { return _wire__WEBPACK_IMPORTED_MODULE_4__["a"]; });
 
-/* harmony import */ var _w_lazy_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(23);
-/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "createLazy", function() { return _w_lazy_js__WEBPACK_IMPORTED_MODULE_5__["a"]; });
+/* harmony import */ var _lazy_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(25);
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "createLazy", function() { return _lazy_js__WEBPACK_IMPORTED_MODULE_5__["a"]; });
 
-/* harmony import */ var _w_prefetch_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(24);
-/* harmony import */ var _plugins_modal_modal_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(25);
+/* harmony import */ var _prefetch_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(26);
+/* harmony import */ var _plugins_modal_modal_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(27);
 
 
 
@@ -158,7 +159,7 @@ if (typeof window !== 'undefined') {
 }
 
 /***/ }),
-/* 7 */
+/* 8 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -170,14 +171,17 @@ if (typeof window !== 'undefined') {
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "d", function() { return filter; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "e", function() { return preloadComponent; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "g", function() { return useJQuery; });
-/* harmony import */ var scopex__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(8);
-/* harmony import */ var scopex__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(scopex__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var ts_fns__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(11);
-/* harmony import */ var ts_fns__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(12);
-/* harmony import */ var ts_fns__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(10);
-/* harmony import */ var ts_fns__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(16);
-/* harmony import */ var _utils_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(9);
-/* harmony import */ var _store__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(15);
+/* harmony import */ var _vendor_ScopeX__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(9);
+/* harmony import */ var _vendor_ScopeX__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_vendor_ScopeX__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(10);
+/* harmony import */ var _utils_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(11);
+/* harmony import */ var _store_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(17);
+/* harmony import */ var _reactive_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(18);
+function _regeneratorValues(e) { if (null != e) { var t = e["function" == typeof Symbol && Symbol.iterator || "@@iterator"], r = 0; if (t) return t.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) return { next: function next() { return e && r >= e.length && (e = void 0), { value: e && e[r++], done: !e }; } }; } throw new TypeError(_typeof(e) + " is not iterable"); }
+function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
+function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
+function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
+function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
 function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
@@ -188,18 +192,14 @@ function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) 
 function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
 function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
 function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
-function _regeneratorValues(e) { if (null != e) { var t = e["function" == typeof Symbol && Symbol.iterator || "@@iterator"], r = 0; if (t) return t.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) return { next: function next() { return e && r >= e.length && (e = void 0), { value: e && e[r++], done: !e }; } }; } throw new TypeError(_typeof(e) + " is not iterable"); }
-function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
-function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
-function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
-function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
 function ownKeys(e, r) { var t = Object.keys(e); if (Object.getOwnPropertySymbols) { var o = Object.getOwnPropertySymbols(e); r && (o = o.filter(function (r) { return Object.getOwnPropertyDescriptor(e, r).enumerable; })), t.push.apply(t, o); } return t; }
 function _objectSpread(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys(Object(t), !0).forEach(function (r) { _defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
 function _defineProperty(e, r, t) { return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, { value: t, enumerable: !0, configurable: !0, writable: !0 }) : e[r] = t, e; }
 function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
 function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-var WEX_VERSION = '1.2.2';
+var WEX_VERSION = '2.0.0';
+
 
 
 
@@ -268,7 +268,7 @@ function checkInterpolation(text, scp, ctx) {
     var expr = raw.trim();
     try {
       var v = scp.parse(expr);
-      if (Object(ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isNone */ "j"])(v)) {
+      if (Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isNone */ "e"])(v)) {
         report("\xAB{{ ".concat(expr, " }}\xBB \u0432\u0435\u0440\u043D\u0443\u043B ").concat(v), _objectSpread(_objectSpread({}, ctx), {}, {
           expr: expr,
           scope: scp
@@ -310,11 +310,82 @@ function _push(list, name, compile, affect) {
   }
   list.push([name, compile, affect, priority]);
 }
+
+// ---------- жизненный цикл директив ----------
+// directive(name, { compile, mounted, updated, unmounted, priority })
+//   compile($el, attrs)                  как раньше, на виртуальном дереве
+//   mounted($el, attrs, data)            один раз, когда элемент появился в DOM
+//   updated($el, attrs, data)            на каждый следующий рендер
+//   unmounted($el, data)                 когда элемент удалён из DOM или view размонтирован
+// this = { $root, scope, view, component } (как у affect). data живёт столько же, сколько элемент.
+function lifecycleAffect(name, def) {
+  return function ($el, attrs) {
+    var el = $el[0];
+    var bag = el.__wDirs || (el.__wDirs = {});
+    var rec = bag[name];
+    if (!rec) {
+      rec = bag[name] = {
+        def: def,
+        data: {},
+        ctx: this
+      };
+      if (def.mounted) def.mounted.call(this, $el, attrs, rec.data);
+    } else {
+      rec.ctx = this;
+      if (def.updated) def.updated.call(this, $el, attrs, rec.data);
+    }
+  };
+}
+function normalizeDirective(name, compile, affect, priority) {
+  if (compile && _typeof(compile) === 'object' && !(compile instanceof View)) {
+    var def = compile;
+    return [def.compile || null, lifecycleAffect(name, def), def.priority !== undefined ? def.priority : priority];
+  }
+  return [compile, affect, priority];
+}
+function teardownDirectives(el) {
+  var run = function run(node) {
+    var bag = node.__wDirs;
+    if (!bag) return;
+    delete node.__wDirs;
+    Object.keys(bag).forEach(function (name) {
+      var rec = bag[name];
+      if (!rec.def.unmounted) return;
+      try {
+        rec.def.unmounted.call(rec.ctx, $(node), rec.data);
+      } catch (e) {
+        console.error(e);
+      }
+    });
+  };
+  run(el);
+  if (el.querySelectorAll) el.querySelectorAll('*').forEach(run);
+}
+
+// удаляемый узел: размонтировать компоненты и директивы внутри
+function disposeNode(node) {
+  if (node.nodeType !== 1) return;
+  var els = [node].concat(_toConsumableArray(node.querySelectorAll('*')));
+  els.forEach(function (el) {
+    var comp = el.__jQvmComponent;
+    if (comp) {
+      comp.__cancelled = true;
+      comp.unmount();
+      delete el.__jQvmComponent;
+    }
+  });
+  teardownDirectives(node);
+}
 function component(name, compile, affect) {
   _push(globalComponents, name, compile, affect);
 }
 function directive(name, compile, affect, priority) {
-  _push(globalDirectives, name, compile, affect, priority);
+  var _normalizeDirective = normalizeDirective(name, compile, affect, priority),
+    _normalizeDirective2 = _slicedToArray(_normalizeDirective, 3),
+    c = _normalizeDirective2[0],
+    a = _normalizeDirective2[1],
+    p = _normalizeDirective2[2];
+  _push(globalDirectives, name, c, a, p);
 }
 function filter(name, fn) {
   globalFilters[name] = fn;
@@ -572,13 +643,13 @@ function compile($root, components, directives, state, view, _ref4) {
       // уже обработан вложенным compile (w-for) — повторно не трогаем
       if (el.__jQvmIterated) return;
       var $el = $(el);
-      var attrs = Object(_utils_js__WEBPACK_IMPORTED_MODULE_5__[/* getNodeAttrs */ "c"])(this);
-      var name = Object(_utils_js__WEBPACK_IMPORTED_MODULE_5__[/* getNodeName */ "d"])(this);
+      var attrs = Object(_utils_js__WEBPACK_IMPORTED_MODULE_2__[/* getNodeAttrs */ "c"])(this);
+      var name = Object(_utils_js__WEBPACK_IMPORTED_MODULE_2__[/* getNodeName */ "d"])(this);
       var els = [el];
       var inner = $el.html();
       var slot = function slot(locals) {
         var $root = $('<div />');
-        var subScope = locals ? locals instanceof scopex__WEBPACK_IMPORTED_MODULE_0__["ScopeX"] ? scope.$new(locals.data) : scope.$new(locals) : scope;
+        var subScope = locals ? locals instanceof _vendor_ScopeX__WEBPACK_IMPORTED_MODULE_0__["ScopeX"] ? scope.$new(locals.data) : scope.$new(locals) : scope;
         var nodes = compile($root, components, directives, state, view, [inner, subScope]);
         affect($root, scope, view);
         return nodes;
@@ -602,7 +673,7 @@ function compile($root, components, directives, state, view, _ref4) {
           var tag = proto.tag,
             attributes = proto.attributes;
           var $tag = $("<".concat(tag, " />"));
-          var attrsText = Object(_utils_js__WEBPACK_IMPORTED_MODULE_5__[/* createAttrsText */ "b"])(attrs);
+          var attrsText = Object(_utils_js__WEBPACK_IMPORTED_MODULE_2__[/* createAttrsText */ "b"])(attrs);
           var $commentBegin = $("<!-- ".concat(name, " ").concat(attrsText, " begin -->"));
           var $commentEnd = $("<!-- ".concat(name, " ").concat(attrsText, " end -->"));
           Object.assign(attrs, attributes, _defineProperty({}, 'data-hoist', name));
@@ -633,7 +704,7 @@ function compile($root, components, directives, state, view, _ref4) {
         var output = onCompile.call(ctx, $el, attrs, slot);
         if (output && output instanceof View) {
           useComponent(output);
-        } else if (!Object(ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isNone */ "j"])(output) && $el !== output) {
+        } else if (!Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isNone */ "e"])(output) && $el !== output) {
           var newEls = $('<div />').html(output)[0].childNodes;
           $el.replaceWith(newEls);
           els.length = 0;
@@ -660,7 +731,7 @@ function compile($root, components, directives, state, view, _ref4) {
     $els.each(function () {
       var el = this;
       var $el = $(el);
-      var attrs = Object(_utils_js__WEBPACK_IMPORTED_MODULE_5__[/* getNodeAttrs */ "c"])(this);
+      var attrs = Object(_utils_js__WEBPACK_IMPORTED_MODULE_2__[/* getNodeAttrs */ "c"])(this);
       var els = [el];
       if (typeof onCompile === 'function') {
         // developers can recompile inside fn
@@ -676,7 +747,7 @@ function compile($root, components, directives, state, view, _ref4) {
           interpolate: _interpolate
         };
         var output = onCompile.call(ctx, $el, attrs);
-        if (!Object(ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isNone */ "j"])(output) && $el !== output) {
+        if (!Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isNone */ "e"])(output) && $el !== output) {
           var $newEls = $(output);
           $el.replaceWith($newEls);
           els = _toConsumableArray($newEls);
@@ -725,7 +796,72 @@ function compile($root, components, directives, state, view, _ref4) {
   var nodes = _toConsumableArray($element[0].childNodes);
   return nodes;
 }
+
+// ---------- keyed diff ----------
+// Ключ узла:
+//   'g|…'  глобальный в пределах view: w-for ... traceby (ставит __wKey) и id. Узел и компонент
+//          переезжают между контейнерами, а не пересоздаются.
+//   'l|…'  локальный (ручной data-id): ищется только среди детей того же родителя.
+function keyOf(node) {
+  if (node.nodeType !== 1) return undefined;
+  if (node.__wKey !== undefined) return node.__wKey;
+  var id = node.getAttribute('id');
+  if (id) return 'g|id|' + id;
+  var d = node.getAttribute('data-id');
+  if (d !== null) return 'l|' + node.nodeName + '|' + d;
+  return undefined;
+}
 function diffAndPatch($root, nodes) {
+  var claimed = new Set(); // старые узлы, уже занятые новым деревом
+  var pending = []; // кандидаты на удаление: решение после обхода всего дерева
+  var localCache = new Map();
+  var globalIdx = null;
+  var addTo = function addTo(map, key, el) {
+    var list = map.get(key);
+    if (list) list.push(el);else map.set(key, [el]);
+  };
+  var localIndex = function localIndex(parent) {
+    var map = localCache.get(parent);
+    if (!map) {
+      map = new Map();
+      for (var c = parent.firstElementChild; c; c = c.nextElementSibling) {
+        var k = keyOf(c);
+        if (k !== undefined) addTo(map, k, c);
+      }
+      localCache.set(parent, map);
+    }
+    return map;
+  };
+
+  // одноразовый обход (лениво, только если ключ не найден среди детей); в чужие view не заходим
+  var globalIndex = function globalIndex() {
+    if (!globalIdx) {
+      globalIdx = new Map();
+      var _walk = function walk(el) {
+        for (var c = el.firstElementChild; c; c = c.nextElementSibling) {
+          var k = keyOf(c);
+          if (k !== undefined && k[0] === 'g') addTo(globalIdx, k, c);
+          if (!c.__jQvmComponent) _walk(c);
+        }
+      };
+      _walk($root[0]);
+    }
+    return globalIdx;
+  };
+  var pick = function pick(list) {
+    if (!list) return null;
+    for (var i = 0; i < list.length; i++) {
+      if (!claimed.has(list[i])) return list[i];
+    }
+    return null;
+  };
+  var take = function take(key, parent) {
+    var el = pick(localIndex(parent).get(key));
+    if (!el && key[0] === 'g') el = pick(globalIndex().get(key));
+    if (el) claimed.add(el);
+    return el;
+  };
+
   // we will not use next to replace current node, so we should transform record info to old node
   var transferRecord = function transferRecord(current, next) {
     var record = next.__jQvmCompiledRecord;
@@ -743,8 +879,8 @@ function diffAndPatch($root, nodes) {
   var diffAndPatchNode = function diffAndPatchNode($current, $next) {
     var current = $current[0];
     var next = $next[0];
-    var currentAttrs = Object(_utils_js__WEBPACK_IMPORTED_MODULE_5__[/* getNodeAttrs */ "c"])(current);
-    var nextAttrs = Object(_utils_js__WEBPACK_IMPORTED_MODULE_5__[/* getNodeAttrs */ "c"])(next);
+    var currentAttrs = Object(_utils_js__WEBPACK_IMPORTED_MODULE_2__[/* getNodeAttrs */ "c"])(current);
+    var nextAttrs = Object(_utils_js__WEBPACK_IMPORTED_MODULE_2__[/* getNodeAttrs */ "c"])(next);
     var currentAttrNames = Object.keys(currentAttrs);
     var nextAttrNames = Object.keys(nextAttrs);
 
@@ -758,7 +894,7 @@ function diffAndPatch($root, nodes) {
     });
 
     // remove no use attrs
-    var diffAttrNames = Object(ts_fns__WEBPACK_IMPORTED_MODULE_2__[/* diffArray */ "b"])(currentAttrNames, nextAttrNames);
+    var diffAttrNames = Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* diffArray */ "a"])(currentAttrNames, nextAttrNames);
     diffAttrNames.forEach(function (name) {
       // keep style and class attributes
       if (name === 'style' || name === 'class' || name === 'w-name') {
@@ -766,6 +902,7 @@ function diffAndPatch($root, nodes) {
       }
       $current.removeAttr(name);
     });
+    if (next.__wKey !== undefined) current.__wKey = next.__wKey;
     transferRecord(current, next);
 
     // dont diff component inner content
@@ -780,7 +917,7 @@ function diffAndPatch($root, nodes) {
         return;
       }
       var ignoreAttrs = ['style', 'class', 'w-name'];
-      if (current.nodeName === next.nodeName && $current.attr('data-hoist') === $next.attr('data-hoist') && Object(ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isEqual */ "f"])(currentAttrNames.filter(function (item) {
+      if (current.nodeName === next.nodeName && $current.attr('data-hoist') === $next.attr('data-hoist') && Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isEqual */ "c"])(currentAttrNames.filter(function (item) {
         return !ignoreAttrs.includes(item);
       }), nextAttrNames.filter(function (item) {
         return !ignoreAttrs.includes(item);
@@ -794,82 +931,57 @@ function diffAndPatch($root, nodes) {
   var diffAndPatchChildren = function diffAndPatchChildren($parent, nextChildren) {
     var parentNode = $parent[0];
 
-    // append all children at once if current is empty inside
-    if (!parentNode.childNodes.length) {
+    // пустой родитель без ключей: просто добавляем всё разом
+    if (!parentNode.childNodes.length && !nextChildren.some(function (n) {
+      return keyOf(n) !== undefined;
+    })) {
       nextChildren.forEach(function (child) {
         parentNode.appendChild(child);
       });
       return;
     }
+
+    // инвариант: после шага i parentNode.childNodes[i] соответствует nextChildren[i]
     nextChildren.forEach(function (next, i) {
-      var $next = $(next);
-      var current = parentNode.childNodes[i];
-      var $current = $(current);
-      var nextId = $next.attr('id');
-      var nextDataId = $next.attr('data-id');
-      var move = function move($prev) {
-        if ($prev.length) {
-          var prev = $prev[0];
-          // move it
-          if (prev !== current) {
-            parentNode.insertBefore(prev, current);
-            transferRecord(current, next);
-          }
-          // update the node
-          diffAndPatchNode($prev, $next);
+      var current = parentNode.childNodes[i] || null;
+      var key = keyOf(next);
+      if (key !== undefined) {
+        var found = take(key, parentNode);
+        if (found) {
+          if (found !== current) parentNode.insertBefore(found, current);
+          diffAndPatchNode($(found), $(next));
         } else {
           parentNode.insertBefore(next, current);
         }
-      };
-
-      // current index node not existing, insert the coming node directly
-      if (!current) {
+      } else if (!current) {
         parentNode.appendChild(next);
       }
-      // use `jq-id` to unique element
-      else if (nextId) {
-        var $prev = $parent.find("[id=".concat(nextId, "]"));
-        move($prev);
-      } else if (nextDataId) {
-        var _$prev = $parent.find("[data-id=\"".concat(nextDataId, "\"]"));
-        move(_$prev);
-      }
-      // insert coming child directly
-      else if (next.nodeName !== current.nodeName) {
+      // чужой ключевой узел не патчим под безключевой: вставляем рядом
+      else if (next.nodeName !== current.nodeName || keyOf(current) !== undefined) {
         parentNode.insertBefore(next, current);
       }
       // diff and patch element
       else if (next.nodeName.indexOf('#') !== 0) {
-        diffAndPatchNode($current, $next);
+        diffAndPatchNode($(current), $(next));
       }
       // diff and patch text
-      else {
-        if (next.textContent !== current.textContent) {
-          current.textContent = next.textContent;
-        }
+      else if (next.textContent !== current.textContent) {
+        current.textContent = next.textContent;
       }
     });
 
-    // remove no use elements
+    // хвост: не удаляем сразу, узел мог переехать в другой контейнер
     for (var i = parentNode.childNodes.length - 1, start = nextChildren.length; i >= start; i--) {
-      var child = parentNode.childNodes[i];
-      if (child.__jQvmComponent) {
-        child.__jQvmComponent.__cancelled = true;
-        child.__jQvmComponent.unmount();
-        delete child.__jQvmComponent;
-      }
-      var all = $(child).find('*');
-      all.each(function () {
-        if (this.__jQvmComponent) {
-          this.__jQvmComponent.__cancelled = true;
-          this.__jQvmComponent.unmount();
-          delete this.__jQvmComponent;
-        }
-      });
-      parentNode.removeChild(child);
+      pending.push(parentNode.childNodes[i]);
     }
   };
   diffAndPatchChildren($root, nodes);
+  pending.forEach(function (node) {
+    var parent = node.parentNode;
+    if (claimed.has(node) || !parent) return;
+    disposeNode(node);
+    parent.removeChild(node);
+  });
 }
 var inertDoc = null;
 function inertBox(html) {
@@ -969,7 +1081,7 @@ function affect($root, scope, view) {
 
         // --- props ---
         var outside = {};
-        Object(ts_fns__WEBPACK_IMPORTED_MODULE_3__[/* each */ "b"])(attrs, function (exp, attr) {
+        Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* each */ "b"])(attrs, function (exp, attr) {
           if (attr.indexOf(':') === 0) {
             var ctx = {
               view: view,
@@ -979,15 +1091,15 @@ function affect($root, scope, view) {
               source: source
             };
             var value = safeParse(finalScope, exp, ctx);
-            if (Object(ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isNone */ "j"])(value)) {
+            if (Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isNone */ "e"])(value)) {
               report("\u041F\u0440\u043E\u043F \xAB".concat(attr.substring(1), "\xBB \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430 \xAB").concat(name, "\xBB \u043F\u043E\u043B\u0443\u0447\u0438\u043B ").concat(value), _objectSpread(_objectSpread({}, ctx), {}, {
                 scope: finalScope
               }));
             }
-            outside[Object(_utils_js__WEBPACK_IMPORTED_MODULE_5__[/* camelCase */ "a"])(attr.substring(1))] = value;
+            outside[Object(_utils_js__WEBPACK_IMPORTED_MODULE_2__[/* camelCase */ "a"])(attr.substring(1))] = value;
           } else if (attr.indexOf('@') === 0) {
-            var event = Object(_utils_js__WEBPACK_IMPORTED_MODULE_5__[/* camelCase */ "a"])(attr.substring(1));
-            var _parseKey = Object(_utils_js__WEBPACK_IMPORTED_MODULE_5__[/* parseKey */ "f"])(exp),
+            var event = Object(_utils_js__WEBPACK_IMPORTED_MODULE_2__[/* camelCase */ "a"])(attr.substring(1));
+            var _parseKey = Object(_utils_js__WEBPACK_IMPORTED_MODULE_2__[/* parseKey */ "f"])(exp),
               _parseKey2 = _slicedToArray(_parseKey, 2),
               fname = _parseKey2[0],
               params = _parseKey2[1];
@@ -1005,10 +1117,10 @@ function affect($root, scope, view) {
               for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
                 args[_key] = arguments[_key];
               }
-              if (Object(ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(res)) return res.apply(this, args);
+              if (Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "d"])(res)) return res.apply(this, args);
             };
           } else if (attr.indexOf('_') !== 0) {
-            outside[Object(_utils_js__WEBPACK_IMPORTED_MODULE_5__[/* camelCase */ "a"])(attr)] = exp;
+            outside[Object(_utils_js__WEBPACK_IMPORTED_MODULE_2__[/* camelCase */ "a"])(attr)] = exp;
           }
         });
         component.update(outside, SYMBOL);
@@ -1060,6 +1172,7 @@ function affect($root, scope, view) {
 
 // ---------------- main ---------------
 
+// начальное состояние клона: свои копии plain-данных (state по ссылке живёт только через props и shareState)
 function cloneState(value) {
   if (Array.isArray(value)) return value.map(cloneState);
   if (value && Object.getPrototypeOf(value) === Object.prototype) {
@@ -1097,7 +1210,7 @@ function vm() {
   var fns = {};
   function component(name, compile, affect) {
     // component('my-button', './components/button.html')
-    if (Object(ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isString */ "m"])(compile)) {
+    if (Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isString */ "g"])(compile)) {
       var entry = loadRemote(compile, affect); // affect здесь = { lazy: true }
       var placeholder = function placeholder() {
         entry.load();
@@ -1125,7 +1238,12 @@ function vm() {
     return view;
   }
   function directive(name, compile, affect, priority) {
-    _push(directives, name, compile, affect, priority);
+    var _normalizeDirective3 = normalizeDirective(name, compile, affect, priority),
+      _normalizeDirective4 = _slicedToArray(_normalizeDirective3, 3),
+      c = _normalizeDirective4[0],
+      a = _normalizeDirective4[1],
+      p = _normalizeDirective4[2];
+    _push(directives, name, c, a, p);
     return view;
   }
   function filter(name, fn) {
@@ -1133,68 +1251,67 @@ function vm() {
     return view;
   }
 
-  // ------------
+  // ------------ планировщик рендера ------------
+  // Любая мутация state (или вложенного объекта) помечает view грязным; рендер батчится в микротаске.
+  // hold()/release(): на время drag и подобных операций рендер откладывается, release() выполняет его синхронно.
 
-  var latestHash = null;
-  var nextTick = Object(ts_fns__WEBPACK_IMPORTED_MODULE_4__[/* throttle */ "a"])(function (e) {
-    if (!state || !latestHash) {
-      return;
-    }
-    var currentHash = Object(ts_fns__WEBPACK_IMPORTED_MODULE_3__[/* getObjectHash */ "c"])(state);
-    if (latestHash !== currentHash) {
-      var needToUpdate = e ? change(e) : true;
-      if (needToUpdate) {
-        render(true);
-      }
-    }
-    latestHash = currentHash;
-  }, 16);
-  var currTick = function currTick() {
-    latestHash = Object(ts_fns__WEBPACK_IMPORTED_MODULE_3__[/* getObjectHash */ "c"])(state);
+  var dirty = false;
+  var queued = false;
+  var held = 0;
+  var skipped = false; // рендер был отменён через $update + prevent
+  var lastInfo = null;
+  var unsubscribe = null;
+  var schedule = function schedule(info) {
+    lastInfo = info;
+    dirty = true;
+    if (queued || held || !isMounted) return;
+    queued = true;
+    Promise.resolve().then(flush);
   };
+  function flush() {
+    queued = false;
+    if (!dirty || held || !state || !isMounted) return;
+    dirty = false;
+    if (change(lastInfo)) render(true);
+  }
 
   // -------------
 
-  var outsideHashes = {};
-  var assignOutsideState = function assignOutsideState(state, outsideState, init) {
+  // props приходят по ссылке: реактивные данные родителя остаются теми же объектами
+  var assignOutsideState = function assignOutsideState(state, outsideState) {
     if (!state) return false;
     var keys = {};
     Object.keys(state).forEach(function (k) {
       keys[k.toLowerCase()] = k;
     });
-    var next = {};
-    Object(ts_fns__WEBPACK_IMPORTED_MODULE_3__[/* each */ "b"])(outsideState, function (value, key) {
+    var changed = false;
+    Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* each */ "b"])(outsideState, function (value, key) {
       if (key[0] === '@') return;
       var realKey = key in state ? key : keys[key.toLowerCase()];
       if (!realKey) return;
-      var hash = Object(ts_fns__WEBPACK_IMPORTED_MODULE_3__[/* getObjectHash */ "c"])(value);
-      if (!init && outsideHashes[key] === hash && Object(ts_fns__WEBPACK_IMPORTED_MODULE_3__[/* getObjectHash */ "c"])(state[realKey]) === hash) return;
-      outsideHashes[key] = hash;
-      next[realKey] = cloneState(value);
-      // ранее здесь было прямое присвоение value но у нас кривой CreateProxy из ts-fns модуля. createProxy ребёнка не принимает уже проксированное значение: внутри всегда 0 почему-то. Решение - клонировать. Там внутри все передается.
-      // Побочный эффект: Ребёнок теперь работает со своей копией пропа. Если где-то ребёнок пишет в проп и ждёт, что родитель увидит изменение, это перестанет работать. Для пропов только на чтение, как menu, posts и article, это не мешает. Если у вас есть компоненты, которые пишут в проп, лучше передавать им колбэк через @event.
+      var prev = Object(_reactive_js__WEBPACK_IMPORTED_MODULE_4__[/* toRaw */ "d"])(state[realKey]);
+      var next = Object(_reactive_js__WEBPACK_IMPORTED_MODULE_4__[/* toRaw */ "d"])(value);
+      if (prev === next) return;
+      // литерал из выражения (`:x="{a:1}"`) создаётся заново на каждый рендер родителя: сравниваем по содержимому
+      if (!Object(_reactive_js__WEBPACK_IMPORTED_MODULE_4__[/* isReactive */ "a"])(value) && Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isEqual */ "c"])(prev, next)) return;
+      state[realKey] = next;
+      changed = true;
     });
-    Object.assign(state, next);
-    return Object.keys(next).length > 0;
+    return changed;
   };
   function init(initState) {
-    var next = Object(ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(initState) ? initState.call(view) : initState;
+    var next = Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "d"])(initState) ? initState.call(view) : initState;
     if (!next || _typeof(next) !== 'object') {
       throw new Error('initState should must be an object');
     }
+    state = Object(_reactive_js__WEBPACK_IMPORTED_MODULE_4__[/* reactive */ "b"])(next); // shareState отдаёт один и тот же прокси всем view
     if (outside) {
-      assignOutsideState(next, outside, true);
+      assignOutsideState(state, outside);
     }
-    state = Object(ts_fns__WEBPACK_IMPORTED_MODULE_3__[/* createProxy */ "a"])(next, {
-      dispatch: nextTick,
-      enumerable: function enumerable() {
-        return true;
-      }
-    });
-    scope = new scopex__WEBPACK_IMPORTED_MODULE_0__["ScopeX"](state, {
+    unsubscribe = Object(_reactive_js__WEBPACK_IMPORTED_MODULE_4__[/* subscribe */ "c"])(state, schedule);
+    scope = new _vendor_ScopeX__WEBPACK_IMPORTED_MODULE_0__["ScopeX"](state, {
       filters: filters
     });
-    currTick();
 
     // setupSpecialEvents should be invoked here
     // because these events should be registered before $init triggered
@@ -1206,8 +1323,10 @@ function vm() {
       return;
     }
     if (!shouldUpdate()) {
+      skipped = true;
       return;
     }
+    skipped = false;
     var $root = getMountNode();
     prepare($root);
     var nodes = compile($root, components, directives, state, view, [$template.html(), scope]);
@@ -1220,21 +1339,21 @@ function vm() {
     var attrs = $template.attr('attrs');
     if (attrs) {
       var props = scope.parse(attrs);
-      Object(ts_fns__WEBPACK_IMPORTED_MODULE_3__[/* each */ "b"])(props, function (value, key) {
+      Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* each */ "b"])(props, function (value, key) {
         if (key === 'class') {
           var items = value.split(' ');
           items.forEach(function (item) {
             return $root.addClass(item);
           });
         } else if (key === 'style') {
-          if (Object(ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "l"])(value)) {
+          if (Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "f"])(value)) {
             $root.css(value);
-          } else if (Object(ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isString */ "m"])(value)) {
+          } else if (Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isString */ "g"])(value)) {
             var style = $root.attr('style') || '';
             var rules = style.split(';').concat(value.split(';')).filter(function (item) {
               return !!item;
             });
-            var stylesheet = Object(ts_fns__WEBPACK_IMPORTED_MODULE_2__[/* uniqueArray */ "d"])(rules).join(';');
+            var stylesheet = Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* uniqueArray */ "h"])(rules).join(';');
             $root.attr('style', stylesheet);
           }
         } else {
@@ -1244,14 +1363,14 @@ function vm() {
     }
     $template.trigger('$render');
   }
-  function change(e) {
+  function change(info) {
     var flag = true;
     var prevent = function prevent() {
       return flag = false;
     };
-    $template.trigger('$change', [state, e, prevent]);
+    $template.trigger('$change', [state, info, prevent]);
     if (flag) {
-      _store__WEBPACK_IMPORTED_MODULE_6__[/* VMLocalStorage */ "a"].reloadJqvmLocalStorage(state, '$change');
+      _store_js__WEBPACK_IMPORTED_MODULE_3__[/* VMLocalStorage */ "a"].reloadJqvmLocalStorage(state, '$change');
     }
     return flag;
   }
@@ -1299,7 +1418,8 @@ function vm() {
       $template.after($root);
     }
     render();
-    _store__WEBPACK_IMPORTED_MODULE_6__[/* VMLocalStorage */ "a"].reloadJqvmLocalStorage(state, '$mount');
+    dirty = false;
+    _store_js__WEBPACK_IMPORTED_MODULE_3__[/* VMLocalStorage */ "a"].reloadJqvmLocalStorage(state, '$mount');
     $template.trigger('$mount', [state]);
     isMounted = true;
     isUnmounted = false;
@@ -1314,6 +1434,7 @@ function vm() {
       return;
     }
     $template.trigger('$unmount');
+    teardownDirectives($root[0]);
     if (mountTo) {
       $root.html('');
       $root.removeAttr('w-name');
@@ -1329,37 +1450,30 @@ function vm() {
     $template.trigger('$beforeDestroy');
     var $root = getMountNode();
     unmount();
+    if (unsubscribe) unsubscribe();
+    unsubscribe = null;
     state = null;
     scope = null;
     actions.length = 0;
     var root = $root[0];
-    delete root.__jQvmComponentInstances;
-    delete root.__jQvmCompiledRecords;
+    if (root) {
+      delete root.__jQvmComponentInstances;
+      delete root.__jQvmCompiledRecords;
+    }
     $template.trigger('$destroy');
   }
-  var forcePending = false;
-  var scheduleForce = function scheduleForce() {
-    if (forcePending) return;
-    forcePending = true;
-    Promise.resolve().then(function () {
-      forcePending = false;
-      if (isMounted && state) {
-        render(true);
-        currTick();
-      }
-    });
-  };
   function update(nextState, type) {
+    // props от родителя: рендер запустит подписка на state
     if (type === SYMBOL) {
-      var changed = state ? assignOutsideState(state, nextState) : false;
       outside = nextState;
-      if (changed && isMounted) scheduleForce();
+      if (state) assignOutsideState(state, nextState);
       return view;
     }
 
     // force update
     if (nextState === true) {
       if (isMounted) {
+        dirty = false;
         render(true);
       }
       return view;
@@ -1367,23 +1481,30 @@ function vm() {
 
     // when nextState passed, assign to state will trigger rerender
     if (state && nextState) {
-      if (Object(ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(nextState)) {
+      if (Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "d"])(nextState)) {
         var res = nextState(state);
-        if (Object(ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "l"])(res)) {
+        if (Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "f"])(res)) {
           Object.assign(state, res);
-        } else if (isMounted) {
-          nextTick();
+        } else {
+          schedule(null); // мутации не-plain объектов (Chart.js) не видны прокси: помечаем вручную
         }
-        return view;
-      } else if (Object(ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "l"])(nextState)) {
+      } else if (Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "f"])(nextState)) {
         Object.assign(state, nextState);
-        return view;
       }
     }
+    return view;
+  }
 
-    // if not passed nextState, it means to check manually
-    if (isMounted && nextState) {
-      nextTick();
+  // отложить рендер до release(); вызовы вкладываются
+  function hold() {
+    held++;
+    return view;
+  }
+
+  // release() рендерит синхронно, если за время hold что-то изменилось (или рендер был отменён через $update + prevent)
+  function release() {
+    if (held > 0 && --held === 0) {
+      if (dirty) flush();else if (skipped) render(true);
     }
     return view;
   }
@@ -1410,7 +1531,7 @@ function vm() {
         fn.call.apply(fn, [view, state].concat(eventArgs));
       } else {
         var callback = fn.call(view, state);
-        if (Object(ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(callback)) {
+        if (Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "d"])(callback)) {
           res = callback.call.apply(callback, [this, e].concat(eventArgs));
         }
       }
@@ -1473,7 +1594,7 @@ function vm() {
       var key = '@' + event in outside ? '@' + event : Object.keys(outside).find(function (k) {
         return k.toLowerCase() === lower;
       });
-      if (key && Object(ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(outside[key])) {
+      if (key && Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "d"])(outside[key])) {
         var _outside;
         (_outside = outside)[key].apply(_outside, args);
       }
@@ -1483,12 +1604,12 @@ function vm() {
     if (event[0] !== '$') {
       return;
     }
-    // trigger those bind to view root
-    actions.forEach(function (item) {
-      if (item.event === event) {
-        $template.trigger.apply($template, [event].concat(args));
-      }
-    });
+    // trigger those bind to view root: один trigger на событие (каждый обработчик вызывается один раз)
+    if (actions.some(function (item) {
+      return item.event === event;
+    })) {
+      $template.trigger(event, args);
+    }
   }
   function setupSpecialEvents() {
     actions.forEach(function (item) {
@@ -1549,11 +1670,11 @@ function vm() {
   }
   function clone() {
     // свой <template> и своя копия начального состояния на каждый экземпляр
-    var newView = vm.call($template.clone(), Object(ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(initState) ? initState : cloneState(initState));
-    Object(ts_fns__WEBPACK_IMPORTED_MODULE_3__[/* each */ "b"])(fns, function (action, name) {
+    var newView = vm.call($template.clone(), Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "d"])(initState) ? initState : cloneState(initState));
+    Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* each */ "b"])(fns, function (action, name) {
       newView.fn(name, action);
     });
-    Object(ts_fns__WEBPACK_IMPORTED_MODULE_3__[/* each */ "b"])(actions, function (item) {
+    Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* each */ "b"])(actions, function (item) {
       var type = item.type,
         event = item.event,
         selector = item.selector,
@@ -1562,19 +1683,19 @@ function vm() {
       var m = type === 'one' ? 'once' : 'on';
       newView[m].apply(newView, _toConsumableArray(info).concat([fn]));
     });
-    Object(ts_fns__WEBPACK_IMPORTED_MODULE_3__[/* each */ "b"])(components, function (item) {
+    Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* each */ "b"])(components, function (item) {
       if (globalComponents.includes(item)) {
         return;
       }
       newView.component.apply(newView, _toConsumableArray(item));
     });
-    Object(ts_fns__WEBPACK_IMPORTED_MODULE_3__[/* each */ "b"])(directives, function (item) {
+    Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* each */ "b"])(directives, function (item) {
       if (globalDirectives.includes(item)) {
         return;
       }
       newView.directive.apply(newView, _toConsumableArray(item));
     });
-    Object(ts_fns__WEBPACK_IMPORTED_MODULE_3__[/* each */ "b"])(filters, function (fn, name) {
+    Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* each */ "b"])(filters, function (fn, name) {
       newView.filter(name, fn);
     });
 
@@ -1629,6 +1750,8 @@ function vm() {
     unmount: unmount,
     destroy: destroy,
     update: update,
+    hold: hold,
+    release: release,
     find: find,
     component: component,
     directive: directive,
@@ -1639,8 +1762,8 @@ function vm() {
     clone: clone
   });
   var tempEl = $template[0];
-  var tag = Object(_utils_js__WEBPACK_IMPORTED_MODULE_5__[/* getNodeName */ "d"])(tempEl);
-  var attributes = Object(_utils_js__WEBPACK_IMPORTED_MODULE_5__[/* getNodeAttrs */ "c"])(tempEl);
+  var tag = Object(_utils_js__WEBPACK_IMPORTED_MODULE_2__[/* getNodeName */ "d"])(tempEl);
+  var attributes = Object(_utils_js__WEBPACK_IMPORTED_MODULE_2__[/* getNodeAttrs */ "c"])(tempEl);
   Object.defineProperties(view, {
     tag: {
       value: tag
@@ -1661,7 +1784,7 @@ directive('w-for', function ($el, attrs) {
     throw new Error('w-for should match formatter `value,key in data traceby id`!');
   }
   var el = $el[0];
-  var nodeName = Object(_utils_js__WEBPACK_IMPORTED_MODULE_5__[/* getNodeName */ "d"])(el);
+  var nodeName = Object(_utils_js__WEBPACK_IMPORTED_MODULE_2__[/* getNodeName */ "d"])(el);
   var _attr$split = attr.split(' '),
     _attr$split2 = _slicedToArray(_attr$split, 5),
     kv = _attr$split2[0],
@@ -1689,15 +1812,26 @@ directive('w-for', function ($el, attrs) {
   if (traceBy) {
     $el.attr('data-id', "{{".concat(traceBy, "}}")); // modify the template, this will be compiled
   }
+
+  // глобальный ключ: один и тот же список в разных контейнерах (колонки канбана) даёт совместимые ключи,
+  // поэтому keyed diff переносит узел и компонент между контейнерами
+  var keyScope = nodeName + '|' + dataKey + '|' + traceBy;
   var $els = [];
   var temp = el.outerHTML;
-  Object(ts_fns__WEBPACK_IMPORTED_MODULE_3__[/* each */ "b"])(Object(ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isNone */ "j"])(data) ? [] : data, function (value, key) {
+  Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* each */ "b"])(Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isNone */ "e"])(data) ? [] : data, function (value, key) {
     var newScope = _defineProperty({}, valueName, value);
     if (keyName) {
       newScope[keyName] = key;
     }
     var scope = parentScope.$new(newScope);
     var nodes = compile(temp, scope, true);
+    if (traceBy) {
+      nodes.forEach(function (n) {
+        if (n.nodeType !== 1) return;
+        var id = n.getAttribute('data-id');
+        if (id !== null) n.__wKey = 'g|' + keyScope + '|' + id;
+      });
+    }
     $els.push.apply($els, _toConsumableArray(nodes));
   });
   var $commentBegin = $("<!-- ".concat(nodeName, " w-for=\"").concat(attr, "\" begin -->"));
@@ -1735,16 +1869,16 @@ directive('w-html', function ($el, attrs) {
     expr: exp
   };
   var html = safeParse(this.scope, exp, ctx);
-  if (Object(ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isNone */ "j"])(html)) report("w-html \u043F\u043E\u043B\u0443\u0447\u0438\u043B ".concat(html), _objectSpread(_objectSpread({}, ctx), {}, {
+  if (Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isNone */ "e"])(html)) report("w-html \u043F\u043E\u043B\u0443\u0447\u0438\u043B ".concat(html), _objectSpread(_objectSpread({}, ctx), {}, {
     scope: this.scope
   }));
   $el.removeAttr('w-html');
-  $el.html(sanitizeSvg(Object(ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isNone */ "j"])(html) ? '' : String(html)));
+  $el.html(sanitizeSvg(Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isNone */ "e"])(html) ? '' : String(html)));
 });
 directive('w-if', function ($el, attrs) {
   var attr = attrs['w-if'];
   var value = this.scope.parse(attr);
-  return value ? $el : "<!-- ".concat(Object(_utils_js__WEBPACK_IMPORTED_MODULE_5__[/* getNodeName */ "d"])($el[0]), " w-if=\"").concat(attr, "\" (hidden) -->");
+  return value ? $el : "<!-- ".concat(Object(_utils_js__WEBPACK_IMPORTED_MODULE_2__[/* getNodeName */ "d"])($el[0]), " w-if=\"").concat(attr, "\" (hidden) -->");
 });
 directive('w-id', function ($el, attrs) {
   var attr = attrs['w-id'];
@@ -1754,7 +1888,7 @@ directive('w-id', function ($el, attrs) {
 directive('w-class', function ($el, attrs) {
   var attr = attrs['w-class'];
   var obj = this.scope.parse(attr);
-  Object(ts_fns__WEBPACK_IMPORTED_MODULE_3__[/* each */ "b"])(obj, function (value, key) {
+  Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* each */ "b"])(obj, function (value, key) {
     if (value) {
       $el.addClass(key);
     }
@@ -1812,7 +1946,7 @@ directive('w-src', null, function ($el, attrs) {
     expr: attr
   };
   var value = safeParse(this.scope, attr, ctx);
-  if (Object(ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isNone */ "j"])(value)) {
+  if (Object(_vendor_ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isNone */ "e"])(value)) {
     report("w-src \u043F\u043E\u043B\u0443\u0447\u0438\u043B ".concat(value, ": src \u043D\u0435 \u0432\u044B\u0441\u0442\u0430\u0432\u043B\u0435\u043D, \u0437\u0430\u043F\u0440\u043E\u0441 \u043D\u0435 \u043E\u0442\u043F\u0440\u0430\u0432\u043B\u0435\u043D"), _objectSpread(_objectSpread({}, ctx), {}, {
       scope: this.scope
     }));
@@ -1826,7 +1960,7 @@ directive('w-on', null, function ($el, attrs) {
     _attr$split4 = _slicedToArray(_attr$split3, 2),
     event = _attr$split4[0],
     method = _attr$split4[1];
-  var _parseKey3 = Object(_utils_js__WEBPACK_IMPORTED_MODULE_5__[/* parseKey */ "f"])(method),
+  var _parseKey3 = Object(_utils_js__WEBPACK_IMPORTED_MODULE_2__[/* parseKey */ "f"])(method),
     _parseKey4 = _slicedToArray(_parseKey3, 2),
     name = _parseKey4[0],
     params = _parseKey4[1];
@@ -1846,7 +1980,7 @@ directive('w-on', null, function ($el, attrs) {
       return fn.call.apply(fn, [this, state].concat(_toConsumableArray(args)));
     };
   }
-  var path = Object(_utils_js__WEBPACK_IMPORTED_MODULE_5__[/* getPath */ "e"])($el, $root);
+  var path = Object(_utils_js__WEBPACK_IMPORTED_MODULE_2__[/* getPath */ "e"])($el, $root);
   if (!path) {
     return;
   }
@@ -1912,7 +2046,7 @@ function useJQuery(jQuery) {
 console.log('[Wex]: загружена версия: ' + WEX_VERSION);
 
 /***/ }),
-/* 8 */
+/* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -2089,14 +2223,14 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
    * providing 'undefined' or 'null' values for `obj` will not throw a TypeError, but rather just
    * return the value provided.
    *
-     ```js
-       var values = {name: 'misko', gender: 'male'};
-       var log = [];
-       angular.forEach(values, function(value, key) {
-         this.push(key + ': ' + value);
-       }, log);
-       expect(log).toEqual(['name: misko', 'gender: male']);
-     ```
+   ```js
+   var values = {name: 'misko', gender: 'male'};
+   var log = [];
+   angular.forEach(values, function(value, key) {
+   this.push(key + ': ' + value);
+   }, log);
+   expect(log).toEqual(['name: misko', 'gender: male']);
+   ```
    *
    * @param {Object|Array} obj Object to iterate over.
    * @param {Function} iterator Iterator function.
@@ -2168,12 +2302,12 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
    * @description
    * A function that performs no operations. This function can be useful when writing code in the
    * functional style.
-     ```js
-       function foo(callback) {
-         var result = calculateResult();
-         (callback || angular.noop)(result);
-       }
-     ```
+   ```js
+   function foo(callback) {
+   var result = calculateResult();
+   (callback || angular.noop)(result);
+   }
+   ```
    */
   function noop() {}
   noop.$inject = [];
@@ -2340,42 +2474,39 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
    * @returns {*} The copy or updated `destination`, if `destination` was specified.
    *
    * @example
-    <example module="copyExample" name="angular-copy">
-      <file name="index.html">
-        <div ng-controller="ExampleController">
-          <form novalidate class="simple-form">
-            <label>Name: <input type="text" ng-model="user.name" /></label><br />
-            <label>Age:  <input type="number" ng-model="user.age" /></label><br />
-            Gender: <label><input type="radio" ng-model="user.gender" value="male" />male</label>
-                    <label><input type="radio" ng-model="user.gender" value="female" />female</label><br />
-            <button ng-click="reset()">RESET</button>
-            <button ng-click="update(user)">SAVE</button>
-          </form>
-          <pre>form = {{user | json}}</pre>
-          <pre>master = {{master | json}}</pre>
-        </div>
-      </file>
-      <file name="script.js">
-        // Module: copyExample
-        angular.
-          module('copyExample', []).
-          controller('ExampleController', ['$scope', function($scope) {
-            $scope.master = {};
-  
-            $scope.reset = function() {
-              // Example with 1 argument
-              $scope.user = angular.copy($scope.master);
-            };
-  
-            $scope.update = function(user) {
-              // Example with 2 arguments
-              angular.copy(user, $scope.master);
-            };
-  
-            $scope.reset();
-          }]);
-      </file>
-    </example>
+   <example module="copyExample" name="angular-copy">
+   <file name="index.html">
+   <div ng-controller="ExampleController">
+   <form novalidate class="simple-form">
+   <label>Name: <input type="text" ng-model="user.name" /></label><br />
+   <label>Age:  <input type="number" ng-model="user.age" /></label><br />
+   Gender: <label><input type="radio" ng-model="user.gender" value="male" />male</label>
+   <label><input type="radio" ng-model="user.gender" value="female" />female</label><br />
+   <button ng-click="reset()">RESET</button>
+   <button ng-click="update(user)">SAVE</button>
+   </form>
+   <pre>form = {{user | json}}</pre>
+   <pre>master = {{master | json}}</pre>
+   </div>
+   </file>
+   <file name="script.js">
+   // Module: copyExample
+   angular.
+   module('copyExample', []).
+   controller('ExampleController', ['$scope', function($scope) {
+   $scope.master = {};
+     $scope.reset = function() {
+   // Example with 1 argument
+   $scope.user = angular.copy($scope.master);
+   };
+     $scope.update = function(user) {
+   // Example with 2 arguments
+   angular.copy(user, $scope.master);
+   };
+     $scope.reset();
+   }]);
+   </file>
+   </example>
    */
   function copy(source, destination) {
     var stackSource = [];
@@ -4342,7 +4473,150 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
 });
 
 /***/ }),
-/* 9 */
+/* 10 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "e", function() { return isNone; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "g", function() { return isString; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "f", function() { return isObject; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return diffArray; });
+/* unused harmony export inArray */
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "d", function() { return isFunction; });
+/* unused harmony export isConstructor */
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "h", function() { return uniqueArray; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "b", function() { return each; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "c", function() { return isEqual; });
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function isNone(value) {
+  return value == null || typeof value === 'number' && Number.isNaN(value);
+}
+function isString(value) {
+  return typeof value === 'string';
+}
+function isObject(value) {
+  return value && _typeof(value) === 'object' && value.constructor === Object;
+}
+function diffArray(a, b) {
+  return a.filter(function (v) {
+    return !b.includes(v);
+  });
+}
+function inArray(item, arr) {
+  return Array.isArray(arr) && arr.includes(item);
+}
+function isFunction(value, isStrict) {
+  if (typeof value !== 'function') {
+    return false;
+  }
+  return isStrict ? !isConstructor(value, 2) : true;
+}
+function isConstructor(value) {
+  var strict = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+  if (typeof value !== 'function') {
+    return false;
+  }
+  try {
+    Reflect.construct(String, [], value);
+  } catch (_unused) {
+    return false;
+  }
+  if (strict === 0) {
+    return true;
+  }
+  var source = Function.prototype.toString.call(value);
+  var prototype = value.prototype;
+  var isNative = /\{\s*\[native code\]\s*\}/.test(source);
+  var isNativeClass = /^class\s/.test(source);
+  var level4 = isNative || isNativeClass;
+  if (strict >= 4) {
+    return level4;
+  }
+  if (strict === 3) {
+    return level4;
+  }
+  var keys = prototype ? Reflect.ownKeys(prototype).filter(function (key) {
+    return key !== 'constructor';
+  }) : [];
+  var level2 = level4 || keys.length > 0;
+  if (strict === 2) {
+    return level2;
+  }
+  if (strict === 1) {
+    return level2 || /\bthis\s*[.[]/.test(source);
+  }
+  return true;
+}
+function uniqueArray(arr, prop) {
+  var exists = [];
+  return arr.filter(function (item) {
+    var value = prop ? item[prop] : item;
+    if (exists.includes(value)) {
+      return false;
+    }
+    exists.push(value);
+    return true;
+  });
+}
+function each(obj, fn) {
+  var withDescriptors = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+  if (withDescriptors) {
+    var descriptors = Object.getOwnPropertyDescriptors(obj);
+    Reflect.ownKeys(descriptors).forEach(function (key) {
+      var descriptor = descriptors[key];
+      var get = descriptor.get,
+        set = descriptor.set,
+        enumerable = descriptor.enumerable,
+        configurable = descriptor.configurable,
+        writable = descriptor.writable;
+      if (enumerable || get || set || configurable && writable) {
+        fn(descriptor, key, obj);
+      }
+    });
+    return;
+  }
+  if (Array.isArray(obj)) {
+    obj.forEach(function (value, key) {
+      return fn(value, key, obj);
+    });
+    return;
+  }
+  Object.keys(obj).forEach(function (key) {
+    fn(obj[key], key, obj);
+  });
+}
+function isEqual(val1, val2) {
+  var equal = function equal(obj1, obj2) {
+    var keys1 = Object.getOwnPropertyNames(obj1);
+    var keys2 = Object.getOwnPropertyNames(obj2);
+    var keys = unionArray(keys1, keys2);
+    for (var i = 0, len = keys.length; i < len; i++) {
+      var key = keys[i];
+      if (!inArray(key, keys1)) {
+        return false;
+      }
+      if (!inArray(key, keys2)) {
+        return false;
+      }
+      var value1 = obj1[key];
+      var value2 = obj2[key];
+      if (!isEqual(value1, value2)) {
+        return false;
+      }
+    }
+    return true;
+  };
+  if (isObject(val1) && isObject(val2)) {
+    return equal(val1, val2);
+  } else if (Array.isArray(val1) && Array.isArray(val2)) {
+    return equal(val1, val2);
+  } else {
+    return val1 === val2;
+  }
+}
+
+/***/ }),
+/* 11 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -4354,8 +4628,8 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return camelCase; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "f", function() { return parseKey; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "d", function() { return getNodeName; });
-/* harmony import */ var ts_fns__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(10);
-/* harmony import */ var ts_fns__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(11);
+/* harmony import */ var ts_fns__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(12);
+/* harmony import */ var ts_fns__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(13);
 function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
@@ -4394,7 +4668,7 @@ function getNodeAttrs(el) {
 }
 function createAttrsText(attrs) {
   var attrsTexts = [];
-  Object(ts_fns__WEBPACK_IMPORTED_MODULE_0__[/* each */ "b"])(attrs, function (value, key) {
+  Object(ts_fns__WEBPACK_IMPORTED_MODULE_0__[/* each */ "a"])(attrs, function (value, key) {
     attrsTexts.push("".concat(key, "=\"").concat(value, "\""));
   });
   var attrsText = attrsTexts.join(' ');
@@ -4466,7 +4740,7 @@ function parseKey(str) {
   var _matched = _slicedToArray(matched, 4),
     name = _matched[1],
     _params = _matched[3];
-  var params = Object(ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isString */ "m"])(_params) ? _params.split(',').map(function (item) {
+  var params = Object(ts_fns__WEBPACK_IMPORTED_MODULE_1__[/* isString */ "k"])(_params) ? _params.split(',').map(function (item) {
     return item.trim();
   }).filter(function (item) {
     return !!item;
@@ -4478,7 +4752,7 @@ function getNodeName(node) {
 }
 
 /***/ }),
-/* 10 */
+/* 12 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -4486,10 +4760,10 @@ function getNodeName(node) {
 /* unused harmony export extend */
 /* unused harmony export merge */
 /* unused harmony export stringify */
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "c", function() { return getObjectHash; });
+/* unused harmony export getObjectHash */
 /* unused harmony export define */
 /* unused harmony export flat */
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "b", function() { return each; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return each; });
 /* unused harmony export map */
 /* unused harmony export filter */
 /* unused harmony export iterate */
@@ -4497,15 +4771,15 @@ function getNodeName(node) {
 /* unused harmony export extract */
 /* unused harmony export freeze */
 /* unused harmony export createReactive */
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return createProxy; });
+/* unused harmony export createProxy */
 /* unused harmony export isProxy */
 /* unused harmony export refineProxy */
 /* unused harmony export getSymbolContent */
 /* unused harmony export toEntries */
 /* unused harmony export fromEntries */
-/* harmony import */ var _string_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(13);
-/* harmony import */ var _is_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(11);
-/* harmony import */ var _syntax_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(14);
+/* harmony import */ var _string_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(15);
+/* harmony import */ var _is_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(13);
+/* harmony import */ var _syntax_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(16);
 function _toArray(r) { return _arrayWithHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableRest(); }
 function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
@@ -4528,7 +4802,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
 function clone(obj) {
   var parents = [];
   var _clone = function clone(origin) {
-    if (!Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "l"])(origin) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isArray */ "d"])(origin)) {
+    if (!Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "j"])(origin) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isArray */ "d"])(origin)) {
       return origin;
     }
     var result = Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isArray */ "d"])(origin) ? [] : {};
@@ -4585,14 +4859,14 @@ function extend(obj1, obj2) {
           return;
         }
       }
-      if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "l"])(originalValue)) {
-        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "l"])(value) || Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isArray */ "d"])(value)) {
+      if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "j"])(originalValue)) {
+        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "j"])(value) || Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isArray */ "d"])(value)) {
           _extend(originalValue, value, mixArr);
         } else {
           obj1[key] = value;
         }
       } else if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isArray */ "d"])(originalValue)) {
-        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "l"])(value)) {
+        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "j"])(value)) {
           if (mixArr === 0 || mixArr === 1) {
             _extend(originalValue, value, mixArr);
           } else if (mixArr === 2) {
@@ -4640,12 +4914,12 @@ function extend(obj1, obj2) {
 function merge(obj1, obj2) {
   var concatArray = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
   obj1 = clone(obj1);
-  if (!Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isArray */ "d"])(obj2) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "l"])(obj2)) {
-    return Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isArray */ "d"])(obj1) && Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "l"])(obj1) ? obj1 : null;
+  if (!Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isArray */ "d"])(obj2) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "j"])(obj2)) {
+    return Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isArray */ "d"])(obj1) && Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "j"])(obj1) ? obj1 : null;
   }
   obj2 = clone(obj2);
-  if (!Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isArray */ "d"])(obj1) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "l"])(obj1)) {
-    return Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isArray */ "d"])(obj2) && Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "l"])(obj2) ? obj2 : null;
+  if (!Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isArray */ "d"])(obj1) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "j"])(obj1)) {
+    return Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isArray */ "d"])(obj2) && Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "j"])(obj2) ? obj2 : null;
   }
   var exists = [];
   var _merge = function merge(obj1, obj2) {
@@ -4659,17 +4933,17 @@ function merge(obj1, obj2) {
     keys.forEach(function (key) {
       var oldValue = obj1[key];
       var newValue = obj2[key];
-      if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "l"])(newValue) || Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isArray */ "d"])(newValue)) {
+      if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "j"])(newValue) || Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isArray */ "d"])(newValue)) {
         var index = exists.indexOf(newValue);
         if (index === -1) {
           exists.push(newValue);
-        } else if (!Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isArray */ "d"])(oldValue) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "l"])(oldValue)) {
+        } else if (!Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isArray */ "d"])(oldValue) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "j"])(oldValue)) {
           result[key] = newValue;
           return;
         }
       }
-      if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "l"])(newValue) || Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isArray */ "d"])(newValue)) {
-        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "l"])(oldValue) || Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isArray */ "d"])(oldValue)) {
+      if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "j"])(newValue) || Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isArray */ "d"])(newValue)) {
+        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "j"])(oldValue) || Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isArray */ "d"])(oldValue)) {
           result[key] = _merge(oldValue, newValue);
         } else {
           result[key] = newValue;
@@ -4761,14 +5035,14 @@ function getObjectHash(obj) {
  * @returns {object}
  */
 function define(obj, key, value) {
-  if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(value)) {
+  if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(value)) {
     return Object.defineProperty(obj, key, {
       get: value
     });
-  } else if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "l"])(value)) {
+  } else if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "j"])(value)) {
     if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* hasOwnKey */ "a"])(value, 'enumerable') || Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* hasOwnKey */ "a"])(value, 'configurable')) {
       return Object.defineProperty(obj, key, value);
-    } else if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(value.set) && Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(value.get)) {
+    } else if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(value.set) && Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(value.get)) {
       return Object.defineProperty(obj, key, value);
     } else if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* hasOwnKey */ "a"])(value, 'value')) {
       return Object.defineProperty(obj, key, value);
@@ -4798,8 +5072,8 @@ function flat(obj, determine) {
         return _flat(item, "".concat(path, "[").concat(i, "]"), result);
       });
       return result;
-    } else if (input && _typeof(input) === 'object' && !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFile */ "g"])(input) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isDate */ "e"])(input)) {
-      if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(determine) && !determine(input)) {
+    } else if (input && _typeof(input) === 'object' && !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFile */ "f"])(input) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isDate */ "e"])(input)) {
+      if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(determine) && !determine(input)) {
         result[path] = input;
         return result;
       }
@@ -4898,7 +5172,7 @@ function iterate(obj, fn) {
     for (var i = 0, len = obj.length; i < len; i++) {
       var item = obj[i];
       var res = fn(item, i, obj);
-      if (!Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isUndefined */ "o"])(res)) {
+      if (!Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isUndefined */ "m"])(res)) {
         return res;
       }
     }
@@ -4908,7 +5182,7 @@ function iterate(obj, fn) {
       var _key = keys[_i];
       var value = obj[_key];
       var _res = fn(value, _key, obj);
-      if (!Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isUndefined */ "o"])(_res)) {
+      if (!Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isUndefined */ "m"])(_res)) {
         return _res;
       }
     }
@@ -5018,14 +5292,14 @@ function createReactive(origin) {
     receive = options.receive;
   var create = function create(origin) {
     var parents = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
-    if (!Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "l"])(origin) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isArray */ "d"])(origin)) {
+    if (!Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "j"])(origin) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isArray */ "d"])(origin)) {
       return origin;
     }
-    if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(disable) && disable(parents, origin)) {
+    if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(disable) && disable(parents, origin)) {
       return origin;
     }
     var output = null;
-    if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "l"])(origin)) {
+    if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "j"])(origin)) {
       output = createObject(origin, parents);
     } else {
       output = createArray(origin, parents);
@@ -5044,7 +5318,7 @@ function createReactive(origin) {
       }
       var prev = origin[key];
       var invalid = media[key];
-      var input = Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(set) ? set(keyPath, value) : value;
+      var input = Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(set) ? set(keyPath, value) : value;
       var active;
       var next;
       if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* inObject */ "c"])(key, media) && (value === prev || value === invalid || input === prev || input === invalid)) {
@@ -5065,7 +5339,7 @@ function createReactive(origin) {
       }
       origin[key] = next;
       media[key] = active;
-      if (trigger && Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(dispatch)) {
+      if (trigger && Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(dispatch)) {
         dispatch({
           keyPath: keyPath,
           value: value,
@@ -5081,13 +5355,13 @@ function createReactive(origin) {
       var keyPath = [].concat(_toConsumableArray(parents), [key]);
       var prev = origin[key];
       var invalid = media[key];
-      if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(del)) {
+      if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(del)) {
         del(keyPath);
       }
       delete reactive[key];
       delete media[key];
       delete origin[key];
-      if (trigger && Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(dispatch)) {
+      if (trigger && Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(dispatch)) {
         var none = void 0;
         dispatch({
           keyPath: keyPath,
@@ -5096,7 +5370,7 @@ function createReactive(origin) {
           active: none,
           prev: prev,
           invalid: invalid
-        }, Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isUndefined */ "o"])(prev));
+        }, Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isUndefined */ "m"])(prev));
       }
     };
     var put = function put(key, value, trigger) {
@@ -5104,17 +5378,17 @@ function createReactive(origin) {
       Object.defineProperty(reactive, key, {
         get: function get() {
           var active = media[key];
-          var output = Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(_get) ? _get(keyPath, active) : active;
+          var output = Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(_get) ? _get(keyPath, active) : active;
           return output;
         },
         set: function set(value) {
-          if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(receive)) {
+          if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(receive)) {
             receive(keyPath, value);
           }
           if (Object.isFrozen(origin)) {
             return media[key];
           }
-          if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(writable) && !writable(keyPath, value)) {
+          if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(writable) && !writable(keyPath, value)) {
             return media[key];
           }
           var descriptor = Object.getOwnPropertyDescriptor(media, key);
@@ -5157,13 +5431,13 @@ function createReactive(origin) {
       $set: {
         value: function value(key, _value) {
           var keyPath = [].concat(_toConsumableArray(parents), [key]);
-          if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(receive)) {
+          if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(receive)) {
             receive(keyPath, _value);
           }
           if (Object.isFrozen(origin)) {
             return media[key];
           }
-          if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(writable) && !writable(keyPath)) {
+          if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(writable) && !writable(keyPath)) {
             return media[key];
           }
           var descriptor = Object.getOwnPropertyDescriptor(media, key);
@@ -5185,13 +5459,13 @@ function createReactive(origin) {
       $del: {
         value: function value(key) {
           var keyPath = [].concat(_toConsumableArray(parents), [key]);
-          if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(receive)) {
+          if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(receive)) {
             receive(keyPath);
           }
           if (Object.isFrozen(origin)) {
             return false;
           }
-          if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(writable) && !writable(keyPath)) {
+          if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(writable) && !writable(keyPath)) {
             return false;
           }
           var descriptor = Object.getOwnPropertyDescriptor(media, key);
@@ -5225,7 +5499,7 @@ function createReactive(origin) {
       }
       var prev = origin[i];
       var invalid = media[i];
-      var input = Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(set) ? set(keyPath, value) : value;
+      var input = Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(set) ? set(keyPath, value) : value;
       var active;
       var next;
       if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* inObject */ "c"])(i, media) && (value === prev || value === invalid || input === prev || input === invalid)) {
@@ -5246,7 +5520,7 @@ function createReactive(origin) {
       }
       origin[i] = next;
       media[i] = active;
-      if (trigger && Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(dispatch)) {
+      if (trigger && Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(dispatch)) {
         dispatch({
           keyPath: keyPath,
           value: value,
@@ -5268,11 +5542,11 @@ function createReactive(origin) {
         Object.defineProperty(reactive, i, {
           get: function get() {
             var active = media[i];
-            var output = Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(_get) ? _get(keyPath, active) : active;
+            var output = Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(_get) ? _get(keyPath, active) : active;
             return output;
           },
           set: function set(value) {
-            if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(writable) && !writable(keyPath, value)) {
+            if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(writable) && !writable(keyPath, value)) {
               return media[i];
             }
             var descriptor = Object.getOwnPropertyDescriptor(media, i);
@@ -5332,18 +5606,18 @@ function createReactive(origin) {
               return media;
             }
           };
-          if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(receive)) {
+          if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(receive)) {
             receive(parents, origin, fn, args);
           }
           if (Object.isFrozen(origin)) {
             return nonAs();
           }
-          if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(writable) && !writable(parents, origin)) {
+          if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(writable) && !writable(parents, origin)) {
             return nonAs();
           }
 
           // a hook to modify args for array push, shift inputs
-          if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* inObject */ "c"])(fn, options) && Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(options[fn])) {
+          if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* inObject */ "c"])(fn, options) && Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(options[fn])) {
             var res = options[fn](parents, args);
             // when return false, it means don't change the value
             if (res === false) {
@@ -5354,7 +5628,7 @@ function createReactive(origin) {
               args = res;
             }
             // when return object, switch to another method
-            else if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "l"])(res)) {
+            else if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "j"])(res)) {
               var to = res.to,
                 newArgs = res.args;
               fn = to;
@@ -5490,7 +5764,7 @@ function createReactive(origin) {
             operate();
             output = media;
           }
-          if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(dispatch)) {
+          if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(dispatch)) {
             dispatch({
               keyPath: parents,
               value: origin,
@@ -5581,14 +5855,14 @@ function createProxy(origin) {
     enumerable = options.enumerable;
   var create = function create(origin) {
     var parents = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
-    if (!Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "l"])(origin) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isArray */ "d"])(origin)) {
+    if (!Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "j"])(origin) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isArray */ "d"])(origin)) {
       return origin;
     }
-    if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(disable) && disable(parents, origin)) {
+    if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(disable) && disable(parents, origin)) {
       return origin;
     }
     var output = null;
-    if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "l"])(origin)) {
+    if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "j"])(origin)) {
       output = createObject(origin, parents);
     } else {
       output = createArray(origin, parents);
@@ -5601,20 +5875,20 @@ function createProxy(origin) {
     var proxy = new Proxy(media, {
       get: function get(target, key, receiver) {
         // get original property value
-        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isSymbol */ "n"])(key) && key === ProxySymbol) {
+        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isSymbol */ "l"])(key) && key === ProxySymbol) {
           return origin;
         }
 
         // primitive property
         // such as 'a' + obj, and obj[Symbol.toPrimitive](hint) defined
-        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isSymbol */ "n"])(key) && getSymbolContent(key).indexOf('Symbol.') === 0) {
+        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isSymbol */ "l"])(key) && getSymbolContent(key).indexOf('Symbol.') === 0) {
           return Reflect.get(target, key, receiver);
         }
         var active = Reflect.get(target, key, receiver);
 
         // here should be noticed
         // a Symbol key will not to into `get` option function
-        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(_get2) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isSymbol */ "n"])(key)) {
+        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(_get2) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isSymbol */ "l"])(key)) {
           var keyPath = [].concat(_toConsumableArray(parents), [key]);
           var _output = _get2(keyPath, active);
           return _output;
@@ -5624,13 +5898,13 @@ function createProxy(origin) {
       },
       set: function set(target, key, value, receiver) {
         var keyPath = [].concat(_toConsumableArray(parents), [key]);
-        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(receive)) {
+        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(receive)) {
           receive(keyPath, value);
         }
         if (Object.isFrozen(origin)) {
           return true;
         }
-        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(writable) && !writable(keyPath, value)) {
+        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(writable) && !writable(keyPath, value)) {
           return true;
         }
         var descriptor = Object.getOwnPropertyDescriptor(media, key);
@@ -5647,7 +5921,7 @@ function createProxy(origin) {
         }
         var prev = origin[key];
         var invalid = media[key];
-        var input = Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(_set) ? _set(keyPath, value) : value;
+        var input = Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(_set) ? _set(keyPath, value) : value;
         var active;
         var next;
         if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* inObject */ "c"])(key, media) && (value === prev || value === invalid || input === prev || input === invalid)) {
@@ -5659,7 +5933,7 @@ function createProxy(origin) {
         }
         origin[key] = next;
         Reflect.set(target, key, active, receiver);
-        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(dispatch)) {
+        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(dispatch)) {
           dispatch({
             keyPath: keyPath,
             value: value,
@@ -5673,13 +5947,13 @@ function createProxy(origin) {
       },
       deleteProperty: function deleteProperty(target, key) {
         var keyPath = [].concat(_toConsumableArray(parents), [key]);
-        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(receive)) {
+        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(receive)) {
           receive(keyPath);
         }
         if (Object.isFrozen(origin)) {
           return true;
         }
-        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(writable) && !writable(keyPath)) {
+        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(writable) && !writable(keyPath)) {
           return true;
         }
         var descriptor = Object.getOwnPropertyDescriptor(media, key);
@@ -5691,12 +5965,12 @@ function createProxy(origin) {
         }
         var prev = origin[key];
         var invalid = media[key];
-        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(del) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isSymbol */ "n"])(key)) {
+        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(del) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isSymbol */ "l"])(key)) {
           del(keyPath);
         }
         delete origin[key];
         Reflect.deleteProperty(target, key);
-        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(dispatch)) {
+        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(dispatch)) {
           var none = undefined;
           dispatch({
             keyPath: keyPath,
@@ -5705,12 +5979,12 @@ function createProxy(origin) {
             active: none,
             prev: prev,
             invalid: invalid
-          }, !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isUndefined */ "o"])(prev));
+          }, !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isUndefined */ "m"])(prev));
         }
         return true;
       },
       has: function has(target, key) {
-        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(enumerable)) {
+        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(enumerable)) {
           var keyPath = [].concat(_toConsumableArray(parents), [key]);
           return enumerable(keyPath);
         }
@@ -5718,7 +5992,7 @@ function createProxy(origin) {
       },
       isExtensible: function isExtensible() {
         var keyPath = _toConsumableArray(parents);
-        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(extensible)) {
+        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(extensible)) {
           return extensible(keyPath);
         }
         return true;
@@ -5731,7 +6005,7 @@ function createProxy(origin) {
         if (Object.isFrozen(origin)) {
           media[key] = create(value, keyPath);
         } else {
-          var needRewrite = Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(_set) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isSymbol */ "n"])(key);
+          var needRewrite = Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(_set) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isSymbol */ "l"])(key);
           var next = needRewrite ? _set(keyPath, value) : value;
           if (needRewrite) {
             origin[key] = next;
@@ -5750,13 +6024,13 @@ function createProxy(origin) {
     var proxy = new Proxy(media, {
       get: function get(target, key, receiver) {
         // get original property value
-        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isSymbol */ "n"])(key) && key === ProxySymbol) {
+        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isSymbol */ "l"])(key) && key === ProxySymbol) {
           return origin;
         }
 
         // primitive property
         // such as 'a' + obj, and obj[Symbol.toPrimitive](hint) defined
-        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isSymbol */ "n"])(key) && getSymbolContent(key).indexOf('Symbol.') === 0) {
+        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isSymbol */ "l"])(key) && getSymbolContent(key).indexOf('Symbol.') === 0) {
           return Reflect.get(target, key, receiver);
         }
 
@@ -5793,18 +6067,18 @@ function createProxy(origin) {
                 return media;
               }
             };
-            if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(receive)) {
+            if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(receive)) {
               receive(parents, origin, key, args);
             }
             if (Object.isFrozen(origin)) {
               return nonAs();
             }
-            if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(writable) && !writable(parents, origin)) {
+            if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(writable) && !writable(parents, origin)) {
               return nonAs();
             }
 
             // a hook to modify args for array push, shift inputs
-            if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* inObject */ "c"])(key, options) && Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(options[key])) {
+            if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* inObject */ "c"])(key, options) && Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(options[key])) {
               var res = options[key](parents, args);
               // when return false, it means don't change the value
               if (res === false) {
@@ -5815,7 +6089,7 @@ function createProxy(origin) {
                 args = res;
               }
               // when return object, switch to another method
-              else if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "l"])(res)) {
+              else if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isObject */ "j"])(res)) {
                 var to = res.to,
                   newArgs = res.args;
                 key = to;
@@ -5933,7 +6207,7 @@ function createProxy(origin) {
               Array.prototype[key].apply(origin, args);
               output = Array.prototype[key].apply(media, args);
             }
-            if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(dispatch)) {
+            if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(dispatch)) {
               dispatch({
                 keyPath: parents,
                 value: origin,
@@ -5953,7 +6227,7 @@ function createProxy(origin) {
 
         // here should be noticed
         // a Symbol key will not to into `get` option function
-        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(_get2) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isSymbol */ "n"])(key)) {
+        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(_get2) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isSymbol */ "l"])(key)) {
           var _output2 = _get2(keyPath, active);
           return _output2;
         } else {
@@ -5962,13 +6236,13 @@ function createProxy(origin) {
       },
       set: function set(target, key, value, receiver) {
         var keyPath = [].concat(_toConsumableArray(parents), [key]);
-        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(receive)) {
+        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(receive)) {
           receive(keyPath, value);
         }
         if (Object.isFrozen(origin)) {
           return true;
         }
-        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(writable) && !writable(keyPath, value)) {
+        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(writable) && !writable(keyPath, value)) {
           return true;
         }
         var descriptor = Object.getOwnPropertyDescriptor(media, key);
@@ -5986,12 +6260,12 @@ function createProxy(origin) {
 
         // operate like media.length = 0
         if (key === 'length') {
-          if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(writable) && !writable(parents, origin)) {
+          if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(writable) && !writable(parents, origin)) {
             return true;
           }
           origin.length = value;
           media.length = value;
-          if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(dispatch)) {
+          if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(dispatch)) {
             dispatch({
               keyPath: parents,
               value: origin,
@@ -6004,7 +6278,7 @@ function createProxy(origin) {
         }
         var prev = origin[key];
         var invalid = media[key];
-        var input = Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(_set) ? _set(keyPath, value) : value;
+        var input = Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(_set) ? _set(keyPath, value) : value;
         var active;
         var next;
         if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* inObject */ "c"])(key, media) && (value === prev || value === invalid || input === prev || input === invalid)) {
@@ -6016,7 +6290,7 @@ function createProxy(origin) {
         }
         origin[key] = next;
         Reflect.set(target, key, active, receiver);
-        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(dispatch)) {
+        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(dispatch)) {
           dispatch({
             keyPath: keyPath,
             value: value,
@@ -6030,13 +6304,13 @@ function createProxy(origin) {
       },
       deleteProperty: function deleteProperty(target, key) {
         var keyPath = [].concat(_toConsumableArray(parents), [key]);
-        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(receive)) {
+        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(receive)) {
           receive(keyPath);
         }
         if (Object.isFrozen(origin)) {
           return true;
         }
-        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(writable) && !writable(keyPath)) {
+        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(writable) && !writable(keyPath)) {
           return true;
         }
         var descriptor = Object.getOwnPropertyDescriptor(media, key);
@@ -6048,12 +6322,12 @@ function createProxy(origin) {
         }
         var prev = origin[key];
         var invalid = media[key];
-        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(del) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isSymbol */ "n"])(key)) {
+        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(del) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isSymbol */ "l"])(key)) {
           del(keyPath);
         }
         delete origin[key];
         Reflect.deleteProperty(target, key);
-        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(dispatch)) {
+        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(dispatch)) {
           var none = undefined;
           dispatch({
             keyPath: keyPath,
@@ -6062,7 +6336,7 @@ function createProxy(origin) {
             active: none,
             prev: prev,
             invalid: invalid
-          }, !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isUndefined */ "o"])(prev));
+          }, !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isUndefined */ "m"])(prev));
         }
         return true;
       },
@@ -6070,14 +6344,14 @@ function createProxy(origin) {
         if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* inArray */ "b"])(key, ['remove', 'insert'])) {
           return true;
         }
-        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(enumerable)) {
+        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(enumerable)) {
           var keyPath = [].concat(_toConsumableArray(parents), [key]);
           return enumerable(keyPath);
         }
         return key in target;
       },
       isExtensible: function isExtensible() {
-        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(extensible)) {
+        if (Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(extensible)) {
           var keyPath = _toConsumableArray(parents);
           return extensible(keyPath);
         }
@@ -6091,7 +6365,7 @@ function createProxy(origin) {
         if (Object.isFrozen(origin)) {
           media[i] = create(value, keyPath);
         } else {
-          var needRewrite = Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "h"])(_set) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isSymbol */ "n"])(i);
+          var needRewrite = Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isFunction */ "g"])(_set) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_1__[/* isSymbol */ "l"])(i);
           var next = needRewrite ? _set(keyPath, value) : value;
           if (needRewrite) {
             origin[i] = next;
@@ -6176,34 +6450,34 @@ function fromEntries(entries) {
 }
 
 /***/ }),
-/* 11 */
+/* 13 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "o", function() { return isUndefined; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "m", function() { return isUndefined; });
 /* unused harmony export isNull */
 /* unused harmony export isNullish */
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "j", function() { return isNone; });
+/* unused harmony export isNone */
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "d", function() { return isArray; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "l", function() { return isObject; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "j", function() { return isObject; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "e", function() { return isDate; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "m", function() { return isString; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "k", function() { return isNumber; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "i", function() { return isNaN; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "n", function() { return isSymbol; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "k", function() { return isString; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "i", function() { return isNumber; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "h", function() { return isNaN; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "l", function() { return isSymbol; });
 /* unused harmony export isFinite */
 /* unused harmony export isInfinite */
 /* unused harmony export isBoolean */
 /* unused harmony export isNumeric */
 /* unused harmony export isBlob */
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "g", function() { return isFile; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "f", function() { return isFile; });
 /* unused harmony export isFormData */
 /* unused harmony export isEmpty */
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "h", function() { return isFunction; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "g", function() { return isFunction; });
 /* unused harmony export isConstructor */
 /* unused harmony export isTruthy */
 /* unused harmony export isFalsy */
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "f", function() { return isEqual; });
+/* unused harmony export isEqual */
 /* unused harmony export isLt */
 /* unused harmony export isLte */
 /* unused harmony export isGt */
@@ -6217,7 +6491,7 @@ function fromEntries(entries) {
 /* unused harmony export isShallowEqual */
 /* unused harmony export isOneInArray */
 /* unused harmony export isAllInArray */
-/* harmony import */ var _array_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(12);
+/* harmony import */ var _array_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(14);
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
 
 
@@ -6483,7 +6757,7 @@ function isEqual(val1, val2) {
   var equal = function equal(obj1, obj2) {
     var keys1 = Object.getOwnPropertyNames(obj1);
     var keys2 = Object.getOwnPropertyNames(obj2);
-    var keys = Object(_array_js__WEBPACK_IMPORTED_MODULE_0__[/* unionArray */ "c"])(keys1, keys2);
+    var keys = Object(_array_js__WEBPACK_IMPORTED_MODULE_0__[/* unionArray */ "b"])(keys1, keys2);
     for (var i = 0, len = keys.length; i < len; i++) {
       var key = keys[i];
       if (!inArray(key, keys1)) {
@@ -6690,23 +6964,23 @@ function isAllInArray(items, arr) {
 }
 
 /***/ }),
-/* 12 */
+/* 14 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return createArray; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "c", function() { return unionArray; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "b", function() { return unionArray; });
 /* unused harmony export interArray */
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "b", function() { return diffArray; });
+/* unused harmony export diffArray */
 /* unused harmony export compArray */
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "d", function() { return uniqueArray; });
+/* unused harmony export uniqueArray */
 /* unused harmony export sortArray */
 /* unused harmony export toArray */
 /* unused harmony export flatArray */
 /* unused harmony export groupArray */
 /* unused harmony export splitArray */
 /* unused harmony export joinArray */
-/* harmony import */ var _is_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(11);
+/* harmony import */ var _is_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(13);
 function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread(); }
 function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
@@ -6809,8 +7083,8 @@ function sortArray(items, by) {
   res.sort(function (a, b) {
     var oa = by ? a[by] : a;
     var ob = by ? b[by] : b;
-    oa = !Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isNaN */ "i"])(+oa) ? +oa : Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isString */ "m"])(oa) ? oa : 10;
-    ob = !Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isNaN */ "i"])(+ob) ? +ob : Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isString */ "m"])(ob) ? ob : 10;
+    oa = !Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isNaN */ "h"])(+oa) ? +oa : Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isString */ "k"])(oa) ? oa : 10;
+    ob = !Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isNaN */ "h"])(+ob) ? +ob : Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isString */ "k"])(ob) ? ob : 10;
     if (oa < ob) {
       return decs ? 1 : -1;
     }
@@ -6872,7 +7146,7 @@ function splitArray(arr, split) {
   var results = [];
   var temp = [];
   arr.forEach(function (item, i) {
-    if (split === item || Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isFunction */ "h"])(split) && split(item, i)) {
+    if (split === item || Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isFunction */ "g"])(split) && split(item, i)) {
       results.push(temp);
       temp = [];
     } else {
@@ -6899,7 +7173,7 @@ function joinArray(arr, join) {
 }
 
 /***/ }),
-/* 13 */
+/* 15 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -6910,7 +7184,7 @@ function joinArray(arr, join) {
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return getStringHash; });
 /* unused harmony export createRandomString */
 /* unused harmony export interpolate */
-/* harmony import */ var _array_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(12);
+/* harmony import */ var _array_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(14);
 
 
 // the order could never be changed, becuase we use it for number convertion
@@ -7072,7 +7346,7 @@ function interpolate(template, data, opts) {
 }
 
 /***/ }),
-/* 14 */
+/* 16 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -7124,7 +7398,7 @@ function caseby(entries) {
 }
 
 /***/ }),
-/* 15 */
+/* 17 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -7137,6 +7411,11 @@ function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Can
 function _defineProperty(e, r, t) { return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, { value: t, enumerable: !0, configurable: !0, writable: !0 }) : e[r] = t, e; }
 function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
 function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+/*
+ * Персистентность ключей state.storage в localStorage.
+ * Формат значения: JSON.stringify(value)
+ * Старые записи читаются: строка приводится к типу значения по умолчанию.
+ */
 var VMLocalStorage = /*#__PURE__*/_createClass(function VMLocalStorage() {
   _classCallCheck(this, VMLocalStorage);
 });
@@ -7145,122 +7424,203 @@ _defineProperty(VMLocalStorage, "getKey", function (key) {
   return 'JQVM_ls_' + key;
 });
 _defineProperty(VMLocalStorage, "getVal", function (key) {
-  return JSON.parse(localStorage.getItem(_VMLocalStorage.getKey(key)));
+  try {
+    var raw = localStorage.getItem(_VMLocalStorage.getKey(key));
+    return raw === null ? null : JSON.parse(raw);
+  } catch (e) {
+    return null;
+  }
 });
 _defineProperty(VMLocalStorage, "setVal", function (key, val) {
-  val = String(val);
-  localStorage.setItem(_VMLocalStorage.getKey(key), JSON.stringify(val));
+  try {
+    var next = JSON.stringify(val === undefined ? null : val);
+    var k = _VMLocalStorage.getKey(key);
+    if (localStorage.getItem(k) !== next) localStorage.setItem(k, next); // не пишем без изменений
+  } catch (e) {/* квота или приватный режим */}
+});
+_defineProperty(VMLocalStorage, "revive", function (stored, def) {
+  if (typeof stored === 'string' && typeof def !== 'string' && def !== undefined && def !== null) {
+    try {
+      return JSON.parse(stored);
+    } catch (e) {
+      return def;
+    } // старый формат
+  }
+  return stored;
 });
 _defineProperty(VMLocalStorage, "reloadJqvmLocalStorage", function (state, status) {
-  // user handed some data into storage key
-  if (state.storage !== undefined) {
-    // get data from const storage
-    var stateStorage = Object.assign({}, state.storage);
-    Object.keys(stateStorage).forEach(function (name, index) {
-      var localStorageValue = _VMLocalStorage.getVal(name);
-
-      // set state from storage if exists and it mount step (pipe)
-      if (status === '$mount') {
-        _VMLocalStorage.setVal(state.storage[name]);
-        var localStoreVal = _VMLocalStorage.getVal(name);
-        if (localStoreVal === null || localStoreVal === undefined) {
-          _VMLocalStorage.setVal(name, String(state.storage[name]));
-        } else {
-          state.storage[name] = localStoreVal;
-        }
-      }
-
-      // local storage empty
-      if (localStorageValue === null) {
-        _VMLocalStorage.setVal(name, stateStorage[index]);
-
-        // storage have items, load it
-      } else {
-        if (status === '$change') {
-          _VMLocalStorage.setVal(name, state.storage[name]);
-        }
-      }
-    });
-  }
+  var st = state && state.storage;
+  if (!st || _typeof(st) !== 'object') return;
+  Object.keys(st).forEach(function (name) {
+    if (status === '$mount') {
+      var stored = _VMLocalStorage.getVal(name);
+      if (stored === null) _VMLocalStorage.setVal(name, st[name]);else st[name] = _VMLocalStorage.revive(stored, st[name]);
+    } else if (status === '$change') {
+      _VMLocalStorage.setVal(name, st[name]);
+    }
+  });
 });
 
 /***/ }),
-/* 16 */
+/* 18 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-/* unused harmony export debounce */
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return throttle; });
-/**
- * 创建防抖函数
- * @param {function} fn
- * @param {number} wait
- * @param {boolean} [immediate] 是否立即执行函数
- * @returns {function}
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "d", function() { return toRaw; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return isReactive; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "b", function() { return reactive; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "c", function() { return subscribe; });
+/* unused harmony export shareState */
+function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread(); }
+function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
+function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
+function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+/*
+ * Wex reactive layer ES-модуль, подключается из wex.js.
+ *
+ *  reactive(v)            -> прокси (один raw = один прокси); не plain-объекты возвращаются как есть
+ *  toRaw(v) / isReactive(v)
+ *  subscribe(target, fn)  -> unsubscribe; fn({ target, key, type }) синхронно при мутации target
+ *                            или любого вложенного объекта (связи «ребёнок -> родитель» строятся при чтении/записи)
  */
-function debounce(fn, wait, immediate) {
-  var timeout = null;
-  return function () {
-    var _this = this;
+var RAW = Symbol('wex.raw');
+var proxies = new WeakMap(); // raw -> proxy
+var subs = new WeakMap(); // raw -> Set<fn>
+var parents = new WeakMap(); // raw child -> Set<raw parent>
+
+var hasOwn = function hasOwn(o, k) {
+  return Object.prototype.hasOwnProperty.call(o, k);
+};
+var isPlain = function isPlain(v) {
+  if (v === null || _typeof(v) !== 'object') return false;
+  if (Array.isArray(v)) return true;
+  var p = Object.getPrototypeOf(v);
+  return p === Object.prototype || p === null;
+};
+var toRaw = function toRaw(v) {
+  return v && _typeof(v) === 'object' && v[RAW] || v;
+};
+var isReactive = function isReactive(v) {
+  return !!(v && _typeof(v) === 'object' && v[RAW]);
+};
+function link(child, parent) {
+  var set = parents.get(child);
+  if (!set) parents.set(child, set = new Set());
+  set.add(parent);
+}
+function notify(raw, info) {
+  var seen = new Set();
+  var fns = new Set();
+  var stack = [raw];
+  while (stack.length) {
+    var cur = stack.pop();
+    if (seen.has(cur)) continue;
+    seen.add(cur);
+    var s = subs.get(cur);
+    if (s) s.forEach(function (fn) {
+      return fns.add(fn);
+    });
+    var p = parents.get(cur);
+    if (p) p.forEach(function (x) {
+      return stack.push(x);
+    });
+  }
+  fns.forEach(function (fn) {
+    try {
+      fn(info);
+    } catch (e) {
+      console.error(e);
+    }
+  });
+}
+var searchers = {};
+['includes', 'indexOf', 'lastIndexOf'].forEach(function (name) {
+  searchers[name] = function () {
+    var raw = toRaw(this);
     for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
       args[_key] = arguments[_key];
     }
-    var callNow = immediate && !timeout;
-    var next = function next() {
-      timeout = null;
-      if (!immediate) {
-        fn.apply(_this, args);
-      }
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(next, wait);
-    if (callNow) {
-      fn.apply(this, args);
-    }
+    var res = raw[name].apply(raw, args);
+    if (res === false || res === -1) res = raw[name].apply(raw, _toConsumableArray(args.map(toRaw)));
+    return res;
   };
-}
+});
+var handler = {
+  get: function get(target, key, receiver) {
+    if (key === RAW) return target;
+    if (Array.isArray(target) && hasOwn(searchers, key)) return searchers[key];
 
-/**
- * 创建节流函数
- * @param {function} fn
- * @param {number} wait
- * @param {boolean} [immediate] 是否立即执行
- * @returns {function}
- */
-function throttle(fn, wait, immediate) {
-  var timeout = null;
-  var lastTime = 0;
+    // receiver не передаём: объект может быть прототипом чужого объекта (локальный scope ScopeX)
+    var value = Reflect.get(target, key);
+    if (_typeof(key) === 'symbol' || !isPlain(value)) return value;
+    var d = Object.getOwnPropertyDescriptor(target, key);
+    if (d && !d.configurable && !d.writable) return value; // инвариант Proxy
+
+    var raw = toRaw(value);
+    link(raw, target);
+    return reactive(raw);
+  },
+  // ScopeX.$new делает Object.setPrototypeOf(locals, state): присваивание `x = 1` в дочернем scope
+  // приходит сюда с receiver = locals. Пишем строго в target, иначе значение осядет на locals и state не изменится.
+  set: function set(target, key, value) {
+    var next = toRaw(value);
+    var had = hasOwn(target, key);
+    var prev = target[key];
+    var ok = Reflect.set(target, key, next);
+    if (ok && (!had || prev !== next)) {
+      if (isPlain(next)) link(next, target);
+      notify(target, {
+        target: target,
+        key: key,
+        type: had ? 'set' : 'add'
+      });
+    }
+    return ok;
+  },
+  deleteProperty: function deleteProperty(target, key) {
+    var had = hasOwn(target, key);
+    var ok = Reflect.deleteProperty(target, key);
+    if (ok && had) notify(target, {
+      target: target,
+      key: key,
+      type: 'delete'
+    });
+    return ok;
+  }
+};
+function reactive(value) {
+  if (!isPlain(value)) return value;
+  var raw = toRaw(value);
+  var p = proxies.get(raw);
+  if (!p) {
+    if (Object.isFrozen(raw)) return raw;
+    p = new Proxy(raw, handler);
+    proxies.set(raw, p);
+  }
+  return p;
+}
+function subscribe(target, fn) {
+  var raw = toRaw(target);
+  var set = subs.get(raw);
+  if (!set) subs.set(raw, set = new Set());
+  set.add(fn);
   return function () {
-    var _this2 = this;
-    for (var _len2 = arguments.length, args = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-      args[_key2] = arguments[_key2];
-    }
-    var callNow = immediate && !timeout;
-    var nowTime = Date.now();
-    var next = function next() {
-      timeout = null;
-      fn.apply(_this2, args);
-    };
-    if (timeout || lastTime && nowTime < lastTime + wait) {
-      return;
-    }
-    lastTime = nowTime;
-    if (callNow) {
-      fn.apply(this, args);
-    } else {
-      timeout = setTimeout(next, wait);
-    }
+    set["delete"](fn);
   };
 }
+var shareState = reactive;
 
 /***/ }),
-/* 17 */
+/* 19 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return shareState; });
-/* harmony import */ var ts_fns__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(11);
-/* harmony import */ var ts_fns__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(18);
+/* harmony import */ var ts_fns__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(13);
+/* harmony import */ var ts_fns__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(20);
 
 
 /**
@@ -7284,7 +7644,7 @@ function shareState(initState, options) {
           value = _ref.value;
         views.forEach(function (item) {
           if (item === view) {
-            if (options && Object(ts_fns__WEBPACK_IMPORTED_MODULE_0__[/* isFunction */ "h"])(options.onChange)) {
+            if (options && Object(ts_fns__WEBPACK_IMPORTED_MODULE_0__[/* isFunction */ "g"])(options.onChange)) {
               options.onChange(keyPath, value);
             }
             return;
@@ -7302,7 +7662,7 @@ function shareState(initState, options) {
         }
       });
     });
-    if (options && Object(ts_fns__WEBPACK_IMPORTED_MODULE_0__[/* isFunction */ "h"])(options.drive)) {
+    if (options && Object(ts_fns__WEBPACK_IMPORTED_MODULE_0__[/* isFunction */ "g"])(options.drive)) {
       options.drive(function (arg) {
         return view.update(arg);
       });
@@ -7312,7 +7672,7 @@ function shareState(initState, options) {
 }
 
 /***/ }),
-/* 18 */
+/* 20 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -7323,7 +7683,7 @@ function shareState(initState, options) {
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return assign; });
 /* unused harmony export remove */
 /* unused harmony export keyin */
-/* harmony import */ var _is_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(11);
+/* harmony import */ var _is_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(13);
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
 function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread(); }
 function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
@@ -7374,24 +7734,24 @@ function makeKeyPath(chain, isStrict) {
   for (var i = 0, len = chain.length; i < len; i++) {
     var key = chain[i];
     // do not support symbols
-    if (Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isSymbol */ "n"])(key)) {
+    if (Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isSymbol */ "l"])(key)) {
       var symbol = key.toString();
       path += '[' + symbol + ']';
     }
     // 1
-    else if (isStrict && Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isNumber */ "k"])(key)) {
+    else if (isStrict && Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isNumber */ "i"])(key)) {
       path += '[' + key + ']';
     }
     // '1'
-    else if (isStrict && Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isString */ "m"])(key) && /^[0-9]+$/.test(key)) {
+    else if (isStrict && Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isString */ "k"])(key) && /^[0-9]+$/.test(key)) {
       path += '[' + key + ']';
     }
     // '[1]' or '[a]' or '[a.b]'
-    else if (isStrict && Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isString */ "m"])(key) && /^\[.*\]$/.test(key)) {
+    else if (isStrict && Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isString */ "k"])(key) && /^\[.*\]$/.test(key)) {
       path += key;
     }
     // 'a.b'
-    else if (Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isString */ "m"])(key) && key.indexOf('.') > -1) {
+    else if (Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isString */ "k"])(key) && key.indexOf('.') > -1) {
       path += '[' + key + ']';
     } else {
       path += path ? '.' + key : key;
@@ -7485,12 +7845,12 @@ function assign(obj, key, value) {
     var current = chain[i];
     var next = chain[i + 1];
     // at the end
-    if (Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isUndefined */ "o"])(next) && i === len - 1) {
+    if (Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isUndefined */ "m"])(next) && i === len - 1) {
       next = tail;
     }
-    if (Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isNumber */ "k"])(next) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isArray */ "d"])(target[current])) {
+    if (Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isNumber */ "i"])(next) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isArray */ "d"])(target[current])) {
       target[current] = [];
-    } else if (Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isString */ "m"])(next) && /^[0-9]+$/.test(next) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isArray */ "d"])(target[current])) {
+    } else if (Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isString */ "k"])(next) && /^[0-9]+$/.test(next) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isArray */ "d"])(target[current])) {
       target[current] = [];
     } else if (target[current] === null || _typeof(target[current]) !== 'object') {
       target[current] = {};
@@ -7518,7 +7878,7 @@ function remove(obj, key) {
   }
   var tail = chain.pop();
   var target = parse(obj, chain);
-  if (!Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isObject */ "l"])(target) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isArray */ "d"])(target)) {
+  if (!Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isObject */ "j"])(target) && !Object(_is_js__WEBPACK_IMPORTED_MODULE_0__[/* isArray */ "d"])(target)) {
     return obj;
   }
   delete target[tail];
@@ -7567,7 +7927,7 @@ function keyin(key, obj, enumerable) {
 }
 
 /***/ }),
-/* 19 */
+/* 21 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -7600,16 +7960,16 @@ function createAsyncComponent(defer, callback) {
 }
 
 /***/ }),
-/* 20 */
+/* 22 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "b", function() { return route; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return createRouter; });
-/* harmony import */ var _utils_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(9);
-/* harmony import */ var _wex_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(7);
-/* harmony import */ var _wire_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(21);
-/* harmony import */ var _route_pattern_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(22);
+/* harmony import */ var _utils_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(11);
+/* harmony import */ var _wex_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(8);
+/* harmony import */ var _wire_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(23);
+/* harmony import */ var _route_pattern_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(24);
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
 function ownKeys(e, r) { var t = Object.keys(e); if (Object.getOwnPropertySymbols) { var o = Object.getOwnPropertySymbols(e); r && (o = o.filter(function (r) { return Object.getOwnPropertyDescriptor(e, r).enumerable; })), t.push.apply(t, o); } return t; }
 function _objectSpread(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys(Object(t), !0).forEach(function (r) { _defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
@@ -8137,7 +8497,7 @@ function createRouter() {
 }
 
 /***/ }),
-/* 21 */
+/* 23 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -8384,7 +8744,7 @@ var $wire = createWire();
 
 
 /***/ }),
-/* 22 */
+/* 24 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -8489,12 +8849,12 @@ function buildRoute(pattern) {
 }
 
 /***/ }),
-/* 23 */
+/* 25 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return createLazy; });
-/* harmony import */ var _wex_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(7);
+/* harmony import */ var _wex_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(8);
 // w-lazy.js
 
 var cfg = {
@@ -8657,11 +9017,11 @@ function createLazy() {
 }
 
 /***/ }),
-/* 24 */
+/* 26 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-/* harmony import */ var _wex_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(7);
+/* harmony import */ var _wex_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(8);
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
 function ownKeys(e, r) { var t = Object.keys(e); if (Object.getOwnPropertySymbols) { var o = Object.getOwnPropertySymbols(e); r && (o = o.filter(function (r) { return Object.getOwnPropertyDescriptor(e, r).enumerable; })), t.push.apply(t, o); } return t; }
 function _objectSpread(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys(Object(t), !0).forEach(function (r) { _defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
@@ -8792,12 +9152,12 @@ Object(_wex_js__WEBPACK_IMPORTED_MODULE_0__[/* directive */ "c"])('w-to', null, 
 });
 
 /***/ }),
-/* 25 */
+/* 27 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return setupModal; });
-/* harmony import */ var _wex_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(7);
+/* harmony import */ var _wex_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(8);
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
 /**
  * modal.js

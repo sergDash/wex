@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wex Kanban demo</title>
+    <script>try{const t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.classList.toggle('dark',t==='dark')}catch(e){}</script>
+    <script>window.Quas = { AutoDarkMode: false };</script>
+    <script src="https://cdn.jsdelivr.net/gh/wemmbley/quas@master/Source/Quas.js"></script>
+    <script src="https://unpkg.com/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/wemmbley/wex-js@master/dist/wex.min.js"></script>
+    <script src="./wex-draggable.js"></script>
+    <script src="./wex-source.js"></script>
+    <script src="./wex-kanban.js"></script>
+</head>
+<body class="min-h-screen bg-white p-4 text-[13px] text-slate-700 antialiased sm:p-8 dark:bg-slate-950 dark:text-slate-300">
+
+<div class="mx-auto mb-4 flex max-w-6xl flex-wrap items-center gap-2 text-xs">
+    <h1 class="mr-4 text-2xl font-semibold tracking-tight">Orders</h1>
+    <input id="q" placeholder="Поиск (Enter)" class="rounded border border-slate-300 bg-white px-2.5 py-1.5 dark:border-slate-600 dark:bg-slate-900" />
+    <button id="sortTitle" class="rounded border border-slate-300 bg-white px-2.5 py-1.5 dark:border-slate-600 dark:bg-slate-900">Sort: title</button>
+    <button id="sortPos" class="rounded border border-slate-300 bg-white px-2.5 py-1.5 dark:border-slate-600 dark:bg-slate-900">Sort: position</button>
+    <label class="flex items-center gap-1"><input id="reject" type="checkbox" class="accent-blue-500" /> сервер отклоняет перенос (revert)</label>
+    <span class="flex-1"></span>
+    <button id="theme" class="rounded border border-slate-300 bg-white px-3 py-1.5 dark:border-slate-600 dark:bg-slate-900">light / dark</button>
+</div>
+
+<template id="app" attrs="{ class: 'mx-auto max-w-6xl' }">
+    <Kanban source="orders" groupBy="status" :boards="boards" card="OrderCard" position="position" perGroup="6" @cardMove="onMove"></Kanban>
+</template>
+
+<pre id="log" class="mx-auto mt-4 h-24 max-w-6xl overflow-auto text-[11px] text-slate-500"></pre>
+
+<script>
+    document.getElementById('theme').onclick = () => {
+        const dark = document.documentElement.classList.toggle('dark')
+        try { localStorage.setItem('theme', dark ? 'dark' : 'light') } catch (e) {}
+    }
+    const $log = (t) => { const el = document.getElementById('log'); el.textContent = t + '\n' + el.textContent }
+
+    // ---------- карточка: дизайн целиком ваш; получает prop row
+    const OrderCard = $(`<template><article class="rounded border border-[#e7e7e7] bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+  <div class="text-[11.5px] leading-4 text-[#929292] dark:text-slate-300">{{ row.title }}</div>
+  <div class="mt-2 flex items-center gap-1.5 text-[10px] text-[#888]"><span>#{{ row.id }}</span><span class="flex-1"></span><span>{{ row.customer }}</span><span>{{ row.total }} ₴</span></div>
+</article></template>`).state(() => ({ row: null }))
+
+    // ---------- фейковый сервер: данные из JSON через $wire, остальное считаем здесь
+    let all = null
+    const loadAll = () => (all ? Promise.resolve(all) : new Promise(res => $wire.get('./orders.json').done((d) => { all = d; res(d) })))
+
+    function fakeServer(url, body) {
+        return loadAll().then((data) => {
+            let rows = data.slice()
+            body.filters.items.forEach((f) => {
+                if (f.operator === 'equals') rows = rows.filter(r => r[f.field] === f.value)
+                if (f.operator === 'not_in') rows = rows.filter(r => !f.value.includes(r[f.field]))
+            })
+            if (body.search) { const q = body.search.value.toLowerCase(); rows = rows.filter(r => String(r.title).toLowerCase().includes(q)) }
+            body.sort.slice().reverse().forEach(s => rows.sort((a, b) => (a[s.field] > b[s.field] ? 1 : a[s.field] < b[s.field] ? -1 : 0) * (s.dir === 'desc' ? -1 : 1)))
+            const per = body.per_page, total = rows.length, last = Math.max(1, Math.ceil(total / per)), page = Math.min(body.page, last), start = (page - 1) * per
+            return new Promise(r => setTimeout(() => r({ current_page: page, data: rows.slice(start, start + per), from: total ? start + 1 : null, to: total ? start + per : null, last_page: last, per_page: per, total }), 200))
+        })
+    }
+
+    // эмуляция серверного эндпоинта move: считает position между соседями
+    function serverMove(e) {
+        const row = all.find(r => String(r.id) === String(e.id))
+        const pos = id => (id == null ? null : all.find(r => String(r.id) === String(id)).position)
+        const b = pos(e.before), a = pos(e.after)
+        row.status = e.to
+        row.position = b != null && a != null ? (a + b) / 2 : b != null ? b - 1 : a != null ? a + 1 : 0
+    }
+
+    // ---------- подключение
+    const orders = createSource('orders', {
+        url: '/api/orders', transport: fakeServer,
+        columns: [{ field: 'title' }, { field: 'status' }, { field: 'position', type: 'number' }]
+    })
+    const kanban = createKanban({ cards: { OrderCard } })
+
+    // событие для сервера: сработает при переносе карточки и при смене позиции
+    kanban.view.on('$kanbanCardMove', (state, e) => {
+        if (document.getElementById('reject').checked) { $log('server: отклонён перенос ' + e.id + ', revert()'); e.revert(); return }
+        serverMove(e)
+        $log('$kanbanCardMove: id=' + e.id + ' ' + e.from + ' -> ' + e.to + ' index=' + e.index + ' before=' + e.before + ' after=' + e.after)
+    })
+
+    document.getElementById('q').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') orders.setSearch(ev.target.value) })
+    document.getElementById('sortTitle').onclick = () => orders.setSort([{ field: 'title', dir: 'asc' }])
+    document.getElementById('sortPos').onclick = () => orders.setSort([])
+
+    $('#app')
+        .state({ boards: ['new', 'paid', 'shipped', { value: 'done', label: 'Done' }] })
+        .method('onMove', state => function (e) { /* родитель тоже получает событие: @cardMove */ })
+        .plugin(kanban)
+        .mount()
+</script>
+</body>
+</html>

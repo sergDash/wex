@@ -1,65 +1,46 @@
+/*
+ * Персистентность ключей state.storage в localStorage.
+ * Формат значения: JSON.stringify(value)
+ * Старые записи читаются: строка приводится к типу значения по умолчанию.
+ */
 export class VMLocalStorage {
-    static getKey = (key) => 'JQVM_ls_' + key;
+    static getKey = (key) => 'JQVM_ls_' + key
 
     static getVal = (key) => {
-        return JSON.parse(
-            localStorage.getItem(
-                this.getKey(
-                    key
-                )
-            )
-        )
-    };
+        try {
+            const raw = localStorage.getItem(this.getKey(key))
+            return raw === null ? null : JSON.parse(raw)
+        } catch (e) { return null }
+    }
 
     static setVal = (key, val) => {
-        val = String(val);
+        try {
+            const next = JSON.stringify(val === undefined ? null : val)
+            const k = this.getKey(key)
+            if (localStorage.getItem(k) !== next) localStorage.setItem(k, next)   // не пишем без изменений
+        } catch (e) { /* квота или приватный режим */ }
+    }
 
-        localStorage.setItem(
-            this.getKey(
-                key
-            ),
-            JSON.stringify(
-                val
-            )
-        )
+    static revive = (stored, def) => {
+        if (typeof stored === 'string' && typeof def !== 'string' && def !== undefined && def !== null) {
+            try { return JSON.parse(stored) } catch (e) { return def }   // старый формат
+        }
+        return stored
     }
 
     static reloadJqvmLocalStorage = (state, status) => {
+        const st = state && state.storage
+        if (!st || typeof st !== 'object') return
 
-        // user handed some data into storage key
-        if(state.storage !== undefined) {
-            // get data from const storage
-            const stateStorage = Object.assign({}, state.storage);
-
-            Object.keys(stateStorage).forEach((name, index) => {
-                const localStorageValue = this.getVal(name);
-
-                // set state from storage if exists and it mount step (pipe)
-                if(status === '$mount') {
-                    this.setVal(state.storage[name])
-
-                    const localStoreVal = this.getVal(name);
-
-                    if(localStoreVal === null || localStoreVal === undefined) {
-                        this.setVal(name, String(state.storage[name]));
-                    } else {
-                        state.storage[name] = localStoreVal;
-                    }
-                }
-
-                // local storage empty
-                if(localStorageValue === null) {
-                    this.setVal(name, stateStorage[index]);
-
-                    // storage have items, load it
-                } else {
-                    if(status === '$change') {
-                        this.setVal(
-                            name, state.storage[name]
-                        );
-                    }
-                }
-            })
-        }
-    };
+        Object.keys(st).forEach((name) => {
+            if (status === '$mount') {
+                const stored = this.getVal(name)
+                if (stored === null) this.setVal(name, st[name])
+                else st[name] = this.revive(stored, st[name])
+            }
+            else if (status === '$change') {
+                this.setVal(name, st[name])
+            }
+        })
+    }
 }

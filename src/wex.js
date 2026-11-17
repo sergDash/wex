@@ -1,13 +1,10 @@
-const WEX_VERSION = '1.2.2';
+const WEX_VERSION = '2.0.0';
 
-import { ScopeX } from 'scopex'
-import {
-  isNone, each, isObject, isFunction, isString,
-  diffArray, uniqueArray, getObjectHash, createProxy,
-  isEqual, throttle, filter as filterProps, isShallowEqual,
-} from 'ts-fns'
+import { ScopeX } from './vendor/ScopeX'
+import { isNone, each, isObject, isFunction, isString, diffArray, uniqueArray, isEqual } from './vendor/ts-fns'
 import { getPath, camelCase, parseKey, getNodeName, getNodeAttrs, createAttrsText } from './utils.js'
-import { VMLocalStorage } from './store';
+import { VMLocalStorage } from './store.js'
+import { reactive, toRaw, isReactive, subscribe } from './reactive.js'
 
 let vmId = 0
 let $ = null
@@ -31,8 +28,8 @@ function scopeSnapshot(scp) {
     for (const k in data) {
       const v = data[k]
       out[k] = v && typeof v === 'object'
-        ? (Array.isArray(v) ? `Array(${v.length})` : `{${Object.keys(v).slice(0, 6).join(', ')}}`)
-        : v
+          ? (Array.isArray(v) ? `Array(${v.length})` : `{${Object.keys(v).slice(0, 6).join(', ')}}`)
+          : v
     }
   } catch (e) {}
   return out
@@ -108,12 +105,75 @@ function _push(list, name, compile, affect, priority = 10) {
   list.push([name, compile, affect, priority])
 }
 
+// ---------- жизненный цикл директив ----------
+// directive(name, { compile, mounted, updated, unmounted, priority })
+//   compile($el, attrs)                  как раньше, на виртуальном дереве
+//   mounted($el, attrs, data)            один раз, когда элемент появился в DOM
+//   updated($el, attrs, data)            на каждый следующий рендер
+//   unmounted($el, data)                 когда элемент удалён из DOM или view размонтирован
+// this = { $root, scope, view, component } (как у affect). data живёт столько же, сколько элемент.
+function lifecycleAffect(name, def) {
+  return function ($el, attrs) {
+    const el = $el[0]
+    const bag = el.__wDirs || (el.__wDirs = {})
+    let rec = bag[name]
+    if (!rec) {
+      rec = bag[name] = { def, data: {}, ctx: this }
+      if (def.mounted) def.mounted.call(this, $el, attrs, rec.data)
+    }
+    else {
+      rec.ctx = this
+      if (def.updated) def.updated.call(this, $el, attrs, rec.data)
+    }
+  }
+}
+
+function normalizeDirective(name, compile, affect, priority) {
+  if (compile && typeof compile === 'object' && !(compile instanceof View)) {
+    const def = compile
+    return [def.compile || null, lifecycleAffect(name, def), def.priority !== undefined ? def.priority : priority]
+  }
+  return [compile, affect, priority]
+}
+
+function teardownDirectives(el) {
+  const run = (node) => {
+    const bag = node.__wDirs
+    if (!bag) return
+    delete node.__wDirs
+    Object.keys(bag).forEach((name) => {
+      const rec = bag[name]
+      if (!rec.def.unmounted) return
+      try { rec.def.unmounted.call(rec.ctx, $(node), rec.data) }
+      catch (e) { console.error(e) }
+    })
+  }
+  run(el)
+  if (el.querySelectorAll) el.querySelectorAll('*').forEach(run)
+}
+
+// удаляемый узел: размонтировать компоненты и директивы внутри
+function disposeNode(node) {
+  if (node.nodeType !== 1) return
+  const els = [node, ...node.querySelectorAll('*')]
+  els.forEach((el) => {
+    const comp = el.__jQvmComponent
+    if (comp) {
+      comp.__cancelled = true
+      comp.unmount()
+      delete el.__jQvmComponent
+    }
+  })
+  teardownDirectives(node)
+}
+
 export function component(name, compile, affect) {
   _push(globalComponents, name, compile, affect)
 }
 
 export function directive(name, compile, affect, priority) {
-  _push(globalDirectives, name, compile, affect, priority)
+  const [c, a, p] = normalizeDirective(name, compile, affect, priority)
+  _push(globalDirectives, name, c, a, p)
 }
 
 export function filter(name, fn) {
@@ -234,40 +294,40 @@ function compile($root, components, directives, state, view, [template, scope, i
   const $element = $(inertBox(template))
 
   const interpolate = ($element, scp = scope) => {
-	  $element.each(function() {
-		const attrs = [...this.attributes]
-		const $this = $(this)
-		attrs.forEach(({ name, value }) => {
-		  if (name.indexOf('@') === 0) return
+    $element.each(function() {
+      const attrs = [...this.attributes]
+      const $this = $(this)
+      attrs.forEach(({ name, value }) => {
+        if (name.indexOf('@') === 0) return
 
-		  checkInterpolation(value, scp, { view, el: this, attr: name })
-		  const text = scp.interpolate(value)
+        checkInterpolation(value, scp, { view, el: this, attr: name })
+        const text = scp.interpolate(value)
 
-		  // атрибут целиком из одного {{ }} и результат пустой: не пишем "undefined" в DOM
-		  if ((text === 'undefined' || text === 'null') && /^\{\{[^}]+\}\}$/.test(value.trim())) {
-			$this.removeAttr(name)
-			return
-		  }
-		  $this.attr(name, text)
-		})
+        // атрибут целиком из одного {{ }} и результат пустой: не пишем "undefined" в DOM
+        if ((text === 'undefined' || text === 'null') && /^\{\{[^}]+\}\}$/.test(value.trim())) {
+          $this.removeAttr(name)
+          return
+        }
+        $this.attr(name, text)
+      })
 
-		const children = [...this.childNodes]
-		children.forEach((child) => {
-		  if (child.nodeName === '#text') {
-			checkInterpolation(child.textContent, scp, { view, el: this })
-			child.textContent = scp.interpolate(child.textContent)
-		  }
-		  else if (child.nodeName.indexOf('#') !== 0) {
-			interpolate($(child), scp)
-		  }
-		})
-	  })
-	}
+      const children = [...this.childNodes]
+      children.forEach((child) => {
+        if (child.nodeName === '#text') {
+          checkInterpolation(child.textContent, scp, { view, el: this })
+          child.textContent = scp.interpolate(child.textContent)
+        }
+        else if (child.nodeName.indexOf('#') !== 0) {
+          interpolate($(child), scp)
+        }
+      })
+    })
+  }
 
   const createIterator = (onCompile, onAffect) => function(index) {
     const el = this
-	// уже обработан вложенным compile (w-for) — повторно не трогаем
-	if (el.__jQvmIterated) return
+    // уже обработан вложенным compile (w-for) — повторно не трогаем
+    if (el.__jQvmIterated) return
     const $el = $(el)
     const attrs = getNodeAttrs(this)
     const name = getNodeName(this)
@@ -285,34 +345,34 @@ function compile($root, components, directives, state, view, [template, scope, i
     slot.nodes = [...el.childNodes]
 
     const record = {
-	  affect: onAffect, attrs, els, slot, scope,
-	  source: config.debug ? el.outerHTML.slice(0, 160) : '',
-	}
+      affect: onAffect, attrs, els, slot, scope,
+      source: config.debug ? el.outerHTML.slice(0, 160) : '',
+    }
 
     const useComponent = (proto) => {
-	  // экземпляр создаётся в affect() и привязывается к конкретному DOM-элементу
-	  record.view = proto
-	  record.name = name
-	  record.state = state
+      // экземпляр создаётся в affect() и привязывается к конкретному DOM-элементу
+      record.view = proto
+      record.name = name
+      record.state = state
 
-	  if (proto.tag !== 'template') {
-		const { tag, attributes } = proto
-		const $tag = $(`<${tag} />`)
+      if (proto.tag !== 'template') {
+        const { tag, attributes } = proto
+        const $tag = $(`<${tag} />`)
 
-		const attrsText = createAttrsText(attrs)
-		const $commentBegin = $(`<!-- ${name} ${attrsText} begin -->`)
-		const $commentEnd = $(`<!-- ${name} ${attrsText} end -->`)
+        const attrsText = createAttrsText(attrs)
+        const $commentBegin = $(`<!-- ${name} ${attrsText} begin -->`)
+        const $commentEnd = $(`<!-- ${name} ${attrsText} end -->`)
 
-		Object.assign(attrs, attributes, { ['data-hoist']: name })
-		$tag.attr(attrs)
-		$el.replaceWith([$commentBegin, $tag, $commentEnd])
-		els.length = 0
-		els.push($commentBegin[0], $tag[0], $commentEnd[0])
-	  }
-	  else {
-		$el.empty()
-	  }
-	}
+        Object.assign(attrs, attributes, { ['data-hoist']: name })
+        $tag.attr(attrs)
+        $el.replaceWith([$commentBegin, $tag, $commentEnd])
+        els.length = 0
+        els.push($commentBegin[0], $tag[0], $commentEnd[0])
+      }
+      else {
+        $el.empty()
+      }
+    }
 
     // register a view as component
     if (onCompile instanceof View) {
@@ -340,12 +400,12 @@ function compile($root, components, directives, state, view, [template, scope, i
       }
     }
 
-	records.push(record)
-	el.__jQvmIterated = true
-	els.forEach((item) => {
-	  item.__jQvmCompiledRecord = record
-	  item.__jQvmIterated = true
-	})
+    records.push(record)
+    el.__jQvmIterated = true
+    els.forEach((item) => {
+      item.__jQvmCompiledRecord = record
+      item.__jQvmIterated = true
+    })
   }
 
   // directives have higher priority than components
@@ -407,7 +467,77 @@ function compile($root, components, directives, state, view, [template, scope, i
   return nodes
 }
 
+// ---------- keyed diff ----------
+// Ключ узла:
+//   'g|…'  глобальный в пределах view: w-for ... traceby (ставит __wKey) и id. Узел и компонент
+//          переезжают между контейнерами, а не пересоздаются.
+//   'l|…'  локальный (ручной data-id): ищется только среди детей того же родителя.
+function keyOf(node) {
+  if (node.nodeType !== 1) return undefined
+  if (node.__wKey !== undefined) return node.__wKey
+  const id = node.getAttribute('id')
+  if (id) return 'g|id|' + id
+  const d = node.getAttribute('data-id')
+  if (d !== null) return 'l|' + node.nodeName + '|' + d
+  return undefined
+}
+
 function diffAndPatch($root, nodes) {
+  const claimed = new Set()     // старые узлы, уже занятые новым деревом
+  const pending = []            // кандидаты на удаление: решение после обхода всего дерева
+  const localCache = new Map()
+  let globalIdx = null
+
+  const addTo = (map, key, el) => {
+    const list = map.get(key)
+    if (list) list.push(el)
+    else map.set(key, [el])
+  }
+
+  const localIndex = (parent) => {
+    let map = localCache.get(parent)
+    if (!map) {
+      map = new Map()
+      for (let c = parent.firstElementChild; c; c = c.nextElementSibling) {
+        const k = keyOf(c)
+        if (k !== undefined) addTo(map, k, c)
+      }
+      localCache.set(parent, map)
+    }
+    return map
+  }
+
+  // одноразовый обход (лениво, только если ключ не найден среди детей); в чужие view не заходим
+  const globalIndex = () => {
+    if (!globalIdx) {
+      globalIdx = new Map()
+      const walk = (el) => {
+        for (let c = el.firstElementChild; c; c = c.nextElementSibling) {
+          const k = keyOf(c)
+          if (k !== undefined && k[0] === 'g') addTo(globalIdx, k, c)
+          if (!c.__jQvmComponent) walk(c)
+        }
+      }
+      walk($root[0])
+    }
+    return globalIdx
+  }
+
+  const pick = (list) => {
+    if (!list) return null
+    for (let i = 0; i < list.length; i ++) {
+      if (!claimed.has(list[i])) return list[i]
+    }
+    return null
+  }
+
+  const take = (key, parent) => {
+    let el = pick(localIndex(parent).get(key))
+    if (!el && key[0] === 'g') el = pick(globalIndex().get(key))
+    if (el) claimed.add(el)
+    return el
+  }
+
   // we will not use next to replace current node, so we should transform record info to old node
   const transferRecord = (current, next) => {
     const record = next.__jQvmCompiledRecord
@@ -454,38 +584,40 @@ function diffAndPatch($root, nodes) {
       $current.removeAttr(name)
     })
 
+    if (next.__wKey !== undefined) current.__wKey = next.__wKey
+
     transferRecord(current, next)
 
     // dont diff component inner content
     if (current.__jQvmComponent) {
       if (
-        current.nodeName === next.nodeName
-        && currentAttrs['w-name'] === nextAttrs['w-name']
+          current.nodeName === next.nodeName
+          && currentAttrs['w-name'] === nextAttrs['w-name']
       ) {
         return
       }
 
       if (
-        current.nodeName === next.nodeName
-        && (currentAttrs['id'] || nextAttrs['id'])
-        && currentAttrs['id'] === nextAttrs['id']
+          current.nodeName === next.nodeName
+          && (currentAttrs['id'] || nextAttrs['id'])
+          && currentAttrs['id'] === nextAttrs['id']
       ) {
         return
       }
 
       if (
-        current.nodeName === next.nodeName
-        && (currentAttrs['data-id'] || nextAttrs['data-id'])
-        && currentAttrs['data-id'] === nextAttrs['data-id']
+          current.nodeName === next.nodeName
+          && (currentAttrs['data-id'] || nextAttrs['data-id'])
+          && currentAttrs['data-id'] === nextAttrs['data-id']
       ) {
         return
       }
 
       const ignoreAttrs = ['style', 'class', 'w-name']
       if (
-        current.nodeName === next.nodeName
-        && $current.attr('data-hoist') === $next.attr('data-hoist')
-        && isEqual(currentAttrNames.filter(item => !ignoreAttrs.includes(item)), nextAttrNames.filter(item => !ignoreAttrs.includes(item)))
+          current.nodeName === next.nodeName
+          && $current.attr('data-hoist') === $next.attr('data-hoist')
+          && isEqual(currentAttrNames.filter(item => !ignoreAttrs.includes(item)), nextAttrNames.filter(item => !ignoreAttrs.includes(item)))
       ) {
         return
       }
@@ -498,88 +630,60 @@ function diffAndPatch($root, nodes) {
   const diffAndPatchChildren = ($parent, nextChildren) => {
     const parentNode = $parent[0]
 
-    // append all children at once if current is empty inside
-    if (!parentNode.childNodes.length) {
+    // пустой родитель без ключей: просто добавляем всё разом
+    if (!parentNode.childNodes.length && !nextChildren.some(n => keyOf(n) !== undefined)) {
       nextChildren.forEach((child) => {
         parentNode.appendChild(child)
       })
       return
     }
 
+    // инвариант: после шага i parentNode.childNodes[i] соответствует nextChildren[i]
     nextChildren.forEach((next, i) => {
-      const $next = $(next)
-      const current = parentNode.childNodes[i]
-      const $current = $(current)
-      const nextId = $next.attr('id')
-      const nextDataId = $next.attr('data-id')
+      const current = parentNode.childNodes[i] || null
+      const key = keyOf(next)
 
-      const move = ($prev) => {
-        if ($prev.length) {
-          const prev = $prev[0]
-          // move it
-          if (prev !== current) {
-            parentNode.insertBefore(prev, current)
-            transferRecord(current, next)
-          }
-          // update the node
-          diffAndPatchNode($prev, $next)
+      if (key !== undefined) {
+        const found = take(key, parentNode)
+        if (found) {
+          if (found !== current) parentNode.insertBefore(found, current)
+          diffAndPatchNode($(found), $(next))
         }
         else {
           parentNode.insertBefore(next, current)
         }
       }
-
-      // current index node not existing, insert the coming node directly
-      if (!current) {
+      else if (!current) {
         parentNode.appendChild(next)
       }
-      // use `jq-id` to unique element
-      else if (nextId) {
-        const $prev = $parent.find(`[id=${nextId}]`)
-        move($prev)
-      }
-      else if (nextDataId) {
-        const $prev = $parent.find(`[data-id="${nextDataId}"]`)
-        move($prev)
-      }
-      // insert coming child directly
-      else if (next.nodeName !== current.nodeName) {
+      // чужой ключевой узел не патчим под безключевой: вставляем рядом
+      else if (next.nodeName !== current.nodeName || keyOf(current) !== undefined) {
         parentNode.insertBefore(next, current)
       }
       // diff and patch element
       else if (next.nodeName.indexOf('#') !== 0) {
-        diffAndPatchNode($current, $next)
+        diffAndPatchNode($(current), $(next))
       }
       // diff and patch text
-      else {
-        if (next.textContent !== current.textContent) {
-          current.textContent = next.textContent
-        }
+      else if (next.textContent !== current.textContent) {
+        current.textContent = next.textContent
       }
     })
 
-    // remove no use elements
+    // хвост: не удаляем сразу, узел мог переехать в другой контейнер
     for (let i = parentNode.childNodes.length - 1, start = nextChildren.length; i >= start; i --) {
-      const child = parentNode.childNodes[i]
-	  
-		 if (child.__jQvmComponent) {
-		  child.__jQvmComponent.__cancelled = true
-		  child.__jQvmComponent.unmount()
-		  delete child.__jQvmComponent
-		}
-		const all = $(child).find('*')
-		all.each(function() {
-		  if (this.__jQvmComponent) {
-			this.__jQvmComponent.__cancelled = true
-			this.__jQvmComponent.unmount()
-			delete this.__jQvmComponent
-		  }
-		})
-      parentNode.removeChild(child)
+      pending.push(parentNode.childNodes[i])
     }
   }
 
   diffAndPatchChildren($root, nodes)
+
+  pending.forEach((node) => {
+    const parent = node.parentNode
+    if (claimed.has(node) || !parent) return
+    disposeNode(node)
+    parent.removeChild(node)
+  })
 }
 
 let inertDoc = null
@@ -757,6 +861,7 @@ function affect($root, scope, view) {
 
 // ---------------- main ---------------
 
+// начальное состояние клона: свои копии plain-данных (state по ссылке живёт только через props и shareState)
 function cloneState(value) {
   if (Array.isArray(value)) return value.map(cloneState)
   if (value && Object.getPrototypeOf(value) === Object.prototype) {
@@ -823,7 +928,8 @@ function vm(initState = {}) {
   }
 
   function directive(name, compile, affect, priority) {
-    _push(directives, name, compile, affect, priority)
+    const [c, a, p] = normalizeDirective(name, compile, affect, priority)
+    _push(directives, name, c, a, p)
     return view
   }
 
@@ -832,56 +938,57 @@ function vm(initState = {}) {
     return view
   }
 
-  // ------------
+  // ------------ планировщик рендера ------------
+  // Любая мутация state (или вложенного объекта) помечает view грязным; рендер батчится в микротаске.
+  // hold()/release(): на время drag и подобных операций рендер откладывается, release() выполняет его синхронно.
 
-  let latestHash = null
-  const nextTick = throttle((e) => {
-    if (!state || !latestHash) {
-      return
-    }
+  let dirty = false
+  let queued = false
+  let held = 0
+  let skipped = false      // рендер был отменён через $update + prevent
+  let lastInfo = null
+  let unsubscribe = null
 
-    const currentHash = getObjectHash(state)
-    if (latestHash !== currentHash) {
-      const needToUpdate = e ? change(e) : true
-      if (needToUpdate) {
-        render(true)
-      }
-    }
+  const schedule = (info) => {
+    lastInfo = info
+    dirty = true
+    if (queued || held || !isMounted) return
+    queued = true
+    Promise.resolve().then(flush)
+  }
 
-    latestHash = currentHash
-  }, 16)
-  const currTick = () => {
-    latestHash = getObjectHash(state)
+  function flush() {
+    queued = false
+    if (!dirty || held || !state || !isMounted) return
+    dirty = false
+    if (change(lastInfo)) render(true)
   }
 
   // -------------
 
-  const outsideHashes = {}
-
-  const assignOutsideState = (state, outsideState, init) => {
+  // props приходят по ссылке: реактивные данные родителя остаются теми же объектами
+  const assignOutsideState = (state, outsideState) => {
     if (!state) return false
 
     const keys = {}
     Object.keys(state).forEach((k) => { keys[k.toLowerCase()] = k })
 
-    const next = {}
+    let changed = false
     each(outsideState, (value, key) => {
       if (key[0] === '@') return
       const realKey = key in state ? key : keys[key.toLowerCase()]
       if (!realKey) return
 
-		const hash = getObjectHash(value)
-		
-		if (!init && outsideHashes[key] === hash && getObjectHash(state[realKey]) === hash) return
-		outsideHashes[key] = hash
+      const prev = toRaw(state[realKey])
+      const next = toRaw(value)
+      if (prev === next) return
+      // литерал из выражения (`:x="{a:1}"`) создаётся заново на каждый рендер родителя: сравниваем по содержимому
+      if (!isReactive(value) && isEqual(prev, next)) return
 
-		next[realKey] = cloneState(value)
-		// ранее здесь было прямое присвоение value но у нас кривой CreateProxy из ts-fns модуля. createProxy ребёнка не принимает уже проксированное значение: внутри всегда 0 почему-то. Решение - клонировать. Там внутри все передается.
-		// Побочный эффект: Ребёнок теперь работает со своей копией пропа. Если где-то ребёнок пишет в проп и ждёт, что родитель увидит изменение, это перестанет работать. Для пропов только на чтение, как menu, posts и article, это не мешает. Если у вас есть компоненты, которые пишут в проп, лучше передавать им колбэк через @event.
+      state[realKey] = next
+      changed = true
     })
-
-	  Object.assign(state, next)
-	  return Object.keys(next).length > 0
+    return changed
   }
 
   function init(initState) {
@@ -891,16 +998,12 @@ function vm(initState = {}) {
       throw new Error('initState should must be an object')
     }
 
+    state = reactive(next)   // shareState отдаёт один и тот же прокси всем view
     if (outside) {
-      assignOutsideState(next, outside, true)
+      assignOutsideState(state, outside)
     }
-
-    state = createProxy(next, {
-      dispatch: nextTick,
-      enumerable: () => true,
-    })
+    unsubscribe = subscribe(state, schedule)
     scope = new ScopeX(state, { filters })
-    currTick()
 
     // setupSpecialEvents should be invoked here
     // because these events should be registered before $init triggered
@@ -914,8 +1017,10 @@ function vm(initState = {}) {
     }
 
     if (!shouldUpdate()) {
+      skipped = true
       return
     }
+    skipped = false
 
     const $root = getMountNode()
 
@@ -960,10 +1065,10 @@ function vm(initState = {}) {
     $template.trigger('$render')
   }
 
-  function change(e) {
+  function change(info) {
     let flag = true
     const prevent = () => flag = false
-    $template.trigger('$change', [state, e, prevent])
+    $template.trigger('$change', [state, info, prevent])
     if (flag) {
       VMLocalStorage.reloadJqvmLocalStorage(state, '$change')
     }
@@ -1018,6 +1123,7 @@ function vm(initState = {}) {
     }
 
     render()
+    dirty = false
 
     VMLocalStorage.reloadJqvmLocalStorage(state, '$mount')
 
@@ -1042,6 +1148,8 @@ function vm(initState = {}) {
 
     $template.trigger('$unmount')
 
+    teardownDirectives($root[0])
+
     if (mountTo) {
       $root.html('')
       $root.removeAttr('w-name')
@@ -1064,41 +1172,33 @@ function vm(initState = {}) {
 
     unmount()
 
+    if (unsubscribe) unsubscribe()
+    unsubscribe = null
     state = null
     scope = null
     actions.length = 0
 
     const root = $root[0]
-    delete root.__jQvmComponentInstances
-    delete root.__jQvmCompiledRecords
+    if (root) {
+      delete root.__jQvmComponentInstances
+      delete root.__jQvmCompiledRecords
+    }
 
     $template.trigger('$destroy')
   }
-  
-	let forcePending = false
-	const scheduleForce = () => {
-	  if (forcePending) return
-	  forcePending = true
-	  Promise.resolve().then(() => {
-		forcePending = false
-		if (isMounted && state) {
-		  render(true)
-		  currTick()
-		}
-	  })
-	}
 
   function update(nextState, type) {
-	if (type === SYMBOL) {
-	  const changed = state ? assignOutsideState(state, nextState) : false
-	  outside = nextState
-	  if (changed && isMounted) scheduleForce()
-	  return view
-	}
+    // props от родителя: рендер запустит подписка на state
+    if (type === SYMBOL) {
+      outside = nextState
+      if (state) assignOutsideState(state, nextState)
+      return view
+    }
 
     // force update
     if (nextState === true) {
       if (isMounted) {
+        dirty = false
         render(true)
       }
       return view
@@ -1111,22 +1211,30 @@ function vm(initState = {}) {
         if (isObject(res)) {
           Object.assign(state, res)
         }
-        else if (isMounted) {
-          nextTick()
+        else {
+          schedule(null)   // мутации не-plain объектов (Chart.js) не видны прокси: помечаем вручную
         }
-        return view
       }
       else if (isObject(nextState)) {
         Object.assign(state, nextState)
-        return view
       }
     }
 
-    // if not passed nextState, it means to check manually
-    if (isMounted && nextState) {
-      nextTick()
-    }
+    return view
+  }
 
+  // отложить рендер до release(); вызовы вкладываются
+  function hold() {
+    held ++
+    return view
+  }
+
+  // release() рендерит синхронно, если за время hold что-то изменилось (или рендер был отменён через $update + prevent)
+  function release() {
+    if (held > 0 && -- held === 0) {
+      if (dirty) flush()
+      else if (skipped) render(true)
+    }
     return view
   }
 
@@ -1218,12 +1326,10 @@ function vm(initState = {}) {
     if (event[0] !== '$') {
       return
     }
-    // trigger those bind to view root
-    actions.forEach((item) => {
-      if (item.event === event) {
-        $template.trigger(event, ...args)
-      }
-    })
+    // trigger those bind to view root: один trigger на событие (каждый обработчик вызывается один раз)
+    if (actions.some(item => item.event === event)) {
+      $template.trigger(event, args)
+    }
   }
 
   function setupSpecialEvents() {
@@ -1289,8 +1395,8 @@ function vm(initState = {}) {
   }
 
   function clone() {
-	// свой <template> и своя копия начального состояния на каждый экземпляр
-	const newView = vm.call($template.clone(), isFunction(initState) ? initState : cloneState(initState))  
+    // свой <template> и своя копия начального состояния на каждый экземпляр
+    const newView = vm.call($template.clone(), isFunction(initState) ? initState : cloneState(initState))
     each(fns, (action, name) => {
       newView.fn(name, action)
     })
@@ -1360,6 +1466,8 @@ function vm(initState = {}) {
     unmount,
     destroy,
     update,
+    hold,
+    release,
     find,
     component,
     directive,
@@ -1414,6 +1522,10 @@ directive('w-for', function($el, attrs) {
     $el.attr('data-id', `{{${traceBy}}}`) // modify the template, this will be compiled
   }
 
+  // глобальный ключ: один и тот же список в разных контейнерах (колонки канбана) даёт совместимые ключи,
+  // поэтому keyed diff переносит узел и компонент между контейнерами
+  const keyScope = nodeName + '|' + dataKey + '|' + traceBy
+
   const $els = []
 
   const temp = el.outerHTML
@@ -1427,6 +1539,13 @@ directive('w-for', function($el, attrs) {
     const scope = parentScope.$new(newScope)
 
     const nodes = compile(temp, scope, true)
+    if (traceBy) {
+      nodes.forEach((n) => {
+        if (n.nodeType !== 1) return
+        const id = n.getAttribute('data-id')
+        if (id !== null) n.__wKey = 'g|' + keyScope + '|' + id
+      })
+    }
     $els.push(...nodes)
   })
 
@@ -1460,8 +1579,8 @@ directive('w-html', function ($el, attrs) {
   // принимаем и w-html="item.icon", и w-html="{{ item.icon }}"
   const exp = attrs['w-html'].replace(/^\{\{\s*|\s*\}\}$/g, '')
   const ctx = { view: this.view, el: $el[0], attr: 'w-html', expr: exp }
-	const html = safeParse(this.scope, exp, ctx)
-	if (isNone(html)) report(`w-html получил ${html}`, { ...ctx, scope: this.scope })
+  const html = safeParse(this.scope, exp, ctx)
+  if (isNone(html)) report(`w-html получил ${html}`, { ...ctx, scope: this.scope })
 
   $el.removeAttr('w-html')
   $el.html(sanitizeSvg(isNone(html) ? '' : String(html)))
@@ -1513,34 +1632,34 @@ directive('w-selected', null, function($el, attrs) {
 })
 
 directive(
-  'w-bind',
-  null,
-  function($el, attrs) {
-    const attr = attrs['w-bind']
-    const value = this.scope.parse(attr)
+    'w-bind',
+    null,
+    function($el, attrs) {
+      const attr = attrs['w-bind']
+      const value = this.scope.parse(attr)
 
-    const event = $el.is('[type=checkbox],[type=radio],[type=color],[type=date],[type=datetime-local],[type=week],[type=file],select') ? 'change' : 'input'
-    const checkbox = $el.is('[type=checkbox]')
-    const radio = $el.is('[type=radio]')
+      const event = $el.is('[type=checkbox],[type=radio],[type=color],[type=date],[type=datetime-local],[type=week],[type=file],select') ? 'change' : 'input'
+      const checkbox = $el.is('[type=checkbox]')
+      const radio = $el.is('[type=radio]')
 
-    if (checkbox) {
-      $el.prop('checked', !!value)
-    }
-    else if (radio) {
-      $el.prop('checked', value === $el.val())
-    }
-    else {
-      $el.val(value)
-    }
+      if (checkbox) {
+        $el.prop('checked', !!value)
+      }
+      else if (radio) {
+        $el.prop('checked', value === $el.val())
+      }
+      else {
+        $el.val(value)
+      }
 
-    const callback = (e) => {
-      const value = checkbox ? $el.prop('checked') : e.target.value
-      this.scope.assign(attr, value)
-    }
+      const callback = (e) => {
+        const value = checkbox ? $el.prop('checked') : e.target.value
+        this.scope.assign(attr, value)
+      }
 
-    $el.on(event, callback)
-    return () => $el.off(event, callback)
-  },
+      $el.on(event, callback)
+      return () => $el.off(event, callback)
+    },
 )
 
 directive('w-src', null, function($el, attrs) {

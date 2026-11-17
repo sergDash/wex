@@ -170,8 +170,23 @@ module.exports = (env = {}) => {
     plugins: [],
   };
 
+  const dropzone = {
+    ...bundle,
+    entry: path.join(__dirname, 'src/plugins/dropzone/wex-dropzone.js'),
+    output: { path: dist, filename: 'wex-dropzone.js' },
+    plugins: [],
+  };
+
+  const imageEditor = {
+    ...bundle,
+    entry: path.join(__dirname, 'src/plugins/image-editor/wex-image-editor.js'),
+    output: { path: dist, filename: 'wex-image-editor.js' },
+    plugins: [],
+  };
+
   return [bundle, mini, doc, minify(doc), editor, minify(editor), datatable,
     minify(datatable), datepicker, minify(datepicker), select, minify(select),
-    gallery, minify(gallery)
+    gallery, minify(gallery), dropzone, minify(dropzone), imageEditor,
+    minify(imageEditor)
   ];
 };

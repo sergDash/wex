@@ -49,16 +49,16 @@
 </body>
 <footer>
     <script src="https://unpkg.com/jquery/dist/jquery.min.js"></script>
-    <script src="../../dist/wex.min.js"></script>
+    <script src="../../../dist/wex.js"></script>
     <script>
         $('#app')
             .state({
                 comments: []
             })
             .on('$mount', (state) => {
-                $wire.get('/Demo/Comments/Structures/Comments.json').to(state.comments)
+                $wire.get('./Structures/Comments.json').to(state.comments)
             })
-            .component('Comment', '/Demo/Comments/Components/Comment.html')
+            .component('Comment', './Components/Comment.html')
             .mount();
     </script>
 </footer>

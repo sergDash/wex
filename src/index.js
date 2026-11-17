@@ -3,8 +3,8 @@ import { shareState } from './shared-state.js'
 import { createAsyncComponent } from './async.js'
 import { createRouter, route } from './plugins/router/router.js'
 import { createWire, $wire } from './wire'
-import { createLazy } from './w-lazy.js'
-import './w-prefetch.js'
+import { createLazy } from './lazy.js'
+import './prefetch.js'
 import { setupModal } from './plugins/modal/modal.js'
 
 // use in browser

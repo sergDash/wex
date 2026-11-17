@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wex Dropzone demo</title>
+    <script>try{const t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.classList.toggle('dark',t==='dark')}catch(e){}</script>
+    <script>window.Quas = { AutoDarkMode: false };</script>
+    <script src="https://cdn.jsdelivr.net/gh/wemmbley/quas@master/Source/Quas.js"></script>
+    <script src="https://unpkg.com/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/wemmbley/wex-js@master/dist/wex.min.js"></script>
+    <script src="../../../dist/wex-image-editor.js"></script>
+    <script src="../../../dist/wex-dropzone.js"></script>
+</head>
+<body class="min-h-screen bg-slate-100 p-4 text-slate-800 antialiased sm:p-8 dark:bg-slate-950 dark:text-slate-100">
+
+<div class="mx-auto mb-6 flex max-w-3xl items-center justify-between">
+    <h1 class="text-2xl font-semibold tracking-tight">Dropzone + Image editor</h1>
+    <button id="theme" class="rounded border border-slate-300 bg-white px-3 py-1 text-xs text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300">light / dark</button>
+</div>
+
+<template id="app" attrs="{ class: 'mx-auto max-w-3xl space-y-6' }">
+
+    <section class="rounded-md border border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+        <h2 class="mb-1 text-sm font-semibold">1. Галерея товара (upload, multiple, client crop)</h2>
+        <p class="mb-3 text-xs text-slate-500">Уже загруженные: 2 картинки и zip. Кидай сразу несколько файлов, тяни карточки для перестановки, двойной клик или ✎ открывает редактор (обрезка, имя, alt). Файл с «fail» в имени падает один раз, ↻ повторяет. Лимит 8 файлов, до 5 МБ, jpg/png/pdf/zip.</p>
+        <Gallery name="files" :value="form.files" @change="onFiles" @reject="onReject" @done="onDone" @error="onError"></Gallery>
+    </section>
+
+    <section class="rounded-md border border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+        <h2 class="mb-1 text-sm font-semibold">2. Аватар (single, рамка 1:1, режим params)</h2>
+        <p class="mb-3 text-xs text-slate-500">Оригинал уходит как есть, параметры рамки едут отдельным полем crop. Новый файл заменяет прежний.</p>
+        <Avatar name="avatar" :value="form.avatar" @change="onAvatar"></Avatar>
+    </section>
+
+    <section class="rounded-md border border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+        <h2 class="mb-1 text-sm font-semibold">3. Режим form (файлы остаются в &lt;input type=file&gt;)</h2>
+        <p class="mb-3 text-xs text-slate-500">Ничего не грузится заранее. Ниже то, что реально уйдёт при отправке формы.</p>
+        <form id="f" onsubmit="return false">
+            <Attach name="docs" @change="onDocs"></Attach>
+            <button type="button" id="peek" class="mt-3 rounded bg-slate-800 px-3 py-1.5 text-xs text-white dark:bg-slate-200 dark:text-slate-900">Показать FormData</button>
+        </form>
+        <pre id="fd" class="mt-3 overflow-auto rounded bg-slate-100 p-3 text-xs dark:bg-slate-800"></pre>
+    </section>
+
+    <section class="rounded-md border border-slate-300 bg-white p-4 text-xs dark:border-slate-700 dark:bg-slate-900">
+        <h2 class="mb-2 text-sm font-semibold">Значение формы и события</h2>
+        <pre class="mb-3 overflow-auto rounded bg-slate-100 p-3 dark:bg-slate-800">{{ dump }}</pre>
+        <div w-for="l in log traceby l.id" class="border-b border-slate-100 py-1 font-mono dark:border-slate-800">{{ l.text }}</div>
+    </section>
+</template>
+
+<script src="FakeServer.js"></script>
+<script>
+    document.getElementById('theme').onclick = () => {
+        const dark = document.documentElement.classList.toggle('dark')
+        try { localStorage.setItem('theme', dark ? 'dark' : 'light') } catch (e) {}
+    }
+
+    createDropzone({
+        tag: 'Gallery', maxFiles: 8, maxSize: 5 * 1024 * 1024, accept: 'image/jpeg,image/png,.pdf,.zip',
+        upload: { url: '/api/upload', transport: fakeUpload, revert: item => console.log('revert', item.id) },
+        image: { maxWidth: 2000, maxHeight: 2000 },
+        editor: { crop: { aspects: ['free', '1:1', '4:3', '16:9'] } }
+    })
+
+    createDropzone({
+        tag: 'Avatar', multiple: false, accept: 'image/*', label: 'Avatar',
+        upload: { url: '/api/upload', transport: fakeUpload },
+        editor: { mode: 'params', crop: { aspects: ['1:1'], aspect: '1:1', lock: true } }
+    })
+
+    createDropzone({
+        tag: 'Attach', mode: 'form', maxFiles: 5,
+        editor: { crop: { aspects: ['free', '1:1', '16:9'] } }
+    })
+
+    let logId = 0
+    const push = (state, text) => { state.log.unshift({ id: ++logId, text }); if (state.log.length > 8) state.log.pop() }
+    const short = r => r && ({ id: r.id, name: r.name, alt: r.alt })
+    const redump = state => { state.dump = JSON.stringify({ files: (state.form.files || []).map(short), avatar: short(state.form.avatar) }, null, 1).replace(/\n\s+/g, ' ').replace(/\n/g, '\n') }
+
+    $('#app')
+        .state({
+            log: [], dump: '',
+            form: {
+                files: [
+                    { id: 11, name: 'photo1.jpg', url: 'files/photo1.jpg', size: 190000, alt: 'Front view' },
+                    { id: 12, name: 'photo3.jpg', url: 'files/photo3.jpg', size: 150000 },
+                    { id: 13, name: 'archive-2024.zip', url: 'files/archive-2024.zip', size: 2000 }
+                ],
+                avatar: { id: 21, name: 'photo2.jpg', url: 'files/photo2.jpg', size: 190000 }
+            }
+        })
+        .method('onFiles', state => function (list) { state.form.files = list; redump(state); push(state, 'files [' + list.map(f => f.id || f.name).join(', ') + ']') })
+        .method('onAvatar', state => function (r) { state.form.avatar = r; redump(state); push(state, 'avatar ' + (r ? r.id + ' crop=' + JSON.stringify(r.crop) : 'null')) })
+        .method('onDocs', state => function (list) { push(state, 'docs ' + list.length) })
+        .method('onReject', state => function (e) { push(state, 'reject ' + e.message) })
+        .method('onDone', state => function (r) { push(state, 'done ' + r.name + ' → ' + r.id) })
+        .method('onError', state => function (r, msg) { push(state, 'error ' + r.name + ': ' + msg) })
+        .mount()
+
+    document.getElementById('peek').onclick = () => {
+        const out = []
+        new FormData(document.getElementById('f')).forEach((v, k) => out.push(k + ' = ' + (v instanceof File ? 'File(' + v.name + ', ' + v.size + ' B)' : v)))
+        document.getElementById('fd').textContent = out.join('\n') || '(пусто)'
+    }
+</script>
+</body>
+</html>
