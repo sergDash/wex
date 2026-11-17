@@ -13,7 +13,7 @@ Wex - это реактивный CDN фронтенд фреймворк. Он 
 
 ```html 
 <script src="https://unpkg.com/jquery/dist/jquery.min.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/wemmbley/wex@master/dist/wex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/wemmbley/wex@2.x/dist/wex.min.js"></script>
 ```
 
 ## 🤖AI vibe-кодинг
@@ -336,7 +336,7 @@ $('#app')
 <img src="./education/Картинки/Dropzone.png">
 
 ```html 
-<script src="https://cdn.jsdelivr.net/gh/wemmbley/wex@master/dist/wex-dropzone.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/wemmbley/wex@2.x/dist/wex-dropzone.min.js"></script>
 ```
 
 ### Image Editor
@@ -347,7 +347,7 @@ $('#app')
 <img src="./education/Картинки/ImageEditor.png">
 
 ```html 
-<script src="https://cdn.jsdelivr.net/gh/wemmbley/wex@master/dist/wex-image-editor.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/wemmbley/wex@2.x/dist/wex-image-editor.min.js"></script>
 ```
 
 ### Wysiwyg редактор
@@ -357,14 +357,14 @@ $('#app')
 <img src="./education/Картинки/Wysiwyg.png">
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/wemmbley/wex@master/dist/wex-editor.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/wemmbley/wex@2.x/dist/wex-editor.js"></script>
 ```
 ### Wysiwyg просмотрщик
 
 Нужен для просмотра сгенерированного JSON от Wysiwyg редактора.
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/wemmbley/wex@master/dist/wex-doc.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/wemmbley/wex@2.x/dist/wex-doc.js"></script>
 ```
 
 ### DataTable
@@ -375,7 +375,7 @@ $('#app')
 
 ```html
 <script src="https://cdn.jsdelivr.net/gh/wemmbley/quas@master/Source/Quas.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/wemmbley/wex@master/dist/wex-datatable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/wemmbley/wex@2.x/dist/wex-datatable.min.js"></script>
 ```
 
 ### Smart Select

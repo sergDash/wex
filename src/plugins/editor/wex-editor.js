@@ -587,19 +587,6 @@ directive('w-editor', null, function ($el, attrs) {
 // Тёмная тема: html.dark (как в Quas).
 // =====================================================================
 
-// const UI_CSS = `
-// .wxe{--wxe-bg:#fff;--wxe-fg:#18181b;--wxe-border:#e4e4e7;--wxe-bar:#fafafa;--wxe-hover:#f4f4f5;--wxe-active:#e4e4e7;--wxe-muted:#a1a1aa;border:1px solid var(--wxe-border);border-radius:.75rem;background:var(--wxe-bg);color:var(--wxe-fg);overflow:hidden}
-// html.dark .wxe{--wxe-bg:#09090b;--wxe-fg:#fafafa;--wxe-border:#27272a;--wxe-bar:#18181b;--wxe-hover:#27272a;--wxe-active:#3f3f46;--wxe-muted:#71717a}
-// .wxe-bar{display:flex;flex-wrap:wrap;align-items:center;gap:2px;padding:6px;border-bottom:1px solid var(--wxe-border);background:var(--wxe-bar)}
-// .wxe-btn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:6px;color:inherit;background:transparent;cursor:pointer;transition:background-color .12s}
-// .wxe-btn:hover{background:var(--wxe-hover)}
-// .wxe-btn.is-active{background:var(--wxe-active)}
-// .wxe-btn:focus-visible{outline:2px solid #3b82f6;outline-offset:-2px}
-// .wxe-sep{width:1px;height:20px;margin:0 4px;background:var(--wxe-border)}
-// .wxe-body{position:relative;min-height:12rem;padding:14px 16px;outline:none;word-break:break-word}
-// .wxe-body[data-empty]::before{content:attr(data-placeholder);position:absolute;top:14px;left:16px;color:var(--wxe-muted);pointer-events:none}
-// `
-
 const UI_CSS = `
 .wxe {
   --wxe-bg: #ffffff;

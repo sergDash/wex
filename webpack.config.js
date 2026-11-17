@@ -137,8 +137,8 @@ module.exports = (env = {}) => {
     optimization: { minimize: true, usedExports: true, sideEffects: true },
   });
 
-  const doc = plugin('wex-doc', 'WexDoc', { '../wex.js': core });
-  const editor = plugin('wex-editor', 'WexEditor', { '../wex.js': core, './wex-doc.js': docLib });
+  const doc = plugin('wex-doc', 'WexDoc', { '../../wex.js': core });
+  const editor = plugin('wex-editor', 'WexEditor', { '../../wex.js': core, './wex-doc.js': docLib });
 
   // DataTable: самодостаточный скрипт, сам вешает createDataTable на window,
   // поэтому без library/externals (в отличие от doc и editor)

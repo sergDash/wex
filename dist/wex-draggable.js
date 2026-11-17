@@ -120,6 +120,14 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
  *   Элемент списка опознаётся по data-id (его ставит traceby). Поле идентификатора в объекте: itemKey (по умолчанию 'id').
  *   Массив меняется по ссылке (splice по соседям before/after, swap, или запись x/y), затем view.release() рендерит один раз.
  *
+ *   Компоненты (пропсы по ссылке, массив родителя меняется на месте; @move, @drop, @start, @cancel, @before-drop):
+ *     <Kanban  :columns="board"  :slotted="true">  columns: [{ id, title, cards: [{ id, title }] }]; в слоте виден card
+ *     <Grid    :items="photos" :cols="3" :swap="true" :slotted="true">   items: [{ id, title }]; в слоте виден it
+ *     <Stickers :stickers="notes" :cols="4" :rows="3" :row-height="90" :gap="8" :extra-rows="1">
+ *                                     stickers: [{ id, x, y, w, h, text }]; в слоте виден s
+ *   Общие необязательные пропсы: handle (селектор ручки). canDrop у компонентов не поддерживается (метод родителю не виден):
+ *   запретить перенос можно через @before-drop (в обработчике вызвать prevent) или используйте директивы напрямую.
+ *
  * ---- События view ----------------------------------------------------------------------------------
  *   .on('$beforeDrop', (state, e, prevent) => {})   до изменения state; prevent() отменяет автоматическую мутацию
  *   .on('$drop',       (state, e) => {})            после мутации (синхронизация с сервером)
@@ -127,7 +135,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
  *
  * ---- Стили -----------------------------------------------------------------------------------------
  *   data-dd-source (исходный элемент, скрыт), data-dd-ghost, data-dd-placeholder, data-dd-invalid, data-dd-over, data-dd-dragging.
- *   Пример для Quas: class="border-2 border-sky-400 data-[dd-invalid]:border-red-400"
+ *   Quas: варианты drag-over:, drag-invalid:, drag-ghost:, dragging: (нужен Q.variant, см. патч Quas):
+ *     класс на карточке:   drag-ghost:rotate-2 drag-ghost:shadow-xl      (применится только к призраку-копии)
+ *     placeholderClass:    'border-2 border-dashed border-sky-400 drag-invalid:border-red-400'
+ *     без Q.variant то же даёт data-[dd-invalid]:border-red-400
  */
 (function (global) {
   'use strict';
@@ -186,15 +197,23 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     // 4) вертикальный зазор между рядами: остаёмся на месте
     if (phIndex >= 0) return keep;
 
-    // 5) чужой контейнер, курсор мимо карточек: ближайшая карточка
+    // 5) курсор мимо карточек: выше всех в начало, ниже всех в конец, иначе ближайшая карточка
+    var top = Infinity,
+      bottom = -Infinity;
+    for (var _i2 = 0; _i2 < n; _i2++) {
+      top = Math.min(top, rects[_i2].top);
+      bottom = Math.max(bottom, rects[_i2].bottom);
+    }
+    if (y > bottom) return n;
+    if (y < top) return 0;
     best = 0;
     bd = Infinity;
-    for (var _i2 = 0; _i2 < n; _i2++) {
-      var _r2 = rects[_i2];
+    for (var _i3 = 0; _i3 < n; _i3++) {
+      var _r2 = rects[_i3];
       var _d = Math.hypot(Math.max(_r2.left - x, 0, x - _r2.right), Math.max(_r2.top - y, 0, y - _r2.bottom));
       if (_d < bd) {
         bd = _d;
-        best = _i2;
+        best = _i3;
       }
     }
     var r = rects[best];
@@ -953,7 +972,6 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       var d = drag;
       if (!d) return;
       phase = 'dropping';
-      drag = null;
 
       // после перетаскивания браузер шлёт click: гасим его
       if (!d.kb) {
@@ -972,11 +990,13 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       if (swapWith && !d.kb) {
         swapNodes(d.ph, swapWith);
       } // вернуть DOM, как был
+      drag = null; // только теперь: buildPayload читает drag
 
       var id = d.id,
         el = d.item;
       var flies = !!(payload && payload.moved !== false && !d.kb && duration());
       if (d.kb) kbRestoreFocus(d, payload);
+      if (flies && d.ghost.parentNode !== document.body) document.body.appendChild(d.ghost); // position:fixed: координаты те же
       teardown(d, flies);
       if (payload) emit('drop', payload);else emit('cancel', {
         id: id,
@@ -1631,34 +1651,120 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       }
     });
 
-    // ------------------------------------------------------------ <Kanban :columns="board" @move="onMove">
-    // columns: [{ id, title, cards: [{ id, title }] }]. Пропсы по ссылке: компонент сам переставляет карточки
-    // в массиве родителя; @move и @drop нужны только для побочных эффектов (запрос на сервер).
-    // Содержимое карточки: слот (внутри виден card); при слоте передайте :slotted="true".
+    // ------------------------------------------------------------ компоненты
+    // Все три: пропсы по ссылке, компонент сам переставляет элементы в массиве родителя; события наверх через @move,
+    // @drop, @start, @cancel, @before-drop (побочные эффекты: запрос на сервер). Содержимое элемента: слот + :slotted="true";
+    // в слоте виден элемент списка (card / it / s) и переменные родителя.
     var $ = global.jQuery;
     if ($ && typeof jq.component === 'function') {
-      var view = $('<template>' + '<div class="flex items-start gap-3 overflow-x-auto pb-2" w-drag="{ mode: \'list\', handle: handle, canDrop: canDrop }">' + '<div w-for="col in columns traceby col.id" class="flex w-72 shrink-0 flex-col rounded-md bg-slate-200 p-2 dark:bg-slate-800">' + '<div class="px-1 pb-2 text-sm font-semibold">{{ col.title }} <span class="font-normal text-slate-500">{{ col.cards.length }}</span></div>' + '<div class="flex min-h-[44px] flex-1 flex-col gap-2" w-drag-list="col.cards" w-drag-key="col.id">' + '<div w-for="card in col.cards traceby card.id" tabindex="0" class="cursor-grab select-none rounded border border-slate-200 bg-white p-3 text-xs shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:border-slate-700 dark:bg-slate-900">' + '<span w-if="!slotted">{{ card.title }}</span><slot></slot>' + '</div>' + '</div>' + '</div>' + '</div>' + '</template>').state(function () {
+      var bridge = function bridge(view) {
+        return view.on('$dragStart', function (state, e) {
+          this.emit('start', e);
+        }).on('$beforeDrop', function (state, e, prevent) {
+          this.emit('beforeDrop', e, prevent);
+        }).on('$drop', function (state, e) {
+          this.emit('move', e);
+          this.emit('drop', e);
+        }).on('$dragCancel', function (state, e) {
+          this.emit('cancel', e);
+        });
+      };
+      var make = function make(html, state) {
+        return bridge($('<template>' + html + '</template>').state(state));
+      };
+      var ITEM_CLASS = 'cursor-grab select-none rounded border border-slate-200 bg-white p-3 text-xs shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:border-slate-700 dark:bg-slate-900';
+
+      // <Kanban :columns="board" @move="onMove">  columns: [{ id, title, cards: [{ id, title }] }]
+      jq.component('Kanban', make('<div class="flex items-start gap-3 overflow-x-auto pb-2" w-drag="{ mode: \'list\', handle: handle, canDrop: canDrop }">' + '<div w-for="col in columns traceby col.id" class="flex w-72 shrink-0 flex-col rounded-md bg-slate-200 p-2 dark:bg-slate-800">' + '<div class="px-1 pb-2 text-sm font-semibold">{{ col.title }} <span class="font-normal text-slate-500">{{ col.cards.length }}</span></div>' + '<div class="flex min-h-[44px] flex-1 flex-col gap-2" w-drag-list="col.cards" w-drag-key="col.id">' + '<div w-for="card in col.cards traceby card.id" tabindex="0" class="' + ITEM_CLASS + '">' + '<span w-if="!slotted">{{ card.title }}</span><slot></slot>' + '</div>' + '</div>' + '</div>' + '</div>', function () {
         return {
           columns: [],
           handle: '',
           canDrop: '',
           slotted: false
         };
-      }).on('$dragStart', function (state, e) {
-        this.emit('start', e);
-      }).on('$beforeDrop', function (state, e, prevent) {
-        this.emit('beforeDrop', e, prevent);
-      }).on('$drop', function (state, e) {
-        this.emit('move', e);
-        this.emit('drop', e);
-      }).on('$dragCancel', function (state, e) {
-        this.emit('cancel', e);
-      });
-      jq.component('Kanban', view);
+      }));
+
+      // <Grid :items="photos" :cols="3" :swap="true">  items: [{ id, title }]
+      jq.component('Grid', make('<div class="grid gap-2" style="grid-template-columns: repeat({{ cols }}, minmax(0, 1fr))" ' + 'w-drag="{ mode: \'flow\', swap: swap, handle: handle, canDrop: canDrop }" w-drag-list="items">' + '<div w-for="it in items traceby it.id" tabindex="0" class="' + ITEM_CLASS + '">' + '<span w-if="!slotted">{{ it.title }}</span><slot></slot>' + '</div>' + '</div>', function () {
+        return {
+          items: [],
+          cols: 3,
+          swap: false,
+          handle: '',
+          canDrop: '',
+          slotted: false
+        };
+      }));
+
+      // <Stickers :stickers="notes" :cols="4" :rows="3" :row-height="90" :gap="8" :extra-rows="1">
+      // stickers: [{ id, x, y, w, h, text }]; w и h по умолчанию 1. Переносятся в любую свободную ячейку сетки.
+      jq.component('Stickers', make('<div class="grid" style="grid-template-columns: repeat({{ cols }}, minmax(0, 1fr)); grid-template-rows: repeat({{ rows }}, {{ rowHeight }}px); gap: {{ gap }}px" ' + 'w-drag="{ mode: \'cells\', extraRows: extraRows, handle: handle, canDrop: canDrop }" w-drag-list="stickers">' + '<div w-for="s in stickers traceby s.id" tabindex="0" ' + 'data-x="{{ s.x }}" data-y="{{ s.y }}" data-w="{{ s.w || 1 }}" data-h="{{ s.h || 1 }}" ' + 'style="grid-column: {{ s.x + 1 }} / span {{ s.w || 1 }}; grid-row: {{ s.y + 1 }} / span {{ s.h || 1 }}" ' + 'class="cursor-grab select-none overflow-hidden rounded bg-yellow-200 p-2 text-xs text-slate-800 shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 dark:bg-yellow-300">' + '<span w-if="!slotted">{{ s.text }}</span><slot></slot>' + '</div>' + '</div>', function () {
+        return {
+          stickers: [],
+          cols: 4,
+          rows: 3,
+          rowHeight: 90,
+          gap: 8,
+          extraRows: 0,
+          handle: '',
+          canDrop: '',
+          slotted: false
+        };
+      }));
     }
   } else if (typeof document !== 'undefined') {
     // ядро работает и без Wex; директивы и <Kanban> регистрируются только если Wex загружен раньше
-    if (typeof console !== 'undefined') console.info('[wex-drag] Wex не найден: подключены только createDraggable');
+    if (typeof console !== 'undefined') console.warn('[wex-drag] window.jqvm не найден: Wex должен быть подключён ДО wex-drag.js. Работает только createDraggable, директивы и <Kanban> не зарегистрированы');
+  }
+
+  // ================================================================ варианты Quas
+  // Классы вида drag-ghost:rotate-2 и drag-over:bg-sky-100. Нужен Q.variant (патч Quas); без него работает data-[dd-over]:...
+  var QUAS_VARIANTS = {
+    'dragging': function dragging(s) {
+      return s + '[data-dd-dragging], [data-dd-dragging] ' + s;
+    },
+    // корень или потомок доски во время перетаскивания
+    'drag-over': '[data-dd-over]',
+    // контейнер под курсором
+    'drag-invalid': '[data-dd-invalid]',
+    // плейсхолдер/призрак: здесь класть нельзя
+    'drag-ghost': '[data-dd-ghost]' // призрак (копия карточки со всеми её классами)
+  };
+  var quasWarned = false;
+  function registerQuasVariants() {
+    var Q = global.Quas;
+    if (!Q) return false;
+    if (typeof Q.variant === 'function') {
+      Object.keys(QUAS_VARIANTS).forEach(function (name) {
+        return Q.variant(name, QUAS_VARIANTS[name]);
+      });
+      return true;
+    }
+    if (typeof Q.css !== 'function') {
+      // Quas ещё не стартовал: его расширения читаются при запуске
+      var prefixes = {};
+      Object.keys(QUAS_VARIANTS).forEach(function (name) {
+        var h = QUAS_VARIANTS[name];
+        prefixes[name] = {
+          type: 'pseudo',
+          handler: typeof h === 'function' ? h : function (s) {
+            return s + h;
+          }
+        };
+      });
+      (Q.cssExtensions = Q.cssExtensions || []).push({
+        prefixes: prefixes
+      });
+      return true;
+    }
+    if (!quasWarned && typeof console !== 'undefined') {
+      quasWarned = true;
+      console.warn('[wex-drag] В Quas нет Q.variant: варианты drag-over:, drag-ghost: и т.д. недоступны (работает data-[dd-over]:...). См. патч Quas.');
+    }
+    return false;
+  }
+  if (typeof document !== 'undefined') {
+    if (global.Quas) registerQuasVariants();else document.addEventListener('DOMContentLoaded', registerQuasVariants); // Quas подключён позже
   }
   if ( true && module.exports) module.exports = createDraggable;
 })(typeof window !== 'undefined' ? window : globalThis);

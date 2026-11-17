@@ -136,7 +136,11 @@
         if (document.getElementById('wex-datepicker-css')) return
         const st = document.createElement('style')
         st.id = 'wex-datepicker-css'
-        st.textContent = '.dp-hide-sb{scrollbar-width:none;-ms-overflow-style:none}.dp-hide-sb::-webkit-scrollbar{display:none}'
+        st.textContent = `
+.dp-hide-sb{scrollbar-width:none;-ms-overflow-style:none}
+.dp-hide-sb::-webkit-scrollbar{display:none}
+.dp-popup{animation:dp-pop .14s ease-out}
+@keyframes dp-pop{from{opacity:0;transform:translateY(-4px)}}`
         document.head.appendChild(st)
     }
 
@@ -149,6 +153,18 @@
     function listen() {
         if (listening) return
         listening = true
+
+        document.addEventListener('scroll', e => {
+            const b = e.target
+            if (!b || !b.classList || !b.classList.contains('dp-time')) return
+            if (b._busy && Date.now() < b._busy) return      // не ломаем плавную прокрутку
+            const it = b.querySelectorAll('button')
+            if (it.length < 3) return
+            const p = it[it.length / 3].offsetTop - it[0].offsetTop
+            if (b.scrollTop < p) b.scrollTop += p
+            else if (b.scrollTop >= 2 * p) b.scrollTop -= p
+        }, true)
+
         // клик вне компонента закрывает попап
         document.addEventListener('pointerdown', e => {
             instances.forEach(s => {
@@ -190,7 +206,7 @@
 
   <div w-if="open" class="dp-popup absolute left-0 z-30 flex w-max max-w-[calc(100vw-2rem)] flex-wrap items-start gap-2 {{ pos }}" role="dialog" aria-label="{{ dialog }}">
 
-    <div w-if="panel==='calendar'" class="${CARD} w-[288px] p-2.5">
+    <div w-if="panel==='calendar'" class="dp-panel ${CARD} w-[288px] p-2.5">
       <div class="flex h-10 items-center justify-between border-b border-slate-100 px-1 dark:border-slate-700">
         <button type="button" class="${NAV}" data-step="-1" aria-label="{{ L.prevMonth }}"><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><path d="m15 18-6-6 6-6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <div class="flex items-center gap-3 text-sm font-semibold text-slate-500 dark:text-slate-400">
@@ -205,7 +221,7 @@
       </div>
     </div>
 
-    <div w-if="panel!=='calendar'" class="dp-opts relative max-h-[196px] w-[288px] overflow-y-auto ${CARD} p-2.5" role="listbox" aria-label="{{ panel==='month' ? L.months : L.years }}">
+    <div w-if="panel!=='calendar'" class="dp-panel dp-opts relative h-[311px] w-[288px] overflow-y-auto ${CARD} p-2.5" role="listbox" aria-label="{{ panel==='month' ? L.months : L.years }}">
       <div class="grid gap-1">
         <button w-for="o in options traceby o.key" type="button" class="dp-opt ${OPT} {{ o.cls }}" data-v="{{ o.v }}" data-sel="{{ o.sel }}" role="option" aria-selected="{{ o.sel }}">{{ o.label }}</button>
       </div>
@@ -267,37 +283,86 @@
             }
 
             if (s.withTime) {
-                s.hours = Array.from({ length: 24 }, (_, i) => ({ key: 'h' + i, v: i, label: pad(i), sel: i === s.hour, cls: selCls(i === s.hour), aria: o.labels.hour + ' ' + pad(i) }))
-                s.minutes = Array.from({ length: 60 }, (_, i) => ({ key: 'i' + i, v: i, label: pad(i), sel: i === s.minute, cls: selCls(i === s.minute), aria: o.labels.minute + ' ' + pad(i) }))
+                const rep = (n, kind, cur, label) => {
+                    const a = []
+                    for (let c = 0; c < 3; c++) for (let i = 0; i < n; i++)
+                        a.push({ key: kind + c + '_' + i, v: i, label: pad(i), sel: i === cur, cls: selCls(i === cur), aria: label + ' ' + pad(i) })
+                    return a
+                }
+                s.hours = rep(24, 'h', s.hour, o.labels.hour)
+                s.minutes = rep(60, 'i', s.minute, o.labels.minute)
             }
         }
 
         // попап вниз или вверх, прокрутка списков к выбранному элементу (после рендера Wex)
+        const POPUP_H = 320 // высота календаря
         function place(s) {
-            const r = rootEl(s), pop = r && r.querySelector('.dp-popup')
-            if (!pop) return
+            const r = rootEl(s)
+            if (!r) return
             const rect = r.getBoundingClientRect()
             const below = window.innerHeight - rect.bottom, above = rect.top
-            const up = below < pop.offsetHeight + 12 && above > below
-            const pos = up ? 'bottom-full mb-2' : 'top-full mt-2'
+            const pos = below < POPUP_H + 12 && above > below ? 'bottom-full mb-2' : 'top-full mt-2'
             if (s.pos !== pos) s.pos = pos
         }
 
-        function center(s) {
+        function center(s, smooth) {
             const r = rootEl(s)
             if (!r) return
             r.querySelectorAll('.dp-opts, .dp-time').forEach(box => {
-                const el = box.querySelector('[data-sel="true"]')
-                if (el) box.scrollTop = el.offsetTop - (box.clientHeight - el.offsetHeight) / 2
+                const list = box.querySelectorAll('[data-sel="true"]')
+                if (!list.length) return
+                const isTime = box.classList.contains('dp-time')
+                let el = list[0]
+                if (isTime) {
+                    const mid = box.scrollTop + box.clientHeight / 2
+                    const dist = n => Math.abs(n.offsetTop + n.offsetHeight / 2 - mid)
+                    el = smooth ? [...list].reduce((a, b) => (dist(a) <= dist(b) ? a : b)) : (list[1] || list[0])
+                }
+                const top = el.offsetTop - (box.clientHeight - el.offsetHeight) / 2
+                if (smooth) box._busy = Date.now() + 500
+                box.scrollTo({ top, behavior: smooth ? 'smooth' : 'instant' })
+            })
+        }
+        const nextFrame = fn => requestAnimationFrame(() => requestAnimationFrame(fn))
+
+        // dx = 0: кроссфейд; dx = ±1: слайд в сторону
+        function transition(s, mutate, dx) {
+            const r = rootEl(s)
+            const old = r && r.querySelector('.dp-panel')
+            if (!old || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                mutate(); nextFrame(() => center(s)); return
+            }
+            const rect = old.getBoundingClientRect()
+            const ghost = old.cloneNode(true)
+            Object.assign(ghost.style, {
+                position: 'fixed', left: rect.left + 'px', top: rect.top + 'px',
+                width: rect.width + 'px', height: rect.height + 'px',
+                margin: '0', zIndex: '9999', pointerEvents: 'none', boxSizing: 'border-box'
+            })
+            document.body.appendChild(ghost)
+            const kill = () => ghost.remove()
+            setTimeout(kill, 700)
+
+            mutate()
+            nextFrame(() => {
+                center(s)   // список уже прокручен к выбранному, пока его закрывает призрак
+                const cur = (rootEl(s) || document).querySelector('.dp-panel')
+                const opt = { duration: 200, easing: 'cubic-bezier(.2,.7,.2,1)' }
+                const shift = dx * 18
+                ghost.animate(
+                    [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: dx ? `translateX(${-shift}px)` : 'scale(1.02)' }],
+                    { ...opt, fill: 'forwards' }
+                ).onfinish = kill
+                if (cur) cur.animate(
+                    [{ transform: dx ? `translateX(${shift}px)` : 'scale(.98)' }, { transform: 'none' }], opt
+                )
             })
         }
 
         const settle = s => after(() => { place(s); center(s) })
 
         function setPanel(s, panel) {
-            s.panel = panel
-            refresh(s)
-            settle(s)
+            transition(s, () => { s.panel = panel; refresh(s) }, 0)
         }
 
         // месяц и год, введённые в инпут (если сегменты заполнены), становятся отображаемыми
@@ -346,9 +411,11 @@
             const y = s.panel === 'year' ? val : s.view.y
             const m = s.panel === 'month' ? val : s.view.m
             const cur = parseValue(s.value)
-            s.panel = 'calendar'
-            if (cur) setValue(s, view, { y, m, d: Math.min(cur.d, dim(y, m)), h: cur.h, i: cur.i })
-            else { s.view = { y, m }; refresh(s) }
+            transition(s, () => {
+                s.panel = 'calendar'
+                if (cur) setValue(s, view, { y, m, d: Math.min(cur.d, dim(y, m)), h: cur.h, i: cur.i })
+                else { s.view = { y, m }; refresh(s) }
+            }, 0)
         }
 
         // ---- компонент
@@ -438,9 +505,11 @@
                 .on('click', '.dp-nav', function (s) {
                     return function (e) {
                         const step = +e.currentTarget.getAttribute('data-step')
-                        const d = new Date(s.view.y, s.view.m + step, 1)
-                        s.view = { y: d.getFullYear(), m: d.getMonth() }
-                        refresh(s)
+                        transition(s, () => {
+                            const d = new Date(s.view.y, s.view.m + step, 1)
+                            s.view = { y: d.getFullYear(), m: d.getMonth() }
+                            refresh(s)
+                        }, step)
                     }
                 })
                 .on('click', '.dp-opt', function (s) {
@@ -464,7 +533,10 @@
                     return function (e) {
                         s.hour = +e.currentTarget.getAttribute('data-v')
                         const cur = parseValue(s.value)
-                        if (cur) setValue(s, v, { y: cur.y, m: cur.m, d: cur.d, h: s.hour, i: cur.i })
+                        if (cur) {
+                            setValue(s, v, { y: cur.y, m: cur.m, d: cur.d, h: s.hour, i: cur.i })
+                            nextFrame(() => center(s, true))
+                        }
                         else refresh(s)
                     }
                 })
@@ -473,7 +545,10 @@
                     return function (e) {
                         s.minute = +e.currentTarget.getAttribute('data-v')
                         const cur = parseValue(s.value)
-                        if (cur) setValue(s, v, { y: cur.y, m: cur.m, d: cur.d, h: cur.h, i: s.minute })
+                        if (cur) {
+                            setValue(s, v, { y: cur.y, m: cur.m, d: cur.d, h: cur.h, i: s.minute })
+                            nextFrame(() => center(s, true))
+                        }
                         else refresh(s)
                     }
                 })

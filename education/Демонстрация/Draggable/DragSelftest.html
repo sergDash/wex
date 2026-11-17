@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Wex Drag self-test</title>
+    <style>
+        body { font: 13px/1.5 ui-monospace, Menlo, monospace; margin: 16px; }
+        .ok { color: #15803d } .bad { color: #b91c1c; font-weight: 600 } .sum { margin: 8px 0; font-size: 15px }
+        #stage { min-height: 260px; border: 1px dashed #94a3b8; padding: 8px; margin-bottom: 12px; position: relative }
+    </style>
+    <script>window.Quas = { AutoDarkMode: false }</script>
+    <script src="https://cdn.jsdelivr.net/gh/wemmbley/quas@master/Source/Quas.js"></script>
+    <script src="https://unpkg.com/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script src="../../../dist/wex.min.js"></script>
+    <script src="../../../dist/wex-draggable.js"></script>
+</head>
+<body>
+<div class="sum" id="sum">выполняется…</div>
+<div id="stage"></div>
+<div id="out"></div>
+
+<script>
+    const out = document.getElementById('out')
+    let passed = 0, failed = 0
+    const check = (name, cond, extra) => {
+        cond ? passed++ : failed++
+        const li = document.createElement('div')
+        li.className = cond ? 'ok' : 'bad'
+        li.textContent = (cond ? '✓ ' : '✗ ') + name + (cond ? '' : '  → ' + (extra === undefined ? '' : JSON.stringify(extra)))
+        out.appendChild(li)
+    }
+    const tick = (ms = 40) => new Promise(r => setTimeout(r, ms))
+    const frame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
+    const stage = document.getElementById('stage')
+    const mk = (html, state) => $('<template>' + html + '</template>').state(state)
+    const fresh = () => { stage.innerHTML = ''; window.scrollTo(0, 0); const d = document.createElement('div'); stage.appendChild(d); return d }
+    const center = el => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2] }
+    const pe = (type, x, y, target) => (target || document).dispatchEvent(new PointerEvent(type, {
+        bubbles: true, cancelable: true, clientX: x, clientY: y, pointerType: 'mouse', pointerId: 1, button: 0, isPrimary: true }))
+    const key = (target, k) => target.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }))
+    const ids = col => col.cards.map(c => c.id)
+    const leftovers = () => document.querySelectorAll('[data-dd-ghost],[data-dd-placeholder],[data-dd-source]').length
+
+    async function dragTo(el, x, y, release = true) {
+        const [sx, sy] = center(el)
+        pe('pointerdown', sx, sy, el)
+        pe('pointermove', sx + 8, sy + 8)
+        await frame()
+        pe('pointermove', x, y)
+        await frame()
+        if (release) { pe('pointerup', x, y); await tick(340) }
+    }
+    async function run(name, fn) {
+        try { await fn() } catch (e) { check(name + ' (исключение)', false, String(e && e.stack || e)) }
+    }
+
+    const BOARD = (opts) => `<div class="board" style="display:flex;gap:10px;align-items:flex-start" w-drag="${opts || "{ mode: 'list' }"}">
+  <div class="col" w-for="col in columns traceby col.id" style="width:150px;min-height:110px;padding:8px;background:#e2e8f0;display:flex;flex-direction:column;gap:6px" w-drag-list="col.cards" w-drag-key="col.id">
+    <div class="card" w-for="card in col.cards traceby card.id" tabindex="0" style="padding:8px;background:#fff;border:1px solid #cbd5e1">{{ card.title }}</div>
+  </div></div>`
+    const data = () => ({ columns: [
+            { id: 'todo', cards: [{ id: 1, title: 'A' }, { id: 2, title: 'B' }, { id: 3, title: 'C' }] },
+            { id: 'doing', cards: [{ id: 4, title: 'D' }] },
+            { id: 'done', cards: [] },
+        ] })
+    const cardEl = (el, t) => [...el.querySelectorAll('.card')].find(n => n.textContent === t)
+    const colEl = (el, i) => el.querySelectorAll('.col')[i]
+
+    ;(async () => {
+
+// предполётная проверка: что именно загрузилось
+        const diag = []
+        if (typeof createDraggable !== 'function') diag.push('wex-drag.js НЕ загрузился: проверьте путь в <script src> и вкладку Network (404?)')
+        else if (!window.jqvm) diag.push('wex.min.js не определил window.jqvm: он должен подключаться раньше wex-drag.js')
+        else if (!window.jqvm.createDrag) diag.push('wex-drag.js загружен, но директивы не зарегистрированы: window.jqvm не было на момент его загрузки или jqvm.directive отсутствует')
+        else if (!document.querySelector) diag.push('?')
+        if (diag.length) {
+            document.getElementById('sum').innerHTML = '<span class="bad">' + diag.join('<br>') + '</span>'
+            return
+        }
+
+        await run('канбан: перенос между колонками', async () => {
+            const el = fresh(), log = { drop: [], start: 0, cancel: 0 }
+            const v = mk(BOARD(), data)
+                .on('$dragStart', () => { log.start++ })
+                .on('$drop', (s, e) => { log.drop.push(e) })
+                .on('$dragCancel', () => { log.cancel++ })
+                .mount(el)
+            await tick(80)
+            let st; v.update(s => { st = s })
+            const a = cardEl(el, 'A'); a.__mark = 'same'
+            const r = colEl(el, 1).getBoundingClientRect()
+            await dragTo(a, r.left + r.width / 2, r.bottom - 10)
+            check('state: первая колонка', JSON.stringify(ids(st.columns[0])) === '[2,3]', ids(st.columns[0]))
+            check('state: вторая колонка', JSON.stringify(ids(st.columns[1])) === '[4,1]', ids(st.columns[1]))
+            const texts = [...colEl(el, 1).querySelectorAll('.card')].map(n => n.textContent)
+            check('DOM: порядок во второй колонке', texts.join('') === 'DA', texts)
+            check('тот же DOM-узел (не пересоздан)', cardEl(el, 'A') && cardEl(el, 'A').__mark === 'same')
+            check('события: start и один drop', log.start === 1 && log.drop.length === 1, log)
+            check('payload: to и moved', log.drop[0] && log.drop[0].to === 'doing' && log.drop[0].moved === true, log.drop[0] && { to: log.drop[0].to, moved: log.drop[0].moved })
+            check('нет остатков призрака и плейсхолдера', leftovers() === 0, leftovers())
+            v.destroy()
+        })
+
+        await run('канбан: порядок внутри колонки', async () => {
+            const el = fresh()
+            const v = mk(BOARD(), data).mount(el)
+            await tick(80)
+            let st; v.update(s => { st = s })
+            const c = cardEl(el, 'C').getBoundingClientRect()
+            await dragTo(cardEl(el, 'A'), c.left + c.width / 2, c.bottom - 2)
+            check('A ушла вниз', JSON.stringify(ids(st.columns[0])) === '[2,3,1]', ids(st.columns[0]))
+            v.destroy()
+        })
+
+        await run('канбан: в пустую колонку', async () => {
+            const el = fresh()
+            const v = mk(BOARD(), data).mount(el)
+            await tick(80)
+            let st; v.update(s => { st = s })
+            const [x, y] = center(colEl(el, 2))
+            await dragTo(cardEl(el, 'D'), x, y)
+            check('D в done', JSON.stringify(ids(st.columns[2])) === '[4]' && st.columns[1].cards.length === 0, [ids(st.columns[1]), ids(st.columns[2])])
+            v.destroy()
+        })
+
+        await run('канбан: canDrop запрещает колонку', async () => {
+            const el = fresh(), log = { drop: 0, cancel: 0 }
+            const v = mk(BOARD("{ mode: 'list', canDrop: 'noDone' }"), data)
+                .method('noDone', (state, ctx) => ctx.to !== 'done')
+                .on('$drop', () => { log.drop++ }).on('$dragCancel', () => { log.cancel++ })
+                .mount(el)
+            await tick(80)
+            let st; v.update(s => { st = s })
+            const [x, y] = center(colEl(el, 2))
+            await dragTo(cardEl(el, 'A'), x, y)
+            check('state не изменился', JSON.stringify(ids(st.columns[0])) === '[1,2,3]' && st.columns[2].cards.length === 0)
+            check('cancel вместо drop', log.cancel === 1 && log.drop === 0, log)
+            check('нет остатков', leftovers() === 0)
+            v.destroy()
+        })
+
+        await run('канбан: Escape отменяет', async () => {
+            const el = fresh(), log = { cancel: 0 }
+            const v = mk(BOARD(), data).on('$dragCancel', () => { log.cancel++ }).mount(el)
+            await tick(80)
+            let st; v.update(s => { st = s })
+            const [x, y] = center(colEl(el, 1))
+            await dragTo(cardEl(el, 'A'), x, y, false)
+            check('идёт перетаскивание: есть призрак', !!document.querySelector('[data-dd-ghost]'))
+            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+            await tick(60)
+            check('state не изменился', JSON.stringify(ids(st.columns[0])) === '[1,2,3]')
+            check('cancel один раз', log.cancel === 1, log)
+            check('нет остатков', leftovers() === 0, leftovers())
+            v.destroy()
+        })
+
+        await run('канбан: нажатие на фон колонки не тянет колонку', async () => {
+            const el = fresh(), log = { start: 0 }
+            const v = mk(BOARD(), data).on('$dragStart', () => { log.start++ }).mount(el)
+            await tick(80)
+            const col = colEl(el, 0), r = col.getBoundingClientRect()
+            pe('pointerdown', r.left + 2, r.top + 2, col)
+            pe('pointermove', r.left + 40, r.top + 40)
+            await frame()
+            pe('pointerup', r.left + 40, r.top + 40)
+            await tick(60)
+            check('перетаскивание не началось', log.start === 0 && !document.querySelector('[data-dd-ghost]'), log)
+            v.destroy()
+        })
+
+        await run('канбан: рендер заморожен на время drag (hold)', async () => {
+            const el = fresh()
+            const v = mk(BOARD(), data).mount(el)
+            await tick(80)
+            let st; v.update(s => { st = s })
+            const [x, y] = center(colEl(el, 1))
+            await dragTo(cardEl(el, 'A'), x, y, false)
+            st.columns[0].cards[1].title = 'Bchanged'
+            await tick(60)
+            check('во время drag DOM не меняется', !!cardEl(el, 'B') && !cardEl(el, 'Bchanged'))
+            pe('pointerup', x, y); await tick(340)
+            check('после drop изменение отрисовано', !!cardEl(el, 'Bchanged'))
+            v.destroy()
+        })
+
+        await run('канбан: клавиатура', async () => {
+            const el = fresh()
+            const v = mk(BOARD(), data).mount(el)
+            await tick(80)
+            let st; v.update(s => { st = s })
+            const a = cardEl(el, 'A'); a.focus()
+            key(a, ' ')
+            key(document.activeElement || a, 'ArrowRight')
+            key(document.activeElement || a, ' ')
+            await tick(80)
+            check('A во второй колонке перед D', JSON.stringify(ids(st.columns[1])) === '[1,4]' && JSON.stringify(ids(st.columns[0])) === '[2,3]', [ids(st.columns[0]), ids(st.columns[1])])
+            check('нет остатков', leftovers() === 0)
+            v.destroy()
+        })
+
+        await run('flow: обмен местами', async () => {
+            const el = fresh()
+            const v = mk(`<div class="grid" style="display:grid;grid-template-columns:repeat(4,80px);gap:10px" w-drag="{ mode: 'flow', swap: true }" w-drag-list="photos">
+    <div class="ph" w-for="p in photos traceby p.id" style="height:60px;background:#bfdbfe">{{ p.id }}</div></div>`,
+                () => ({ photos: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }] })).mount(el)
+            await tick(80)
+            let st; v.update(s => { st = s })
+            const els = el.querySelectorAll('.ph')
+            const [x, y] = center(els[2])
+            await dragTo(els[0], x, y)
+            check('1 и 3 поменялись', st.photos.map(p => p.id).join('') === '3214', st.photos.map(p => p.id))
+            check('DOM совпадает', [...el.querySelectorAll('.ph')].map(n => n.textContent).join('') === '3214')
+            v.destroy()
+        })
+
+        await run('cells: свободная ячейка', async () => {
+            const el = fresh()
+            const v = mk(`<div class="g" style="display:grid;grid-template-columns:repeat(4,60px);grid-template-rows:repeat(3,40px);gap:4px;width:250px" w-drag="{ mode: 'cells' }" w-drag-list="stickers">
+    <div class="st" w-for="s in stickers traceby s.id" data-x="{{ s.x }}" data-y="{{ s.y }}" data-w="{{ s.w }}" data-h="{{ s.h }}" style="grid-column: {{ s.x + 1 }} / span {{ s.w }}; grid-row: {{ s.y + 1 }} / span {{ s.h }}; background:#fde68a">{{ s.id }}</div></div>`,
+                () => ({ stickers: [{ id: 1, x: 0, y: 0, w: 1, h: 1 }, { id: 2, x: 1, y: 0, w: 2, h: 1 }] })).mount(el)
+            await tick(80)
+            let st; v.update(s => { st = s })
+            const cr = el.querySelector('.g').getBoundingClientRect()
+            const s1 = el.querySelectorAll('.st')[0]
+            await dragTo(s1, cr.left + 3 * 64 + 30, cr.top + 2 * 44 + 20)
+            check('стикер 1 в ячейке (3,2)', st.stickers[0].x === 3 && st.stickers[0].y === 2, st.stickers[0])
+            check('DOM обновлён', el.querySelectorAll('.st')[0].getAttribute('data-x') === '3')
+            // на занятую ячейку нельзя
+            const s2 = el.querySelectorAll('.st')[1]
+            const [bx, by] = center(el.querySelectorAll('.st')[0])
+            await dragTo(s2, bx, by)
+            check('на занятую ячейку не кладётся', st.stickers[1].x === 1 && st.stickers[1].y === 0, st.stickers[1])
+            v.destroy()
+        })
+
+        await run('<Kanban>: перенос и @move', async () => {
+            const el = fresh(), moves = []
+            const v = mk('<Kanban :columns="board" @move="onMove"></Kanban>', () => ({ board: [
+                    { id: 'a', title: 'Todo', cards: [{ id: 1, title: 'Task 1' }, { id: 2, title: 'Task 2' }] },
+                    { id: 'b', title: 'Doing', cards: [] },
+                ] }))
+                .method('onMove', state => function (e) { moves.push(e) })
+                .mount(el)
+            await tick(200)
+            let st; v.update(s => { st = s })
+            const cards = el.querySelectorAll('[tabindex]')
+            check('карточки отрисованы', cards.length === 2, el.innerHTML.slice(0, 300))
+            const cols = el.querySelectorAll('.w-72')
+            const list = cols[1].children[1]
+            const [x, y] = center(list)
+            await dragTo(cards[0], x, y)
+            check('родитель видит изменение по ссылке', JSON.stringify(ids(st.board[0])) === '[2]' && JSON.stringify(ids(st.board[1])) === '[1]', [ids(st.board[0]), ids(st.board[1])])
+            check('@move дошёл до родителя', moves.length === 1 && moves[0].to === 'b', moves.length)
+            v.destroy()
+        })
+
+        await run('<Grid>: обмен местами', async () => {
+            const el = fresh()
+            const v = mk('<Grid :items="photos" :cols="3" :swap="true"></Grid>',
+                () => ({ photos: [{ id: 1, title: 'one' }, { id: 2, title: 'two' }, { id: 3, title: 'three' }] })).mount(el)
+            await tick(200)
+            let st; v.update(s => { st = s })
+            const cards = el.querySelectorAll('[tabindex]')
+            check('Grid: карточки отрисованы', cards.length === 3, el.innerHTML.slice(0, 200))
+            const [x, y] = center(cards[2])
+            await dragTo(cards[0], x, y)
+            check('Grid: 1 и 3 поменялись', st.photos.map(p => p.id).join('') === '321', st.photos.map(p => p.id))
+            v.destroy()
+        })
+
+        await run('<Grid>: слот видит элемент списка', async () => {
+            const el = fresh()
+            const v = mk('<Grid :items="photos" :slotted="true"><b class="lbl">#{{ it.id }}</b></Grid>',
+                () => ({ photos: [{ id: 1 }, { id: 2 }] })).mount(el)
+            await tick(200)
+            const t = [...el.querySelectorAll('.lbl')].map(n => n.textContent).join('')
+            check('Grid: слот отрисовал it.id', t === '#1#2', t)
+            v.destroy()
+        })
+
+        await run('<Stickers>: перенос в свободную ячейку', async () => {
+            const el = fresh()
+            const v = mk('<Stickers :stickers="notes" :cols="4" :rows="3" :row-height="40" :gap="4"></Stickers>',
+                () => ({ notes: [{ id: 1, x: 0, y: 0, w: 1, h: 1, text: 'a' }, { id: 2, x: 1, y: 0, w: 2, h: 1, text: 'b' }] })).mount(el)
+            await tick(200)
+            let st; v.update(s => { st = s })
+            const items = el.querySelectorAll('[tabindex]')
+            check('Stickers: стикеры отрисованы', items.length === 2, el.innerHTML.slice(0, 200))
+            const grid = items[0].parentElement
+            const cols = getComputedStyle(grid).gridTemplateColumns.split(' ').map(parseFloat)
+            const cr = grid.getBoundingClientRect()
+            await dragTo(items[0], cr.left + cols[0] + cols[1] + cols[2] + 3 * 4 + cols[3] / 2, cr.top + 2 * 44 + 20)
+            check('Stickers: ячейка (3,2)', st.notes[0].x === 3 && st.notes[0].y === 2, st.notes[0])
+            v.destroy()
+        })
+
+        await run('<Kanban>: слот видит card', async () => {
+            const el = fresh()
+            const v = mk('<Kanban :columns="board" :slotted="true"><i class="k">{{ card.title }}!</i></Kanban>',
+                () => ({ board: [{ id: 'a', title: 'T', cards: [{ id: 1, title: 'X' }, { id: 2, title: 'Y' }] }] })).mount(el)
+            await tick(200)
+            const t = [...el.querySelectorAll('.k')].map(n => n.textContent).join('')
+            check('Kanban: слот отрисовал card.title', t === 'X!Y!', t)
+            v.destroy()
+        })
+
+        await run('Quas.variant', async () => {
+            if (!(window.Quas && typeof Quas.variant === 'function')) { check('Quas.variant доступен (примените патч Quas)', false); return }
+            const red = /251,\s*44,\s*54/
+            const over = document.createElement('div'); over.className = 'drag-over:bg-red-500'; stage.appendChild(over)
+            const wrap = document.createElement('div'), kid = document.createElement('div')
+            kid.className = 'dragging:bg-red-500'; wrap.appendChild(kid); stage.appendChild(wrap)
+            const ghost = document.createElement('div'); ghost.className = 'drag-ghost:bg-red-500'; stage.appendChild(ghost)
+            await tick(80)
+            check('drag-over: без атрибута не применяется', !red.test(getComputedStyle(over).backgroundColor), getComputedStyle(over).backgroundColor)
+            over.setAttribute('data-dd-over', '')
+            check('drag-over: с data-dd-over применяется', red.test(getComputedStyle(over).backgroundColor), getComputedStyle(over).backgroundColor)
+            wrap.setAttribute('data-dd-dragging', '')
+            check('dragging: потомок доски', red.test(getComputedStyle(kid).backgroundColor), getComputedStyle(kid).backgroundColor)
+            ghost.setAttribute('data-dd-ghost', '')
+            check('drag-ghost: призрак', red.test(getComputedStyle(ghost).backgroundColor), getComputedStyle(ghost).backgroundColor)
+            over.remove(); wrap.remove(); ghost.remove()
+        })
+
+        check('после всех тестов нет остатков в DOM', leftovers() === 0, leftovers())
+        document.getElementById('sum').innerHTML = `<span class="${failed ? 'bad' : 'ok'}">${passed} прошли, ${failed} упали</span>`
+    })()
+</script>
+</body>
+</html>

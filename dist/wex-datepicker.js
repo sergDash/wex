@@ -88,10 +88,20 @@
 /* 0 */
 /***/ (function(module, exports) {
 
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
 function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
 function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
+function ownKeys(e, r) { var t = Object.keys(e); if (Object.getOwnPropertySymbols) { var o = Object.getOwnPropertySymbols(e); r && (o = o.filter(function (r) { return Object.getOwnPropertyDescriptor(e, r).enumerable; })), t.push.apply(t, o); } return t; }
+function _objectSpread(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys(Object(t), !0).forEach(function (r) { _defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
+function _defineProperty(e, r, t) { return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, { value: t, enumerable: !0, configurable: !0, writable: !0 }) : e[r] = t, e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread(); }
+function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
+function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
 function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
 function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
@@ -329,7 +339,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     if (document.getElementById('wex-datepicker-css')) return;
     var st = document.createElement('style');
     st.id = 'wex-datepicker-css';
-    st.textContent = '.dp-hide-sb{scrollbar-width:none;-ms-overflow-style:none}.dp-hide-sb::-webkit-scrollbar{display:none}';
+    st.textContent = "\n.dp-hide-sb{scrollbar-width:none;-ms-overflow-style:none}\n.dp-hide-sb::-webkit-scrollbar{display:none}\n.dp-popup{animation:dp-pop .14s ease-out}\n@keyframes dp-pop{from{opacity:0;transform:translateY(-4px)}}";
     document.head.appendChild(st);
   }
   var instances = new Set();
@@ -345,6 +355,16 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
   function listen() {
     if (listening) return;
     listening = true;
+    document.addEventListener('scroll', function (e) {
+      var b = e.target;
+      if (!b || !b.classList || !b.classList.contains('dp-time')) return;
+      if (b._busy && Date.now() < b._busy) return; // не ломаем плавную прокрутку
+      var it = b.querySelectorAll('button');
+      if (it.length < 3) return;
+      var p = it[it.length / 3].offsetTop - it[0].offsetTop;
+      if (b.scrollTop < p) b.scrollTop += p;else if (b.scrollTop >= 2 * p) b.scrollTop -= p;
+    }, true);
+
     // клик вне компонента закрывает попап
     document.addEventListener('pointerdown', function (e) {
       instances.forEach(function (s) {
@@ -377,7 +397,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     return "<div class=\"dp-time dp-hide-sb relative h-[220px] w-[78px] shrink-0 snap-y snap-mandatory overflow-y-auto overscroll-contain touch-pan-y ".concat(CARD, " p-1.5\">\n      <button w-for=\"t in ").concat(list, " traceby t.key\" type=\"button\" class=\"dp-").concat(kind, " snap-center my-0.5 ").concat(OPT, " {{ t.cls }}\" data-v=\"{{ t.v }}\" data-sel=\"{{ t.sel }}\" aria-label=\"{{ t.aria }}\" aria-pressed=\"{{ t.sel }}\">{{ t.label }}</button>\n    </div>");
   }
   function template(withTime) {
-    return "<template>\n<div class=\"dp-root relative w-full max-w-[288px]\" data-dp=\"{{ id }}\">\n  <div class=\"relative\">\n    <input type=\"text\" inputmode=\"numeric\" autocomplete=\"off\" class=\"dp-input min-h-[40px] w-full rounded-md border border-slate-100 bg-white px-3 pr-9 text-[13px] text-slate-600 shadow-[0_2px_7px_rgba(15,23,42,.08)] outline-none transition hover:border-slate-300 focus-visible:ring-2 focus-visible:ring-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300\" w-value=\"text\" placeholder=\"{{ ph }}\" aria-haspopup=\"dialog\" aria-expanded=\"{{ open }}\" />\n    <button type=\"button\" class=\"dp-toggle absolute right-0 top-0 flex h-full w-9 items-center justify-center text-slate-400\" aria-label=\"{{ L.toggle }}\"><svg class=\"h-4 w-4\" viewBox=\"0 0 24 24\" fill=\"none\" aria-hidden=\"true\"><path d=\"m7 10 5 5 5-5\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></button>\n  </div>\n\n  <div w-if=\"open\" class=\"dp-popup absolute left-0 z-30 flex w-max max-w-[calc(100vw-2rem)] flex-wrap items-start gap-2 {{ pos }}\" role=\"dialog\" aria-label=\"{{ dialog }}\">\n\n    <div w-if=\"panel==='calendar'\" class=\"".concat(CARD, " w-[288px] p-2.5\">\n      <div class=\"flex h-10 items-center justify-between border-b border-slate-100 px-1 dark:border-slate-700\">\n        <button type=\"button\" class=\"").concat(NAV, "\" data-step=\"-1\" aria-label=\"{{ L.prevMonth }}\"><svg class=\"h-3.5 w-3.5\" viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"m15 18-6-6 6-6\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></button>\n        <div class=\"flex items-center gap-3 text-sm font-semibold text-slate-500 dark:text-slate-400\">\n          <button type=\"button\" class=\"dp-month-btn ").concat(HEAD_BTN, "\">{{ monthLabel }}</button>\n          <button type=\"button\" class=\"dp-year-btn ").concat(HEAD_BTN, "\">{{ view.y }}</button>\n        </div>\n        <button type=\"button\" class=\"").concat(NAV, "\" data-step=\"1\" aria-label=\"{{ L.nextMonth }}\"><svg class=\"h-3.5 w-3.5\" viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"m9 18 6-6-6-6\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></button>\n      </div>\n      <div class=\"grid grid-cols-7 text-center\">\n        <div w-for=\"wd in wdays traceby wd.key\" class=\"py-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400\">{{ wd.label }}</div>\n        <button w-for=\"d in days traceby d.key\" type=\"button\" class=\"dp-day mx-auto my-0.5 flex h-8 w-8 items-center justify-center rounded-full text-[12px] font-medium transition focus-visible:ring-2 focus-visible:ring-slate-400 {{ d.cls }}\" data-iso=\"{{ d.iso }}\" aria-label=\"{{ d.label }}\" aria-pressed=\"{{ d.sel }}\">{{ d.n }}</button>\n      </div>\n    </div>\n\n    <div w-if=\"panel!=='calendar'\" class=\"dp-opts relative max-h-[196px] w-[288px] overflow-y-auto ").concat(CARD, " p-2.5\" role=\"listbox\" aria-label=\"{{ panel==='month' ? L.months : L.years }}\">\n      <div class=\"grid gap-1\">\n        <button w-for=\"o in options traceby o.key\" type=\"button\" class=\"dp-opt ").concat(OPT, " {{ o.cls }}\" data-v=\"{{ o.v }}\" data-sel=\"{{ o.sel }}\" role=\"option\" aria-selected=\"{{ o.sel }}\">{{ o.label }}</button>\n      </div>\n    </div>\n    ").concat(withTime ? timeCol('hour', 'hours') + timeCol('minute', 'minutes') : '', "\n  </div>\n</div>\n</template>");
+    return "<template>\n<div class=\"dp-root relative w-full max-w-[288px]\" data-dp=\"{{ id }}\">\n  <div class=\"relative\">\n    <input type=\"text\" inputmode=\"numeric\" autocomplete=\"off\" class=\"dp-input min-h-[40px] w-full rounded-md border border-slate-100 bg-white px-3 pr-9 text-[13px] text-slate-600 shadow-[0_2px_7px_rgba(15,23,42,.08)] outline-none transition hover:border-slate-300 focus-visible:ring-2 focus-visible:ring-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300\" w-value=\"text\" placeholder=\"{{ ph }}\" aria-haspopup=\"dialog\" aria-expanded=\"{{ open }}\" />\n    <button type=\"button\" class=\"dp-toggle absolute right-0 top-0 flex h-full w-9 items-center justify-center text-slate-400\" aria-label=\"{{ L.toggle }}\"><svg class=\"h-4 w-4\" viewBox=\"0 0 24 24\" fill=\"none\" aria-hidden=\"true\"><path d=\"m7 10 5 5 5-5\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></button>\n  </div>\n\n  <div w-if=\"open\" class=\"dp-popup absolute left-0 z-30 flex w-max max-w-[calc(100vw-2rem)] flex-wrap items-start gap-2 {{ pos }}\" role=\"dialog\" aria-label=\"{{ dialog }}\">\n\n    <div w-if=\"panel==='calendar'\" class=\"dp-panel ".concat(CARD, " w-[288px] p-2.5\">\n      <div class=\"flex h-10 items-center justify-between border-b border-slate-100 px-1 dark:border-slate-700\">\n        <button type=\"button\" class=\"").concat(NAV, "\" data-step=\"-1\" aria-label=\"{{ L.prevMonth }}\"><svg class=\"h-3.5 w-3.5\" viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"m15 18-6-6 6-6\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></button>\n        <div class=\"flex items-center gap-3 text-sm font-semibold text-slate-500 dark:text-slate-400\">\n          <button type=\"button\" class=\"dp-month-btn ").concat(HEAD_BTN, "\">{{ monthLabel }}</button>\n          <button type=\"button\" class=\"dp-year-btn ").concat(HEAD_BTN, "\">{{ view.y }}</button>\n        </div>\n        <button type=\"button\" class=\"").concat(NAV, "\" data-step=\"1\" aria-label=\"{{ L.nextMonth }}\"><svg class=\"h-3.5 w-3.5\" viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"m9 18 6-6-6-6\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></button>\n      </div>\n      <div class=\"grid grid-cols-7 text-center\">\n        <div w-for=\"wd in wdays traceby wd.key\" class=\"py-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400\">{{ wd.label }}</div>\n        <button w-for=\"d in days traceby d.key\" type=\"button\" class=\"dp-day mx-auto my-0.5 flex h-8 w-8 items-center justify-center rounded-full text-[12px] font-medium transition focus-visible:ring-2 focus-visible:ring-slate-400 {{ d.cls }}\" data-iso=\"{{ d.iso }}\" aria-label=\"{{ d.label }}\" aria-pressed=\"{{ d.sel }}\">{{ d.n }}</button>\n      </div>\n    </div>\n\n    <div w-if=\"panel!=='calendar'\" class=\"dp-panel dp-opts relative h-[311px] w-[288px] overflow-y-auto ").concat(CARD, " p-2.5\" role=\"listbox\" aria-label=\"{{ panel==='month' ? L.months : L.years }}\">\n      <div class=\"grid gap-1\">\n        <button w-for=\"o in options traceby o.key\" type=\"button\" class=\"dp-opt ").concat(OPT, " {{ o.cls }}\" data-v=\"{{ o.v }}\" data-sel=\"{{ o.sel }}\" role=\"option\" aria-selected=\"{{ o.sel }}\">{{ o.label }}</button>\n      </div>\n    </div>\n    ").concat(withTime ? timeCol('hour', 'hours') + timeCol('minute', 'minutes') : '', "\n  </div>\n</div>\n</template>");
   }
 
   // ---------------------------------------------------------------- фабрика
@@ -465,51 +485,117 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
         }
       }
       if (s.withTime) {
-        s.hours = Array.from({
-          length: 24
-        }, function (_, i) {
-          return {
-            key: 'h' + i,
-            v: i,
-            label: pad(i),
-            sel: i === s.hour,
-            cls: selCls(i === s.hour),
-            aria: o.labels.hour + ' ' + pad(i)
-          };
-        });
-        s.minutes = Array.from({
-          length: 60
-        }, function (_, i) {
-          return {
-            key: 'i' + i,
-            v: i,
-            label: pad(i),
-            sel: i === s.minute,
-            cls: selCls(i === s.minute),
-            aria: o.labels.minute + ' ' + pad(i)
-          };
-        });
+        var rep = function rep(n, kind, cur, label) {
+          var a = [];
+          for (var c = 0; c < 3; c++) for (var _i = 0; _i < n; _i++) a.push({
+            key: kind + c + '_' + _i,
+            v: _i,
+            label: pad(_i),
+            sel: _i === cur,
+            cls: selCls(_i === cur),
+            aria: label + ' ' + pad(_i)
+          });
+          return a;
+        };
+        s.hours = rep(24, 'h', s.hour, o.labels.hour);
+        s.minutes = rep(60, 'i', s.minute, o.labels.minute);
       }
     }
 
     // попап вниз или вверх, прокрутка списков к выбранному элементу (после рендера Wex)
+    var POPUP_H = 320; // высота календаря
     function place(s) {
-      var r = rootEl(s),
-        pop = r && r.querySelector('.dp-popup');
-      if (!pop) return;
+      var r = rootEl(s);
+      if (!r) return;
       var rect = r.getBoundingClientRect();
       var below = window.innerHeight - rect.bottom,
         above = rect.top;
-      var up = below < pop.offsetHeight + 12 && above > below;
-      var pos = up ? 'bottom-full mb-2' : 'top-full mt-2';
+      var pos = below < POPUP_H + 12 && above > below ? 'bottom-full mb-2' : 'top-full mt-2';
       if (s.pos !== pos) s.pos = pos;
     }
-    function center(s) {
+    function center(s, smooth) {
       var r = rootEl(s);
       if (!r) return;
       r.querySelectorAll('.dp-opts, .dp-time').forEach(function (box) {
-        var el = box.querySelector('[data-sel="true"]');
-        if (el) box.scrollTop = el.offsetTop - (box.clientHeight - el.offsetHeight) / 2;
+        var list = box.querySelectorAll('[data-sel="true"]');
+        if (!list.length) return;
+        var isTime = box.classList.contains('dp-time');
+        var el = list[0];
+        if (isTime) {
+          var mid = box.scrollTop + box.clientHeight / 2;
+          var dist = function dist(n) {
+            return Math.abs(n.offsetTop + n.offsetHeight / 2 - mid);
+          };
+          el = smooth ? _toConsumableArray(list).reduce(function (a, b) {
+            return dist(a) <= dist(b) ? a : b;
+          }) : list[1] || list[0];
+        }
+        var top = el.offsetTop - (box.clientHeight - el.offsetHeight) / 2;
+        if (smooth) box._busy = Date.now() + 500;
+        box.scrollTo({
+          top: top,
+          behavior: smooth ? 'smooth' : 'instant'
+        });
+      });
+    }
+    var nextFrame = function nextFrame(fn) {
+      return requestAnimationFrame(function () {
+        return requestAnimationFrame(fn);
+      });
+    };
+
+    // dx = 0: кроссфейд; dx = ±1: слайд в сторону
+    function transition(s, mutate, dx) {
+      var r = rootEl(s);
+      var old = r && r.querySelector('.dp-panel');
+      if (!old || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        mutate();
+        nextFrame(function () {
+          return center(s);
+        });
+        return;
+      }
+      var rect = old.getBoundingClientRect();
+      var ghost = old.cloneNode(true);
+      Object.assign(ghost.style, {
+        position: 'fixed',
+        left: rect.left + 'px',
+        top: rect.top + 'px',
+        width: rect.width + 'px',
+        height: rect.height + 'px',
+        margin: '0',
+        zIndex: '9999',
+        pointerEvents: 'none',
+        boxSizing: 'border-box'
+      });
+      document.body.appendChild(ghost);
+      var kill = function kill() {
+        return ghost.remove();
+      };
+      setTimeout(kill, 700);
+      mutate();
+      nextFrame(function () {
+        center(s); // список уже прокручен к выбранному, пока его закрывает призрак
+        var cur = (rootEl(s) || document).querySelector('.dp-panel');
+        var opt = {
+          duration: 200,
+          easing: 'cubic-bezier(.2,.7,.2,1)'
+        };
+        var shift = dx * 18;
+        ghost.animate([{
+          opacity: 1,
+          transform: 'none'
+        }, {
+          opacity: 0,
+          transform: dx ? "translateX(".concat(-shift, "px)") : 'scale(1.02)'
+        }], _objectSpread(_objectSpread({}, opt), {}, {
+          fill: 'forwards'
+        })).onfinish = kill;
+        if (cur) cur.animate([{
+          transform: dx ? "translateX(".concat(shift, "px)") : 'scale(.98)'
+        }, {
+          transform: 'none'
+        }], opt);
       });
     }
     var settle = function settle(s) {
@@ -519,9 +605,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       });
     };
     function setPanel(s, panel) {
-      s.panel = panel;
-      refresh(s);
-      settle(s);
+      transition(s, function () {
+        s.panel = panel;
+        refresh(s);
+      }, 0);
     }
 
     // месяц и год, введённые в инпут (если сегменты заполнены), становятся отображаемыми
@@ -587,20 +674,22 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       var y = s.panel === 'year' ? val : s.view.y;
       var m = s.panel === 'month' ? val : s.view.m;
       var cur = parseValue(s.value);
-      s.panel = 'calendar';
-      if (cur) setValue(s, view, {
-        y: y,
-        m: m,
-        d: Math.min(cur.d, dim(y, m)),
-        h: cur.h,
-        i: cur.i
-      });else {
-        s.view = {
+      transition(s, function () {
+        s.panel = 'calendar';
+        if (cur) setValue(s, view, {
           y: y,
-          m: m
-        };
-        refresh(s);
-      }
+          m: m,
+          d: Math.min(cur.d, dim(y, m)),
+          h: cur.h,
+          i: cur.i
+        });else {
+          s.view = {
+            y: y,
+            m: m
+          };
+          refresh(s);
+        }
+      }, 0);
     }
 
     // ---- компонент
@@ -728,12 +817,14 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       }).on('click', '.dp-nav', function (s) {
         return function (e) {
           var step = +e.currentTarget.getAttribute('data-step');
-          var d = new Date(s.view.y, s.view.m + step, 1);
-          s.view = {
-            y: d.getFullYear(),
-            m: d.getMonth()
-          };
-          refresh(s);
+          transition(s, function () {
+            var d = new Date(s.view.y, s.view.m + step, 1);
+            s.view = {
+              y: d.getFullYear(),
+              m: d.getMonth()
+            };
+            refresh(s);
+          }, step);
         };
       }).on('click', '.dp-opt', function (s) {
         var v = this;
@@ -766,26 +857,36 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
         return function (e) {
           s.hour = +e.currentTarget.getAttribute('data-v');
           var cur = parseValue(s.value);
-          if (cur) setValue(s, v, {
-            y: cur.y,
-            m: cur.m,
-            d: cur.d,
-            h: s.hour,
-            i: cur.i
-          });else refresh(s);
+          if (cur) {
+            setValue(s, v, {
+              y: cur.y,
+              m: cur.m,
+              d: cur.d,
+              h: s.hour,
+              i: cur.i
+            });
+            nextFrame(function () {
+              return center(s, true);
+            });
+          } else refresh(s);
         };
       }).on('click', '.dp-minute', function (s) {
         var v = this;
         return function (e) {
           s.minute = +e.currentTarget.getAttribute('data-v');
           var cur = parseValue(s.value);
-          if (cur) setValue(s, v, {
-            y: cur.y,
-            m: cur.m,
-            d: cur.d,
-            h: cur.h,
-            i: s.minute
-          });else refresh(s);
+          if (cur) {
+            setValue(s, v, {
+              y: cur.y,
+              m: cur.m,
+              d: cur.d,
+              h: cur.h,
+              i: s.minute
+            });
+            nextFrame(function () {
+              return center(s, true);
+            });
+          } else refresh(s);
         };
       });
       return tpl;

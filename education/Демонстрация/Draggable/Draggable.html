@@ -1,34 +1,68 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title> <script>try{const t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.classList.toggle('dark',t==='dark')}catch(e){}</script>
+    <title>Wex Drag: демо</title>
+    <script>try{const t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.classList.toggle('dark',t==='dark')}catch(e){}</script>
     <script>window.Quas = { AutoDarkMode: false };</script>
     <script src="https://cdn.jsdelivr.net/gh/wemmbley/quas@master/Source/Quas.js"></script>
-    <script src="./wex-draggable.js"></script>
+    <script src="https://unpkg.com/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script src="../../../dist/wex.min.js"></script>
+    <script src="../../../dist/wex-draggable.js"></script>
 </head>
 <body class="min-h-screen bg-slate-100 p-4 text-[13px] text-slate-700 antialiased sm:p-8 dark:bg-slate-950 dark:text-slate-300">
 <div class="mx-auto max-w-5xl">
-    <div class="mb-6 flex items-center justify-between">
-        <h1 class="text-2xl font-semibold tracking-tight">Draggable</h1>
+    <div class="mb-2 flex items-center justify-between">
+        <h1 class="text-2xl font-semibold tracking-tight">Wex Drag</h1>
         <button id="theme" class="rounded border border-slate-300 bg-white px-3 py-1 text-xs dark:border-slate-600 dark:bg-slate-900">light / dark</button>
     </div>
+    <p class="mb-6 text-slate-500">
+        Мышь, тач и клавиатура: Tab к карточке, Пробел берёт, стрелки двигают, Пробел кладёт, Esc отменяет.
+        Массивы в state меняются сами, под каждым блоком видно событие, которое пришло в приложение.
+    </p>
 
-    <h2 class="mb-2 text-lg font-medium">list: колонки (канбан)</h2>
-    <div id="list" class="grid grid-cols-3 gap-2">
-        <div class="flex min-h-[140px] flex-col gap-1 rounded bg-slate-200 p-2 dark:bg-slate-800" data-container="todo"></div>
-        <div class="flex min-h-[140px] flex-col gap-1 rounded bg-slate-200 p-2 dark:bg-slate-800" data-container="doing"></div>
-        <div class="flex min-h-[140px] flex-col gap-1 rounded bg-slate-200 p-2 dark:bg-slate-800" data-container="done"></div>
-    </div>
-    <pre id="listLog" class="mt-2 h-10 overflow-auto text-[11px] text-slate-500"></pre>
+    <template id="app">
+        <h2 class="mb-1 text-lg font-medium">list: колонки (канбан)</h2>
+        <p class="mb-2 text-slate-500">&lt;Kanban :columns="board" @move="onMove('list')"&gt;</p>
+        <Kanban class="block" :columns="board" @move="onMove('list')" @cancel="onCancel('list')"></Kanban>
+        <pre class="mt-2 h-10 overflow-auto text-[11px] text-slate-500">{{ logs.list }}</pre>
 
-    <h2 class="mb-2 mt-8 text-lg font-medium">flow: перестановка в сетке</h2>
-    <div id="flow" class="grid grid-cols-4 gap-2"></div>
-    <pre id="flowLog" class="mt-2 h-10 overflow-auto text-[11px] text-slate-500"></pre>
+        <h2 class="mb-1 mt-8 text-lg font-medium">flow: перестановка в сетке</h2>
+        <p class="mb-2 text-slate-500">&lt;Grid :items="photos" :cols="4" :swap="true"&gt; со своим содержимым в слоте (виден it)</p>
+        <div class="rounded bg-slate-200 p-2 dark:bg-slate-800">
+            <Grid class="block" :items="photos" :cols="4" :swap="true" :slotted="true" @move="onMove('flow')" @cancel="onCancel('flow')">
+                <div class="flex h-14 items-center justify-center text-lg">{{ it.title }}</div>
+            </Grid>
+        </div>
+        <pre class="mt-2 h-10 overflow-auto text-[11px] text-slate-500">{{ logs.flow }}</pre>
 
-    <h2 class="mb-2 mt-8 text-lg font-medium">cells: стикеры в любую свободную ячейку</h2>
-    <div id="cells" style="display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(3,90px);gap:8px" class="rounded bg-slate-200 p-2 dark:bg-slate-800"></div>
-    <pre id="cellsLog" class="mt-2 h-10 overflow-auto text-[11px] text-slate-500"></pre>
+        <h2 class="mb-1 mt-8 text-lg font-medium">cells: стикеры в любую свободную ячейку</h2>
+        <p class="mb-2 text-slate-500">&lt;Stickers :stickers="notes" :cols="4" :rows="3" :row-height="90" :gap="8"&gt;</p>
+        <div class="rounded bg-slate-200 p-2 dark:bg-slate-800">
+            <Stickers class="block" :stickers="notes" :cols="4" :rows="3" :row-height="90" :gap="8" @move="onMove('cells')" @cancel="onCancel('cells')"></Stickers>
+        </div>
+        <pre class="mt-2 h-10 overflow-auto text-[11px] text-slate-500">{{ logs.cells }}</pre>
+
+        <h2 class="mb-1 mt-8 text-lg font-medium">свои колонки на директивах</h2>
+        <p class="mb-2 text-slate-500">
+            w-drag + w-drag-list: ручка (⠿), запрет «To do → Done» через canDrop, подсветка колонки под курсором,
+            свой плейсхолдер и наклон призрака стилями Quas. События приходят во view: $drop, $dragCancel.
+        </p>
+        <div class="flex items-start gap-3 overflow-x-auto pb-2"
+             w-drag="{ mode: 'list', handle: '.grip', canDrop: 'noJump', placeholderClass: 'rounded border-2 border-dashed border-sky-400 data-[dd-invalid]:border-red-400' }">
+            <div w-for="col in board2 traceby col.id" class="w-64 shrink-0 rounded-md bg-slate-200 p-2 dark:bg-slate-800">
+                <div class="px-1 pb-2 text-sm font-semibold">{{ col.title }}</div>
+                <div class="flex min-h-[56px] flex-col gap-2 rounded p-1 data-[dd-over]:bg-sky-100 dark:data-[dd-over]:bg-slate-700"
+                     w-drag-list="col.cards" w-drag-key="col.id">
+                    <div w-for="card in col.cards traceby card.id" tabindex="0"
+                         class="flex items-center gap-2 rounded border border-slate-200 bg-white p-2 text-xs shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 data-[dd-ghost]:rotate-2 data-[dd-ghost]:shadow-xl dark:border-slate-700 dark:bg-slate-900">
+                        <span class="grip cursor-grab select-none text-slate-400">⠿</span>{{ card.title }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <pre class="mt-2 h-10 overflow-auto text-[11px] text-slate-500">{{ logs.dir }}</pre>
+    </template>
 </div>
 
 <script>
@@ -36,59 +70,45 @@
         const dark = document.documentElement.classList.toggle('dark')
         try { localStorage.setItem('theme', dark ? 'dark' : 'light') } catch (e) {}
     }
-    const $ = s => document.querySelector(s)
-    const log = (id, e) => { $(id).textContent = JSON.stringify(e, (k, v) => (k === 'el' || k === 'event' || k === 'container' ? undefined : v)) }
-    const CARD = 'rounded border border-slate-200 bg-white p-3 text-xs shadow-sm dark:border-slate-700 dark:bg-slate-900'
 
-    // демо сам переставляет DOM по событию drop; в Wex это делает перерисовка по изменению state
-    function moveBy(root, e) {
-        const target = root.querySelector('[data-container="' + e.to + '"]') || root
-        const el = root.querySelector('[data-id="' + e.id + '"]')
-        const before = e.before && root.querySelector('[data-id="' + e.before + '"]')
-        target.insertBefore(el, before)
-    }
+    // в лог попадает всё, кроме DOM-узлов
+    const fmt = e => JSON.stringify(e, (k, v) => (['el', 'event', 'container', 'fromEl', 'toEl'].includes(k) ? undefined : v))
+    const card = (id, title) => ({ id, title })
 
-    // ---- list
-    const cols = { todo: ['Fix login', 'Write docs', 'Refactor router'], doing: ['Datepicker'], done: ['DataTable'] }
-    let n = 0
-    Object.keys(cols).forEach(k => cols[k].forEach(t => {
-        const d = document.createElement('div')
-        d.className = CARD; d.dataset.id = 'c' + (++n); d.textContent = t
-        document.querySelector('#list [data-container="' + k + '"]').appendChild(d)
-    }))
-    createDraggable({ root: () => $('#list'), mode: 'list', containers: '[data-container]', on: { drop: e => { if (e.moved) moveBy($('#list'), e); log('#listLog', e) }, cancel: e => log('#listLog', e) } })
-
-    // ---- flow
-    for (let i = 1; i <= 8; i++) {
-        const d = document.createElement('div')
-        d.className = CARD + ' flex h-20 items-center justify-center text-lg'; d.dataset.id = 'f' + i; d.textContent = i
-        $('#flow').appendChild(d)
-    }
-    function swapEls(root, e) {
-        const a = root.querySelector('[data-id="' + e.id + '"]')
-        const b = root.querySelector('[data-id="' + e.with + '"]')
-        const m = document.createComment('')
-        a.before(m); b.before(a); m.replaceWith(b)
-    }
-    createDraggable({ root: () => $('#flow'), mode: 'flow', swap: true, on: { drop: e => { if (e.moved) swapEls($('#flow'), e); log('#flowLog', e) } } })
-
-    // ---- cells
-    const stickers = [[0, 0, 1, 1, 'Купить хлеб'], [1, 0, 2, 1, 'Созвон в 15:00 (2 ячейки)'], [3, 1, 1, 2, 'Идея: канбан'], [0, 2, 1, 1, 'Оплатить хостинг']]
-    stickers.forEach(([x, y, w, h, t], i) => {
-        const d = document.createElement('div')
-        d.className = 'rounded bg-yellow-200 p-2 text-xs text-slate-800 shadow dark:bg-yellow-300'
-        d.dataset.id = 's' + i; d.textContent = t
-        Object.assign(d.dataset, { x, y, w, h })
-        d.style.gridColumn = (x + 1) + ' / span ' + w; d.style.gridRow = (y + 1) + ' / span ' + h
-        $('#cells').appendChild(d)
-    })
-    createDraggable({
-        root: () => $('#cells'), mode: 'cells',
-        on: {
-            drop: e => { if (e.moved) { const el = e.el; el.dataset.x = e.to.x; el.dataset.y = e.to.y; el.style.gridColumn = (e.to.x + 1) + ' / span ' + e.w; el.style.gridRow = (e.to.y + 1) + ' / span ' + e.h } log('#cellsLog', e) },
-            cancel: e => log('#cellsLog', e)
-        }
-    })
+    $('#app')
+        .state(() => ({
+            // <Kanban>: columns -> cards
+            board: [
+                { id: 'todo', title: 'To do', cards: [card(1, 'Fix login'), card(2, 'Write docs'), card(3, 'Refactor router')] },
+                { id: 'doing', title: 'Doing', cards: [card(4, 'Datepicker')] },
+                { id: 'done', title: 'Done', cards: [card(5, 'DataTable')] },
+            ],
+            // <Grid>
+            photos: Array.from({ length: 8 }, (_, i) => card(i + 1, String(i + 1))),
+            // <Stickers>
+            notes: [
+                { id: 1, x: 0, y: 0, w: 1, h: 1, text: 'Купить хлеб' },
+                { id: 2, x: 1, y: 0, w: 2, h: 1, text: 'Созвон в 15:00 (2 ячейки)' },
+                { id: 3, x: 3, y: 1, w: 1, h: 2, text: 'Идея: канбан' },
+                { id: 4, x: 0, y: 2, w: 1, h: 1, text: 'Оплатить хостинг' },
+            ],
+            // свои колонки на директивах
+            board2: [
+                { id: 'todo', title: 'To do', cards: [card(11, 'Дизайн'), card(12, 'Вёрстка'), card(13, 'Тесты')] },
+                { id: 'doing', title: 'Doing', cards: [card(14, 'API')] },
+                { id: 'done', title: 'Done', cards: [] },
+            ],
+            logs: { list: '', flow: '', cells: '', dir: '' },
+        }))
+        // события компонентов: @move="onMove('list')" приходит как (state, 'list') -> функция(e)
+        .method('onMove', (state, name) => function (e) { state.logs[name] = fmt(e) })
+        .method('onCancel', (state, name) => function () { state.logs[name] = 'отменено' })
+        // canDrop: 'noJump' (метод view): нельзя перенести напрямую из todo в done
+        .method('noJump', (state, ctx) => !(ctx.from === 'todo' && ctx.to === 'done'))
+        // события директивы w-drag приходят во view, где она стоит
+        .on('$drop', (state, e) => { state.logs.dir = fmt(e) })
+        .on('$dragCancel', (state) => { state.logs.dir = 'отменено' })
+        .mount()
 </script>
 </body>
 </html>
