@@ -1,7 +1,6 @@
 /*
  * Персистентность ключей state.storage в localStorage.
- * Формат значения: JSON.stringify(value)
- * Старые записи читаются: строка приводится к типу значения по умолчанию.
+ * Формат значения: JSON.stringify(value). Старые записи читаются: строка приводится к типу значения по умолчанию.
  */
 export class VMLocalStorage {
     static getKey = (key) => 'JQVM_ls_' + key
@@ -17,13 +16,13 @@ export class VMLocalStorage {
         try {
             const next = JSON.stringify(val === undefined ? null : val)
             const k = this.getKey(key)
-            if (localStorage.getItem(k) !== next) localStorage.setItem(k, next)   // не пишем без изменений
+            if (localStorage.getItem(k) !== next) localStorage.setItem(k, next)
         } catch (e) { /* квота или приватный режим */ }
     }
 
     static revive = (stored, def) => {
         if (typeof stored === 'string' && typeof def !== 'string' && def !== undefined && def !== null) {
-            try { return JSON.parse(stored) } catch (e) { return def }   // старый формат
+            try { return JSON.parse(stored) } catch (e) { return def }
         }
         return stored
     }
@@ -31,7 +30,6 @@ export class VMLocalStorage {
     static reloadJqvmLocalStorage = (state, status) => {
         const st = state && state.storage
         if (!st || typeof st !== 'object') return
-
         Object.keys(st).forEach((name) => {
             if (status === '$mount') {
                 const stored = this.getVal(name)
