@@ -7,6 +7,12 @@
         button:disabled{opacity:.5} label{margin-left:14px}
         input{width:56px;font:inherit}
         #status{margin:12px 0;color:#444;min-height:21px}
+        #libs{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;margin:0 0 14px}
+        #libs label.lib{margin:0;padding:3px 10px 3px 6px;border:1px solid #d4d4d4;border-radius:999px;cursor:pointer;user-select:none;display:inline-flex;align-items:center;gap:5px}
+        #libs label.lib:has(input:checked){background:#eef2ff;border-color:#818cf8}
+        #libs label.lib.off{opacity:.45;cursor:not-allowed;text-decoration:line-through}
+        #libs input{width:auto;margin:0}
+        #libs a{color:#2563eb;cursor:pointer;font-size:12px;margin-left:6px}
         table{border-collapse:collapse;width:100%;margin:8px 0 28px} th,td{padding:6px 10px;border-bottom:1px solid #e5e5e5;text-align:left;vertical-align:middle}
         th{font-size:12px;color:#666;font-weight:600} td.t{width:20%}
         .cell{position:relative;min-width:110px} .bar{position:absolute;left:0;top:3px;bottom:3px;background:#dbeafe;border-radius:3px;z-index:0}
@@ -16,6 +22,7 @@
         .box{height:160px;overflow:auto;contain:content;border:1px solid #ddd;margin:4px 0;font-size:11px}
         .note{color:#666;font-size:12px}
     </style>
+    <script>window.WEX_DEBUG = false</script>
     <script src="../wex.js"></script>
     <script src="https://unpkg.com/petite-vue@0.4.1/dist/petite-vue.umd.js"></script>
     <script src="https://unpkg.com/preact@10.24.3/dist/preact.umd.js"></script>
@@ -26,7 +33,8 @@
 </head><body>
 <h1>Wex 3 vs petite-vue vs Preact vs Solid vs Alpine vs Vue 3 vs Knockout</h1>
 <div class="sub">Один и тот же список из 2000 строк (по 2 вложенных элемента и условный узел), одинаковый textContent, чередование библиотек, медиана по прогонам.</div>
-<button id="go">Запустить</button>
+<div id="libs">Загрузка библиотек…</div>
+<button id="go" disabled>Запустить</button>
 <label>прогонов <input id="it" type="number" value="15" min="3" max="60"></label>
 <div id="status">Держите вкладку на виду: без requestAnimationFrame замер «до отрисовки» не идёт.</div>
 <div id="warn"></div>
@@ -42,6 +50,40 @@
     const $ = id => document.getElementById(id)
     const fmt = v => v < 1 ? v.toFixed(2) : v < 10 ? v.toFixed(1) : v.toFixed(0)
 
+    // ---------- выбор библиотек (запоминается в localStorage) ----------
+    const KEY = 'wexbench:off'
+    const loadOff = () => { try { return new Set(JSON.parse(localStorage.getItem(KEY) || '[]')) } catch (e) { return new Set() } }
+    const saveOff = s => { try { localStorage.setItem(KEY, JSON.stringify([...s])) } catch (e) {} }
+    const boxes = () => [...document.querySelectorAll('#libs input')]
+    const selected = () => boxes().filter(b => b.checked && !b.disabled).map(b => b.value)
+
+    function syncSelection() {
+        const off = new Set(boxes().filter(b => !b.checked).map(b => b.value))
+        saveOff(off)
+        $('go').disabled = selected().length === 0
+        if (!selected().length) $('status').textContent = 'Выберите хотя бы одну библиотеку.'
+    }
+    function setAll(on) { boxes().forEach(b => { if (!b.disabled) b.checked = on }); syncSelection() }
+
+    function renderLibs() {
+        const off = loadOff()
+        $('libs').innerHTML = WexBench.list().map(l => {
+            const esc = s => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
+            return `<label class="lib ${l.available ? '' : 'off'}" ${l.available ? '' : `title="${esc('не загружена: ' + l.reason)}"`}>` +
+                `<input type="checkbox" value="${esc(l.name)}" ${l.available && !off.has(l.name) ? 'checked' : ''} ${l.available ? '' : 'disabled'}>${esc(l.name)}</label>`
+        }).join('') + '<a id="all">все</a><a id="none">ни одной</a>'
+        $('libs').onchange = syncSelection
+        $('all').onclick = () => setAll(true)
+        $('none').onclick = () => setAll(false)
+        const missing = WexBench.list().filter(l => !l.available)
+        $('warn').innerHTML = missing.length
+            ? `<div class="warn">Не загружено: ${missing.map(l => `${l.name} (${l.reason})`).join(', ')}. Будут сравниваться только доступные.</div>` : ''
+        syncSelection()
+        if (selected().length) $('status').textContent = 'Держите вкладку на виду: без requestAnimationFrame замер «до отрисовки» не идёт.'
+    }
+
+    WexBench.prepare().then(renderLibs)
+
     function table(title, data, key) {
         const { scenarios, libs, results } = data
         let h = `<h3>${title}</h3><table><tr><th>Сценарий</th>${libs.map(l => `<th>${l}</th>`).join('')}</tr>`
@@ -56,17 +98,18 @@
     }
 
     $('go').onclick = async () => {
-        $('go').disabled = true; $('warn').innerHTML = ''; $('tables').innerHTML = ''
-        $('status').textContent = 'Загрузка библиотек…'
-        const missing = await WexBench.prepare()
-        if (missing.length) $('warn').innerHTML = `<div class="warn">Не загружено: ${missing.join(', ')}. Будут сравниваться только доступные.</div>`
+        const only = selected()
+        if (!only.length) return
+        $('go').disabled = true; boxes().forEach(b => b.disabled = true)
+        $('tables').innerHTML = ''
         const data = await WexBench.run({
-            iterations: +$('it').value || 15, host: $('host'),
+            iterations: +$('it').value || 15, host: $('host'), only,
             onProgress: (sc, i, total) => { $('status').textContent = `${sc.title}: прогон ${i + 1} из ${total}` },
         })
         $('status').textContent = 'Готово.'
         $('tables').innerHTML = table('Скрипт (JS + DOM)', data, 'script') + table('До отрисовки (скрипт + стили + раскладка + покраска)', data, 'paint')
+        renderLibs()   // вернуть чекбоксы (с сохранённым выбором) и предупреждения о незагруженных
         if (data.warnings.length) $('warn').innerHTML += data.warnings.map(w => `<div class="warn">${w}</div>`).join('')
-        $('go').disabled = false
+        $('status').textContent = 'Готово.'
     }
 </script></body></html>

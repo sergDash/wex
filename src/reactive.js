@@ -26,7 +26,7 @@ export const isReactive = (v) => !!(v && typeof v === 'object' && v[RAW])
 
 // ---------- эффекты ----------
 export class Effect {
-    constructor(fn) { this.fn = fn; this.id = ++seq; this.deps = []; this.active = true; this.queued = false; this.view = null }
+    constructor(fn) { this.fn = fn; this.id = ++seq; this.deps = null; this.active = true; this.queued = false; this.view = null }
     run() {
         if (!this.active) return
         cleanup(this)
@@ -37,10 +37,40 @@ export class Effect {
     stop() { if (this.active) { cleanup(this); this.active = false } }
 }
 
+// deps хранит пары (Map, key): подписчик лежит в Map либо сам (единственный), либо в Set (когда их несколько)
 function cleanup(e) {
     const d = e.deps
-    for (let i = 0; i < d.length; i++) d[i].delete(e)
+    if (d === null || d.length === 0) return
+    for (let i = 0; i < d.length; i += 2) {
+        const m = d[i], k = d[i + 1]
+        const c = m.get(k)
+        if (c === e) m.delete(k)
+        else if (c !== undefined) c.delete(e)
+    }
     d.length = 0
+}
+
+// Листовые привязки (текст, атрибут) сначала выполняются под общим «пробным» эффектом: если они ничего
+// реактивного не прочитали (значения строк-примитивов), эффект не создаётся вообще. Иначе зависимости
+// переезжают на настоящий Effect. Вложенных effect() внутри run быть не должно.
+const probe = new Effect(null)
+export function runLeaf(run, a, b, c, d) {
+    const prev = activeEffect
+    activeEffect = probe
+    probe.deps = null
+    try { run(a, b, c, d) } finally { activeEffect = prev }
+    const deps = probe.deps
+    if (deps === null || deps.length === 0) return null
+    probe.deps = null
+    const e = new Effect(() => run(a, b, c, d))
+    for (let i = 0; i < deps.length; i += 2) {
+        const m = deps[i], k = deps[i + 1]
+        const cur = m.get(k)
+        if (cur === probe) m.set(k, e)
+        else { cur.delete(probe); cur.add(e) }
+    }
+    e.deps = deps
+    return e
 }
 
 export function untrack(fn) {
@@ -54,22 +84,47 @@ export function track(target, key) {
     if (!e) return
     let m = targetMap.get(target)
     if (!m) targetMap.set(target, (m = new Map()))
-    let dep = m.get(key)
-    if (!dep) m.set(key, (dep = new Set()))
-    if (!dep.has(e)) { dep.add(e); e.deps.push(dep) }
+    const cur = m.get(key)
+    if (cur === undefined) { m.set(key, e); (e.deps || (e.deps = [])).push(m, key) }
+    else if (cur === e) return
+    else if (cur instanceof Set) { if (!cur.has(e)) { cur.add(e); (e.deps || (e.deps = [])).push(m, key) } }
+    else { m.set(key, new Set([cur, e])); (e.deps || (e.deps = [])).push(m, key) }
 }
 
 export function trigger(target, key, type, newLen) {
     const m = targetMap.get(target)
     if (!m) return
-    const add = (dep) => { if (dep) dep.forEach((e) => { if (e !== activeEffect) enqueue(e) }) }
+    const add = (dep) => {
+        if (dep === undefined) return
+        if (dep instanceof Set) dep.forEach((e) => { if (e !== activeEffect) enqueue(e) })
+        else if (dep !== activeEffect) enqueue(dep)
+    }
     const isArr = Array.isArray(target)
+    if (isArr) add(m.get(ITERATE))   // любой список целиком (см. readList)
     if (isArr && key === 'length') {
         m.forEach((dep, k) => { if (k === 'length' || (typeof k === 'string' && +k >= newLen)) add(dep) })
         return
     }
     if (key !== undefined) add(m.get(key))
     if (type === 'add' || type === 'delete') add(m.get(isArr ? 'length' : ITERATE))
+}
+
+// Чтение массива целиком одним отслеживанием (вместо длины и каждого индекса): для w-for.
+// Любая мутация массива (индекс, длина, splice, reverse) будит подписчика.
+export function readList(src) {
+    const raw = toRaw(src)
+    track(raw, ITERATE)
+    const n = raw.length
+    const out = new Array(n)
+    for (let i = 0; i < n; i++) {
+        const v = raw[i]
+        if (v !== null && typeof v === 'object' && isPlain(v)) {
+            if (subCount) link(toRaw(v), raw)
+            out[i] = reactive(v)
+        }
+        else out[i] = v
+    }
+    return out
 }
 
 // ---------- планировщик ----------

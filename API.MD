@@ -5,11 +5,9 @@
 
 ## Performance
 
-Сравнивался Wex, Petite Vue (Vue.js CDN) и Preact (React CDN), 18 прогонов:
-<img src="./education/Картинки/Performance.png">
+Сравнивался Wex, Vue Global, Preact (React CDN) и Solid, 18 прогонов:
 
-Полное сравнение всех популярных фреймворков:
-<img src="./education/Картинки/Performance_2.png">
+<img src="./education/Картинки/Performance.png">
 
 Запуск теста вручную: `dist/benchmark/Index.html`
 

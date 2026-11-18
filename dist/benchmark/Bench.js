@@ -232,9 +232,10 @@
         return prepared.then(() => adapters.filter(a => !a.available()).map(a => `${a.name} (${a.loadError || a.hint})`))
     }
 
-    async function run({ iterations = 15, warmup = 3, host, onProgress }) {
+    // only — массив имён библиотек, которые нужно мерить (по умолчанию все доступные)
+    async function run({ iterations = 15, warmup = 3, host, onProgress, only }) {
         await prepare()
-        const libs = adapters.filter(a => a.available())
+        const libs = adapters.filter(a => a.available() && (!only || only.includes(a.name)))
         const boxes = libs.map((a) => {
             const d = document.createElement('div')
             d.className = 'box'
@@ -282,5 +283,8 @@
         return { scenarios: SCEN, libs: libs.map(a => a.name), results, warnings, stat: { median, iterations } }
     }
 
-    window.WexBench = { run, prepare, SCEN, median }
+    // список всех библиотек с состоянием загрузки (для чекбоксов в интерфейсе)
+    const list = () => adapters.map(a => ({ name: a.name, available: a.available(), reason: a.loadError || a.hint }))
+
+    window.WexBench = { run, prepare, list, SCEN, median }
 })()

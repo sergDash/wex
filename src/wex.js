@@ -3,7 +3,7 @@ export const WEX_VERSION = '3.0.0'
 import { ScopeX } from './vendor/ScopeX'
 import { isNone, isFunction, isString, isObject, isEqual, getNodeAttrs, camelCase, parseKey, parseMustache, sanitizeSvg } from './utils.js'
 import { VMLocalStorage } from './store.js'
-import { reactive, toRaw, isReactive, subscribe, Effect, untrack, track, trigger, flush, runEffects } from './reactive.js'
+import { reactive, toRaw, isReactive, subscribe, Effect, untrack, track, trigger, flush, runEffects, readList, runLeaf } from './reactive.js'
 
 export { reactive, toRaw, isReactive, untrack, flush as __flush }
 
@@ -65,7 +65,7 @@ class Block {
   constructor(parent, view) {
     this.view = view
     this.parent = parent || null
-    this.effects = []
+    this.effects = null
     this.cleanups = null
     this.children = null
     this.disposed = false
@@ -84,11 +84,11 @@ class Block {
     if (this.disposed) return
     this.disposed = true
     const ef = this.effects
-    for (let i = 0; i < ef.length; i++) ef[i].stop()
+    if (ef) for (let i = 0; i < ef.length; i++) ef[i].stop()
     if (this.children) Array.from(this.children).forEach(c => c.dispose())
     if (this.cleanups) this.cleanups.forEach((f) => { try { f() } catch (e) { console.error(e) } })
     if (this.linked && this.parent && this.parent.children) this.parent.children.delete(this)
-    this.effects = []
+    this.effects = null
   }
 }
 
@@ -96,19 +96,30 @@ function effect(block, fn) {
   if (block.static) { untrack(fn); return null }
   const e = new Effect(fn)
   e.view = block.view
-  block.effects.push(e)
-  block.link()
   e.run()
+  // ничего реактивного не прочитано (константа): эффект больше никогда не сработает, держать его незачем
+  if (e.deps === null || e.deps.length === 0) { e.active = false; return null }
+  ;(block.effects || (block.effects = [])).push(e)
+  block.link()
   return e
 }
 
+function leaf(block, run, a, b, c, d) {
+  if (block.static) { untrack(() => run(a, b, c, d)); return }
+  const e = runLeaf(run, a, b, c, d)
+  if (e === null) return
+  e.view = block.view
+  ;(block.effects || (block.effects = [])).push(e)
+  block.link()
+}
+
 function collectAll(block, out) {
-  block.effects.forEach((e) => { if (e.active) out.push(e) })
+  if (block.effects) block.effects.forEach((e) => { if (e.active) out.push(e) })
   if (block.children) block.children.forEach(c => collectAll(c, out))
 }
 
 function collectEffects(block, view, out) {
-  block.effects.forEach((e) => { if (e.active && e.view === view) out.push(e) })
+  if (block.effects) block.effects.forEach((e) => { if (e.active && e.view === view) out.push(e) })
   if (block.children) block.children.forEach(c => collectEffects(c, view, out))
 }
 
@@ -278,6 +289,24 @@ function resolve(root, path) {
   return n
 }
 
+// путь до узла превращается в цепочку firstChild/nextSibling: на каждый шаблон генерируется одна функция
+function buildResolver(plan) {
+  const ops = plan.ops
+  if (!ops.length) return null
+  const start = plan.rootEl ? 1 : 0
+  const base = plan.rootEl ? 'el' : 'f'
+  const parts = ops.map((op) => {
+    let e = base
+    const p = op.path
+    for (let j = start; j < p.length; j++) {
+      if (p[j] > 8) e += '.childNodes[' + p[j] + ']'
+      else { e += '.firstChild'; for (let k = 0; k < p[j]; k++) e += '.nextSibling' }
+    }
+    return e
+  })
+  return new Function(base, 'return [' + parts.join(',') + ']')
+}
+
 function instantiate(plan, view, data, parentBlock, opts) {
   const block = new Block(parentBlock, view)
   if (opts && opts.static) block.static = true
@@ -288,20 +317,13 @@ function instantiate(plan, view, data, parentBlock, opts) {
     const el = plan.rootEl.cloneNode(true)
     inst = { frag: null, block, rootItems: null, simple: true, el }
     if (n) {
-      const refs = new Array(n)
-      for (let i = 0; i < n; i++) {
-        const p = ops[i].path
-        let node = el
-        for (let j = 1; j < p.length; j++) node = node.childNodes[p[j]]
-        refs[i] = node
-      }
+      const refs = (plan.res === undefined ? (plan.res = buildResolver(plan)) : plan.res)(el)
       for (let i = 0; i < n; i++) applyOp(ops[i], refs[i], view, data, block)
     }
     return inst
   }
   const frag = plan.frag.cloneNode(true)
-  const refs = new Array(n)
-  for (let i = 0; i < n; i++) refs[i] = resolve(frag, ops[i].path)
+  const refs = n ? (plan.res === undefined ? (plan.res = buildResolver(plan)) : plan.res)(frag) : null
   const rootItems = Array.from(frag.childNodes)
   inst = { frag, block, rootItems, simple: false, el: null }
   for (let i = 0; i < n; i++) applyOp(ops[i], refs[i], view, data, block)
@@ -342,45 +364,43 @@ function applyOp(op, node, view, data, block) {
   }
 }
 
-function bindText(op, node, view, data, block) {
+function textRun(op, node, view, data) {
   const parts = op.parts
-  effect(block, () => {
-    let s = ''
-    for (let i = 0; i < parts.length; i++) {
-      const p = parts[i]
-      if (typeof p === 'string') s += p
-      else {
-        const v = ev(view, p, data, op)
-        if (config.debug && isNone(v)) report(`«{{ ${p.expr} }}» вернул ${v}`, { view, expr: p.expr })
-        s += String(v)
-      }
+  let s = ''
+  for (let i = 0; i < parts.length; i++) {
+    const p = parts[i]
+    if (typeof p === 'string') s += p
+    else {
+      const v = ev(view, p, data, op)
+      if (config.debug && isNone(v)) report(`«{{ ${p.expr} }}» вернул ${v}`, { view, expr: p.expr })
+      s += String(v)
     }
-    if (node.data !== s) node.data = s
-  })
+  }
+  if (node.data !== s) node.data = s
 }
+function bindText(op, node, view, data, block) { leaf(block, textRun, op, node, view, data) }
 
-function bindAttr(op, el, view, data, block) {
+function attrRun(op, el, view, data) {
   const { name, parts } = op
-  effect(block, () => {
-    if (op.whole) {
-      const v = ev(view, parts[0], data, op)
-      if (isNone(v)) { el.removeAttribute(name); return }
-      const s = String(v)
-      if (el.getAttribute(name) !== s) el.setAttribute(name, s)
-      return
-    }
-    let s = ''
-    for (let i = 0; i < parts.length; i++) {
-      const p = parts[i]
-      s += typeof p === 'string' ? p : String(ev(view, p, data, op))
-    }
+  if (op.whole) {
+    const v = ev(view, parts[0], data, op)
+    if (isNone(v)) { el.removeAttribute(name); return }
+    const s = String(v)
     if (el.getAttribute(name) !== s) el.setAttribute(name, s)
-  })
+    return
+  }
+  let s = ''
+  for (let i = 0; i < parts.length; i++) {
+    const p = parts[i]
+    s += typeof p === 'string' ? p : String(ev(view, p, data, op))
+  }
+  if (el.getAttribute(name) !== s) el.setAttribute(name, s)
 }
+function bindAttr(op, el, view, data, block) { leaf(block, attrRun, op, el, view, data) }
 
 function bindIf(op, anchor, view, data, block) {
   let inst = null
-  anchor.__dyn = { nodes: () => (inst ? instNodes(inst).concat(anchor) : [anchor]) }
+  if (op.path.length === 1) anchor.__dyn = { nodes: () => (inst ? instNodes(inst).concat(anchor) : [anchor]) }
   effect(block, () => {
     const ok = !!ev(view, op, data, op)
     if (ok) {
@@ -420,22 +440,27 @@ function own(o, k, v) { Object.defineProperty(o, k, { value: v, writable: true, 
 
 function bindFor(op, anchor, view, data, block) {
   const { vname, kname, trace } = op
-  let rows = new Map()
+  // строка = { __proto__: данные родителя, [vname]: элемент }: литерал определяет свойство, не вызывая set-ловушку прокси
+  const mk = op.mk || (op.mk = new Function('d', 'i', 'return {__proto__:d,' + JSON.stringify(vname) + ':i}'))
+  const rows = new Map()   // ключ -> строка; живёт между рендерами, не пересоздаётся
   let order = []
-  anchor.__dyn = {
-    nodes() {
-      const out = []
-      for (const r of order) out.push(...instNodes(r.inst))
-      out.push(anchor)
-      return out
-    },
+  let stamp = 0
+  // nodes() нужен только строкам, у которых эта операция стоит в корне (вложенным якорь не требуется)
+  if (op.path.length === 1) {
+    anchor.__dyn = {
+      nodes() {
+        const out = []
+        for (const r of order) out.push(...instNodes(r.inst))
+        out.push(anchor)
+        return out
+      },
+    }
   }
-  const scratch = trace ? Object.create(data) : null
-  if (trace) { own(scratch, vname, undefined); if (kname) own(scratch, kname, undefined) }
+  const scratch = trace ? mk(data, undefined) : null
+  if (trace && kname) own(scratch, kname, undefined)
 
   const createRow = (item, key, kv) => {
-    const rd = Object.create(data)
-    own(rd, vname, item)
+    const rd = mk(data, item)
     let kh = null
     if (kname) {
       kh = { v: kv }
@@ -444,93 +469,112 @@ function bindFor(op, anchor, view, data, block) {
     const inst = instantiate(op.sub, view, rd, block)
     if (trace && inst.simple && inst.el.nodeType === 1) inst.el.setAttribute('data-id', key)
     if (stats) stats.rows++
-    return { key, raw: toRaw(item), inst, kh, idx: 0, rd }
+    return { key, raw: toRaw(item), inst, kh, idx: 0, rd, stamp }
   }
+  const dropRow = (r) => { instRemove(r.inst); r.inst.block.dispose() }
 
   effect(block, () => {
     const t0 = stats ? performance.now() : 0
     const src = ev(view, op.listH, data, op)
-    const items = []
-    const kvs = []
-    if (isNone(src)) { /* пусто */ }
-    else if (Array.isArray(src)) {
-      for (let i = 0, n = src.length; i < n; i++) { items.push(src[i]); kvs.push(i) }
+    let items, kvs = null, n = 0
+    if (Array.isArray(src)) {
+      items = readList(src)
+      n = items.length
     }
-    else if (typeof src === 'object') {
-      const ks = Object.keys(src)
-      for (let i = 0; i < ks.length; i++) { items.push(src[ks[i]]); kvs.push(ks[i]) }
+    else if (!isNone(src) && typeof src === 'object') {
+      kvs = Object.keys(src)
+      n = kvs.length
+      items = new Array(n)
+      for (let i = 0; i < n; i++) items[i] = src[kvs[i]]
     }
-    const n = items.length
+    else items = []
     if (config.debug && n === 0 && Array.isArray(src)) report(`w-for «${op.list}»: массив пустой`, { view, expr: op.list })
 
-    // ключи вычисляются внутри эффекта: смена ключа перестраивает список
-    const keys = new Array(n)
+    // keys === null: ключ = индекс. Ключи считаются внутри эффекта: смена ключа перестраивает список
+    let keys = kvs
     if (trace) {
+      keys = new Array(n)
       const seen = new Set()
       for (let i = 0; i < n; i++) {
         scratch[vname] = items[i]
-        if (kname) scratch[kname] = kvs[i]
+        if (kname) scratch[kname] = kvs ? kvs[i] : i
         let k = ev(view, op.traceH, scratch, op)
         if (seen.has(k)) { let j = 1; while (seen.has(k + '#' + j)) j++; k = k + '#' + j }
         seen.add(k)
         keys[i] = k
       }
     }
-    else for (let i = 0; i < n; i++) keys[i] = kvs[i]
 
     untrack(() => {
       const parent = anchor.parentNode
-      const next = new Map()
+      stamp++
       const newRows = new Array(n)
 
-      if (order.length === 0) {
+      if (rows.size === 0) {
         // первый рендер: всё одним фрагментом
-        const f = anchor.ownerDocument.createDocumentFragment()
+        // маленький список вставляется сразу, фрагмент нужен только большому
+        const f = n > 16 ? anchor.ownerDocument.createDocumentFragment() : parent
+        const ref = n > 16 ? null : anchor
         for (let i = 0; i < n; i++) {
-          const r = createRow(items[i], keys[i], kvs[i])
+          const key = keys ? keys[i] : i
+          const r = createRow(items[i], key, kvs ? kvs[i] : i)
           r.idx = i
           newRows[i] = r
-          next.set(r.key, r)
-          instMove(r.inst, f, null)
+          rows.set(key, r)
+          instMove(r.inst, f, ref)
         }
-        parent.insertBefore(f, anchor)
-        rows = next
+        if (n > 16) parent.insertBefore(f, anchor)
         order = newRows
         return
       }
 
-      const old = rows
       const srcIdx = new Array(n)
-      let refresh = null
+      let refresh = null, inOrder = true, last = -1, hasNew = false, claimed = 0, removed = false
       for (let i = 0; i < n; i++) {
-        const r = old.get(keys[i])
+        const key = keys ? keys[i] : i
+        let r = rows.get(key)
         if (r) {
-          old.delete(keys[i])
           const raw = toRaw(items[i])
-          // тот же ключ, но другой объект (например, список перезагружен с сервера): строка остаётся, в неё подставляется новый элемент
-          if (r.raw !== raw) { r.raw = raw; r.rd[vname] = items[i]; (refresh || (refresh = [])).push(r) }
-          if (r.kh && r.kh.v !== kvs[i]) { r.kh.v = kvs[i]; trigger(r.kh, 'v', 'set') }
-          newRows[i] = r
-          srcIdx[i] = r.idx
+          if (r.raw !== raw) {
+            if (typeof raw !== 'object' || raw === null) { dropRow(r); rows.delete(key); r = undefined; removed = true }   // примитив: проще пересоздать
+            else { r.raw = raw; r.rd[vname] = items[i]; (refresh || (refresh = [])).push(r) }   // тот же ключ, новый объект: строка остаётся
+          }
         }
-        else { newRows[i] = null; srcIdx[i] = -1 }
+        if (r) {
+          r.stamp = stamp
+          claimed++
+          if (r.kh && r.kh.v !== (kvs ? kvs[i] : i)) { r.kh.v = kvs ? kvs[i] : i; trigger(r.kh, 'v', 'set') }
+          newRows[i] = r
+          const ix = r.idx
+          srcIdx[i] = ix
+          if (ix < last) inOrder = false
+          last = ix
+        }
+        else { newRows[i] = null; srcIdx[i] = -1; hasNew = true }
       }
-      // что осталось в old, того больше нет
-      old.forEach((r) => { instRemove(r.inst); r.inst.block.dispose() })
+      // строки, которых больше нет в данных
+      if (rows.size > claimed) {
+        rows.forEach((r, key) => { if (r.stamp !== stamp) { dropRow(r); rows.delete(key); removed = true } })
+      }
 
-      const stable = lis(srcIdx)
-      let ref = anchor
-      for (let i = n - 1; i >= 0; i--) {
-        let r = newRows[i]
-        if (!r) { r = newRows[i] = createRow(items[i], keys[i], kvs[i]); instMove(r.inst, parent, ref) }
-        else if (!stable[i]) instMove(r.inst, parent, ref)
-        r.idx = i
-        next.set(r.key, r)
-        ref = instFirst(r.inst)
+      if (hasNew || !inOrder || removed) {
+        const stable = inOrder ? null : lis(srcIdx)
+        let ref = anchor
+        for (let i = n - 1; i >= 0; i--) {
+          let r = newRows[i]
+          if (!r) {
+            const key = keys ? keys[i] : i
+            r = newRows[i] = createRow(items[i], key, kvs ? kvs[i] : i)
+            rows.set(key, r)
+            instMove(r.inst, parent, ref)
+          }
+          else if (stable && !stable[i]) instMove(r.inst, parent, ref)
+          r.idx = i
+          ref = instFirst(r.inst)
+        }
       }
-      rows = next
       order = newRows
-      // строки с подменённым элементом перечитывают свои привязки (их эффекты заново соберут зависимости на новом объекте)
+      // строки с подменённым объектом перечитывают свои привязки (эффекты заново соберут зависимости на новом объекте)
       if (refresh) {
         const list = []
         refresh.forEach(r => collectAll(r.inst.block, list))
@@ -544,7 +588,7 @@ function bindFor(op, anchor, view, data, block) {
 function bindSlot(op, anchor, view, data, block) {
   const slot = view.__slot
   let inst = null
-  anchor.__dyn = { nodes: () => (inst ? instNodes(inst).concat(anchor) : [anchor]) }
+  if (op.path.length === 1) anchor.__dyn = { nodes: () => (inst ? instNodes(inst).concat(anchor) : [anchor]) }
   untrack(() => {
     if (slot && slot.plan) {
       let sd = slot.data

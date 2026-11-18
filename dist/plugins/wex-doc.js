@@ -1968,7 +1968,7 @@
 		constructor(fn) {
 			this.fn = fn;
 			this.id = ++seq;
-			this.deps = [];
+			this.deps = null;
 			this.active = true;
 			this.queued = false;
 			this.view = null;
@@ -1993,8 +1993,40 @@
 	};
 	function cleanup(e) {
 		const d = e.deps;
-		for (let i = 0; i < d.length; i++) d[i].delete(e);
+		if (d === null || d.length === 0) return;
+		for (let i = 0; i < d.length; i += 2) {
+			const m = d[i], k = d[i + 1];
+			const c = m.get(k);
+			if (c === e) m.delete(k);
+			else if (c !== void 0) c.delete(e);
+		}
 		d.length = 0;
+	}
+	const probe = new Effect(null);
+	function runLeaf(run, a, b, c, d) {
+		const prev = activeEffect;
+		activeEffect = probe;
+		probe.deps = null;
+		try {
+			run(a, b, c, d);
+		} finally {
+			activeEffect = prev;
+		}
+		const deps = probe.deps;
+		if (deps === null || deps.length === 0) return null;
+		probe.deps = null;
+		const e = new Effect(() => run(a, b, c, d));
+		for (let i = 0; i < deps.length; i += 2) {
+			const m = deps[i], k = deps[i + 1];
+			const cur = m.get(k);
+			if (cur === probe) m.set(k, e);
+			else {
+				cur.delete(probe);
+				cur.add(e);
+			}
+		}
+		e.deps = deps;
+		return e;
 	}
 	function untrack(fn) {
 		const prev = activeEffect;
@@ -2010,22 +2042,33 @@
 		if (!e) return;
 		let m = targetMap.get(target);
 		if (!m) targetMap.set(target, m = /* @__PURE__ */ new Map());
-		let dep = m.get(key);
-		if (!dep) m.set(key, dep = /* @__PURE__ */ new Set());
-		if (!dep.has(e)) {
-			dep.add(e);
-			e.deps.push(dep);
+		const cur = m.get(key);
+		if (cur === void 0) {
+			m.set(key, e);
+			(e.deps || (e.deps = [])).push(m, key);
+		} else if (cur === e) return;
+		else if (cur instanceof Set) {
+			if (!cur.has(e)) {
+				cur.add(e);
+				(e.deps || (e.deps = [])).push(m, key);
+			}
+		} else {
+			m.set(key, /* @__PURE__ */ new Set([cur, e]));
+			(e.deps || (e.deps = [])).push(m, key);
 		}
 	}
 	function trigger(target, key, type, newLen) {
 		const m = targetMap.get(target);
 		if (!m) return;
 		const add = (dep) => {
-			if (dep) dep.forEach((e) => {
+			if (dep === void 0) return;
+			if (dep instanceof Set) dep.forEach((e) => {
 				if (e !== activeEffect) enqueue(e);
 			});
+			else if (dep !== activeEffect) enqueue(dep);
 		};
 		const isArr = Array.isArray(target);
+		if (isArr) add(m.get(ITERATE));
 		if (isArr && key === "length") {
 			m.forEach((dep, k) => {
 				if (k === "length" || typeof k === "string" && +k >= newLen) add(dep);
@@ -2034,6 +2077,20 @@
 		}
 		if (key !== void 0) add(m.get(key));
 		if (type === "add" || type === "delete") add(m.get(isArr ? "length" : ITERATE));
+	}
+	function readList(src) {
+		const raw = toRaw(src);
+		track(raw, ITERATE);
+		const n = raw.length;
+		const out = new Array(n);
+		for (let i = 0; i < n; i++) {
+			const v = raw[i];
+			if (v !== null && typeof v === "object" && isPlain(v)) {
+				if (subCount) link(toRaw(v), raw);
+				out[i] = reactive(v);
+			} else out[i] = v;
+		}
+		return out;
 	}
 	const queue = /* @__PURE__ */ new Set();
 	let pending = false;
@@ -2265,7 +2322,7 @@
 		constructor(parent, view) {
 			this.view = view;
 			this.parent = parent || null;
-			this.effects = [];
+			this.effects = null;
 			this.cleanups = null;
 			this.children = null;
 			this.disposed = false;
@@ -2289,7 +2346,7 @@
 			if (this.disposed) return;
 			this.disposed = true;
 			const ef = this.effects;
-			for (let i = 0; i < ef.length; i++) ef[i].stop();
+			if (ef) for (let i = 0; i < ef.length; i++) ef[i].stop();
 			if (this.children) Array.from(this.children).forEach((c) => c.dispose());
 			if (this.cleanups) this.cleanups.forEach((f) => {
 				try {
@@ -2299,7 +2356,7 @@
 				}
 			});
 			if (this.linked && this.parent && this.parent.children) this.parent.children.delete(this);
-			this.effects = [];
+			this.effects = null;
 		}
 	};
 	function effect(block, fn) {
@@ -2309,19 +2366,34 @@
 		}
 		const e = new Effect(fn);
 		e.view = block.view;
-		block.effects.push(e);
-		block.link();
 		e.run();
+		if (e.deps === null || e.deps.length === 0) {
+			e.active = false;
+			return null;
+		}
+		(block.effects || (block.effects = [])).push(e);
+		block.link();
 		return e;
 	}
+	function leaf(block, run, a, b, c, d) {
+		if (block.static) {
+			untrack(() => run(a, b, c, d));
+			return;
+		}
+		const e = runLeaf(run, a, b, c, d);
+		if (e === null) return;
+		e.view = block.view;
+		(block.effects || (block.effects = [])).push(e);
+		block.link();
+	}
 	function collectAll(block, out) {
-		block.effects.forEach((e) => {
+		if (block.effects) block.effects.forEach((e) => {
 			if (e.active) out.push(e);
 		});
 		if (block.children) block.children.forEach((c) => collectAll(c, out));
 	}
 	function collectEffects(block, view, out) {
-		block.effects.forEach((e) => {
+		if (block.effects) block.effects.forEach((e) => {
 			if (e.active && e.view === view) out.push(e);
 		});
 		if (block.children) block.children.forEach((c) => collectEffects(c, view, out));
@@ -2554,10 +2626,22 @@
 			}
 		}
 	}
-	function resolve(root, path) {
-		let n = root;
-		for (let i = 0; i < path.length; i++) n = n.childNodes[path[i]];
-		return n;
+	function buildResolver(plan) {
+		const ops = plan.ops;
+		if (!ops.length) return null;
+		const start = plan.rootEl ? 1 : 0;
+		const base = plan.rootEl ? "el" : "f";
+		const parts = ops.map((op) => {
+			let e = base;
+			const p = op.path;
+			for (let j = start; j < p.length; j++) if (p[j] > 8) e += ".childNodes[" + p[j] + "]";
+			else {
+				e += ".firstChild";
+				for (let k = 0; k < p[j]; k++) e += ".nextSibling";
+			}
+			return e;
+		});
+		return new Function(base, "return [" + parts.join(",") + "]");
 	}
 	function instantiate(plan, view, data, parentBlock, opts) {
 		const block = new Block(parentBlock, view);
@@ -2575,20 +2659,13 @@
 				el
 			};
 			if (n) {
-				const refs = new Array(n);
-				for (let i = 0; i < n; i++) {
-					const p = ops[i].path;
-					let node = el;
-					for (let j = 1; j < p.length; j++) node = node.childNodes[p[j]];
-					refs[i] = node;
-				}
+				const refs = (plan.res === void 0 ? plan.res = buildResolver(plan) : plan.res)(el);
 				for (let i = 0; i < n; i++) applyOp(ops[i], refs[i], view, data, block);
 			}
 			return inst;
 		}
 		const frag = plan.frag.cloneNode(true);
-		const refs = new Array(n);
-		for (let i = 0; i < n; i++) refs[i] = resolve(frag, ops[i].path);
+		const refs = n ? (plan.res === void 0 ? plan.res = buildResolver(plan) : plan.res)(frag) : null;
 		inst = {
 			frag,
 			block,
@@ -2631,49 +2708,51 @@
 			default: return bindBuiltin(op, node, view, data, block);
 		}
 	}
-	function bindText(op, node, view, data, block) {
+	function textRun(op, node, view, data) {
 		const parts = op.parts;
-		effect(block, () => {
-			let s = "";
-			for (let i = 0; i < parts.length; i++) {
-				const p = parts[i];
-				if (typeof p === "string") s += p;
-				else {
-					const v = ev(view, p, data, op);
-					if (config.debug && isNone(v)) report(`«{{ ${p.expr} }}» вернул ${v}`, {
-						view,
-						expr: p.expr
-					});
-					s += String(v);
-				}
+		let s = "";
+		for (let i = 0; i < parts.length; i++) {
+			const p = parts[i];
+			if (typeof p === "string") s += p;
+			else {
+				const v = ev(view, p, data, op);
+				if (config.debug && isNone(v)) report(`«{{ ${p.expr} }}» вернул ${v}`, {
+					view,
+					expr: p.expr
+				});
+				s += String(v);
 			}
-			if (node.data !== s) node.data = s;
-		});
+		}
+		if (node.data !== s) node.data = s;
 	}
-	function bindAttr(op, el, view, data, block) {
+	function bindText(op, node, view, data, block) {
+		leaf(block, textRun, op, node, view, data);
+	}
+	function attrRun(op, el, view, data) {
 		const { name, parts } = op;
-		effect(block, () => {
-			if (op.whole) {
-				const v = ev(view, parts[0], data, op);
-				if (isNone(v)) {
-					el.removeAttribute(name);
-					return;
-				}
-				const s = String(v);
-				if (el.getAttribute(name) !== s) el.setAttribute(name, s);
+		if (op.whole) {
+			const v = ev(view, parts[0], data, op);
+			if (isNone(v)) {
+				el.removeAttribute(name);
 				return;
 			}
-			let s = "";
-			for (let i = 0; i < parts.length; i++) {
-				const p = parts[i];
-				s += typeof p === "string" ? p : String(ev(view, p, data, op));
-			}
+			const s = String(v);
 			if (el.getAttribute(name) !== s) el.setAttribute(name, s);
-		});
+			return;
+		}
+		let s = "";
+		for (let i = 0; i < parts.length; i++) {
+			const p = parts[i];
+			s += typeof p === "string" ? p : String(ev(view, p, data, op));
+		}
+		if (el.getAttribute(name) !== s) el.setAttribute(name, s);
+	}
+	function bindAttr(op, el, view, data, block) {
+		leaf(block, attrRun, op, el, view, data);
 	}
 	function bindIf(op, anchor, view, data, block) {
 		let inst = null;
-		anchor.__dyn = { nodes: () => inst ? instNodes(inst).concat(anchor) : [anchor] };
+		if (op.path.length === 1) anchor.__dyn = { nodes: () => inst ? instNodes(inst).concat(anchor) : [anchor] };
 		effect(block, () => {
 			if (!!ev(view, op, data, op)) {
 				if (!inst) {
@@ -2721,22 +2800,20 @@
 	}
 	function bindFor(op, anchor, view, data, block) {
 		const { vname, kname, trace } = op;
-		let rows = /* @__PURE__ */ new Map();
+		const mk = op.mk || (op.mk = new Function("d", "i", "return {__proto__:d," + JSON.stringify(vname) + ":i}"));
+		const rows = /* @__PURE__ */ new Map();
 		let order = [];
-		anchor.__dyn = { nodes() {
+		let stamp = 0;
+		if (op.path.length === 1) anchor.__dyn = { nodes() {
 			const out = [];
 			for (const r of order) out.push(...instNodes(r.inst));
 			out.push(anchor);
 			return out;
 		} };
-		const scratch = trace ? Object.create(data) : null;
-		if (trace) {
-			own(scratch, vname, void 0);
-			if (kname) own(scratch, kname, void 0);
-		}
+		const scratch = trace ? mk(data, void 0) : null;
+		if (trace && kname) own(scratch, kname, void 0);
 		const createRow = (item, key, kv) => {
-			const rd = Object.create(data);
-			own(rd, vname, item);
+			const rd = mk(data, item);
 			let kh = null;
 			if (kname) {
 				kh = { v: kv };
@@ -2758,36 +2835,38 @@
 				inst,
 				kh,
 				idx: 0,
-				rd
+				rd,
+				stamp
 			};
+		};
+		const dropRow = (r) => {
+			instRemove(r.inst);
+			r.inst.block.dispose();
 		};
 		effect(block, () => {
 			const t0 = stats ? performance.now() : 0;
 			const src = ev(view, op.listH, data, op);
-			const items = [];
-			const kvs = [];
-			if (isNone(src)) {} else if (Array.isArray(src)) for (let i = 0, n = src.length; i < n; i++) {
-				items.push(src[i]);
-				kvs.push(i);
-			}
-			else if (typeof src === "object") {
-				const ks = Object.keys(src);
-				for (let i = 0; i < ks.length; i++) {
-					items.push(src[ks[i]]);
-					kvs.push(ks[i]);
-				}
-			}
-			const n = items.length;
+			let items, kvs = null, n = 0;
+			if (Array.isArray(src)) {
+				items = readList(src);
+				n = items.length;
+			} else if (!isNone(src) && typeof src === "object") {
+				kvs = Object.keys(src);
+				n = kvs.length;
+				items = new Array(n);
+				for (let i = 0; i < n; i++) items[i] = src[kvs[i]];
+			} else items = [];
 			if (config.debug && n === 0 && Array.isArray(src)) report(`w-for «${op.list}»: массив пустой`, {
 				view,
 				expr: op.list
 			});
-			const keys = new Array(n);
+			let keys = kvs;
 			if (trace) {
+				keys = new Array(n);
 				const seen = /* @__PURE__ */ new Set();
 				for (let i = 0; i < n; i++) {
 					scratch[vname] = items[i];
-					if (kname) scratch[kname] = kvs[i];
+					if (kname) scratch[kname] = kvs ? kvs[i] : i;
 					let k = ev(view, op.traceH, scratch, op);
 					if (seen.has(k)) {
 						let j = 1;
@@ -2797,66 +2876,86 @@
 					seen.add(k);
 					keys[i] = k;
 				}
-			} else for (let i = 0; i < n; i++) keys[i] = kvs[i];
+			}
 			untrack(() => {
 				const parent = anchor.parentNode;
-				const next = /* @__PURE__ */ new Map();
+				stamp++;
 				const newRows = new Array(n);
-				if (order.length === 0) {
-					const f = anchor.ownerDocument.createDocumentFragment();
+				if (rows.size === 0) {
+					const f = n > 16 ? anchor.ownerDocument.createDocumentFragment() : parent;
+					const ref = n > 16 ? null : anchor;
 					for (let i = 0; i < n; i++) {
-						const r = createRow(items[i], keys[i], kvs[i]);
+						const key = keys ? keys[i] : i;
+						const r = createRow(items[i], key, kvs ? kvs[i] : i);
 						r.idx = i;
 						newRows[i] = r;
-						next.set(r.key, r);
-						instMove(r.inst, f, null);
+						rows.set(key, r);
+						instMove(r.inst, f, ref);
 					}
-					parent.insertBefore(f, anchor);
-					rows = next;
+					if (n > 16) parent.insertBefore(f, anchor);
 					order = newRows;
 					return;
 				}
-				const old = rows;
 				const srcIdx = new Array(n);
-				let refresh = null;
+				let refresh = null, inOrder = true, last = -1, hasNew = false, claimed = 0, removed = false;
 				for (let i = 0; i < n; i++) {
-					const r = old.get(keys[i]);
+					const key = keys ? keys[i] : i;
+					let r = rows.get(key);
 					if (r) {
-						old.delete(keys[i]);
 						const raw = toRaw(items[i]);
 						if (r.raw !== raw) {
-							r.raw = raw;
-							r.rd[vname] = items[i];
-							(refresh || (refresh = [])).push(r);
+							if (typeof raw !== "object" || raw === null) {
+								dropRow(r);
+								rows.delete(key);
+								r = void 0;
+								removed = true;
+							} else {
+								r.raw = raw;
+								r.rd[vname] = items[i];
+								(refresh || (refresh = [])).push(r);
+							}
 						}
-						if (r.kh && r.kh.v !== kvs[i]) {
-							r.kh.v = kvs[i];
+					}
+					if (r) {
+						r.stamp = stamp;
+						claimed++;
+						if (r.kh && r.kh.v !== (kvs ? kvs[i] : i)) {
+							r.kh.v = kvs ? kvs[i] : i;
 							trigger(r.kh, "v", "set");
 						}
 						newRows[i] = r;
-						srcIdx[i] = r.idx;
+						const ix = r.idx;
+						srcIdx[i] = ix;
+						if (ix < last) inOrder = false;
+						last = ix;
 					} else {
 						newRows[i] = null;
 						srcIdx[i] = -1;
+						hasNew = true;
 					}
 				}
-				old.forEach((r) => {
-					instRemove(r.inst);
-					r.inst.block.dispose();
+				if (rows.size > claimed) rows.forEach((r, key) => {
+					if (r.stamp !== stamp) {
+						dropRow(r);
+						rows.delete(key);
+						removed = true;
+					}
 				});
-				const stable = lis(srcIdx);
-				let ref = anchor;
-				for (let i = n - 1; i >= 0; i--) {
-					let r = newRows[i];
-					if (!r) {
-						r = newRows[i] = createRow(items[i], keys[i], kvs[i]);
-						instMove(r.inst, parent, ref);
-					} else if (!stable[i]) instMove(r.inst, parent, ref);
-					r.idx = i;
-					next.set(r.key, r);
-					ref = instFirst(r.inst);
+				if (hasNew || !inOrder || removed) {
+					const stable = inOrder ? null : lis(srcIdx);
+					let ref = anchor;
+					for (let i = n - 1; i >= 0; i--) {
+						let r = newRows[i];
+						if (!r) {
+							const key = keys ? keys[i] : i;
+							r = newRows[i] = createRow(items[i], key, kvs ? kvs[i] : i);
+							rows.set(key, r);
+							instMove(r.inst, parent, ref);
+						} else if (stable && !stable[i]) instMove(r.inst, parent, ref);
+						r.idx = i;
+						ref = instFirst(r.inst);
+					}
 				}
-				rows = next;
 				order = newRows;
 				if (refresh) {
 					const list = [];
@@ -2870,7 +2969,7 @@
 	function bindSlot(op, anchor, view, data, block) {
 		const slot = view.__slot;
 		let inst = null;
-		anchor.__dyn = { nodes: () => inst ? instNodes(inst).concat(anchor) : [anchor] };
+		if (op.path.length === 1) anchor.__dyn = { nodes: () => inst ? instNodes(inst).concat(anchor) : [anchor] };
 		untrack(() => {
 			if (slot && slot.plan) {
 				let sd = slot.data;
