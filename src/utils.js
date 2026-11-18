@@ -68,3 +68,62 @@ export function sanitizeSvg(str) {
   })
   return tpl.innerHTML
 }
+
+// ---- экспорты Wex 2 (на них могут опираться другие модули сборки) ----
+export function getNodeName(node) {
+  return node.nodeName.toLowerCase()
+}
+
+export function getOuterHTML(el) {
+  const nodeName = el.nodeName.toLowerCase()
+  const attrs = [...el.attributes].map((a) => {
+    if (a.value === '') return a.name
+    else if (a.value.indexOf('"') > -1) return `${a.name}='${a.value}'`
+    return `${a.name}="${a.value}"`
+  }).join(' ')
+  return `<${nodeName} ${attrs}></${nodeName}>`
+}
+
+export function createAttrsText(attrs) {
+  const texts = []
+  Object.keys(attrs).forEach((key) => { texts.push(`${key}="${attrs[key]}"`) })
+  return texts.join(' ')
+}
+
+export function tryParseJSON(v, callback) {
+  try { return JSON.parse(v) }
+  catch (e) { return callback(v) }
+}
+
+// путь до $element внутри $root в виде селектора (jQuery-объекты передаёт вызывающий)
+export function getPath($element, $root, prefix = []) {
+  let $parent = $element.parent()
+  if (!$parent.length) return null
+
+  const findIndex = ($parent, $child) => {
+    const children = $parent[0].childNodes
+    const child = $child[0]
+    let index = 0
+    for (let i = 0, len = children.length; i < len; i++) {
+      const item = children[i]
+      if (item.nodeName === child.nodeName) index++
+      if (item === child) return index
+    }
+  }
+
+  const index = findIndex($parent, $element)
+  const name = $element[0].nodeName.toLowerCase()
+  const path = [`${name}:nth-of-type(${index})`]
+
+  let level = 0
+  while ($parent[0] !== $root[0]) {
+    const $el = $parent
+    $parent = $parent.parent()
+    if (!$parent.length) return null
+    const idx = findIndex($parent, $el)
+    path.unshift(`${$el[0].nodeName.toLowerCase()}:nth-of-type(${idx})`)
+    level++
+    if (level > 20) throw new Error('Cant get $element path in given $root.')
+  }
+  return '>' + [].concat(prefix).concat(path).join('>')
+}

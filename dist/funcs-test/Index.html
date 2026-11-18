@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+
+</head>
+<body>
+    <template id="w-for">
+        <div w-for="post,index in posts traceby posts.id">
+            {{ post.name }}
+        </div>
+    </template>
+
+    <template id="methods">
+        <p>Count: {{ count }}</p>
+        <button w-on="click:increase">Increase</button>
+        <button w-on="click:decrease">Decrease</button>
+    </template>
+
+    <template id="todo">
+        <input w-bind="newTodo" placeholder="Новая задача..." />
+        <button w-on="click:addTodo">Добавить</button>
+        <div w-for="todo,index in todos traceby todo.id">
+            <span>{{ todo.text }}</span>
+            <button w-on="click:removeTodo(todo.id)">Удалить</button>
+        </div>
+    </template>
+
+    <template id="component">
+        <testComponent varStatic="123" :varDynamic="myVar">
+            Содержимое слота
+        </testComponent>
+    </template>
+</body>
+<footer>
+    <script src="../wex.js"></script>
+    <script>
+        $('#w-for')
+            .state({
+                posts: [
+                    {id: 1, name: "Мой тестовый пост #1"},
+                    {id: 2, name: "Мой тестовый пост #1"},
+                    {id: 3, name: "Мой тестовый пост #1"},
+                    {id: 4, name: "Мой тестовый пост #1"},
+                    {id: 5, name: "Мой тестовый пост #1"},
+                ],
+            })
+            .mount();
+
+        $('#methods')
+            .state({ count: 0 })
+            .method('increase', (state) => {
+                state.count += 1;
+            })
+            .method('decrease', (state) => {
+                if(state.count >= 1) {
+                    state.count -= 1;
+                }
+            })
+            .mount()
+
+        $('#todo')
+            .state({
+                newTodo: '',
+                todos: [],
+            })
+            .method('addTodo', function (state) {
+                state.todos.push({
+                    id: Date.now(),
+                    text: state.newTodo,
+                })
+                state.newTodo = ''
+            })
+            .method('removeTodo', function (state, id) {
+                state.todos = state.todos.filter(todo => todo.id !== id);
+            })
+            .mount()
+
+        $('#component')
+            .state({ myVar: 'test' })
+            .component('testComponent', 'MyComponent.html')
+            .mount()
+    </script>
+</footer>
+</html>

@@ -1,7 +1,10 @@
 (function(global, factory) {
 	typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.jqvm = {}));
 })(this, function(exports) {
-	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	Object.defineProperties(exports, {
+		__esModule: { value: true },
+		[Symbol.toStringTag]: { value: "Module" }
+	});
 	// \0rolldown/runtime.js
 	var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
 	// src/utils.js
@@ -1953,6 +1956,12 @@
 	const subs = /* @__PURE__ */ new WeakMap();
 	const parents = /* @__PURE__ */ new WeakMap();
 	let subCount = 0;
+	let mutations = 0;
+	let afterFlush = null;
+	const mutationCount = () => mutations;
+	const setAfterFlush = (fn) => {
+		afterFlush = fn;
+	};
 	let activeEffect = null;
 	let seq = 0;
 	const hasOwn = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
@@ -2146,6 +2155,7 @@
 			});
 			queue.clear();
 		}
+		if (afterFlush) afterFlush();
 	}
 	function link(child, parent) {
 		let set = parents.get(child);
@@ -2226,6 +2236,7 @@
 			if (ok && (!had || prev !== next)) {
 				if (isPlain(next)) link(next, target);
 				const type = had ? "set" : "add";
+				mutations++;
 				if (subCount) notify(target, {
 					target,
 					key,
@@ -2239,6 +2250,7 @@
 			const had = hasOwn(target, key);
 			const ok = Reflect.deleteProperty(target, key);
 			if (ok && had) {
+				mutations++;
 				if (subCount) notify(target, {
 					target,
 					key,
@@ -2262,7 +2274,13 @@
 	}
 	// src/wex.js
 	const WEX_VERSION = "3.0.0";
+	let $$2 = null;
+	const setDollar = (d) => {
+		$$2 = d;
+	};
+	const getDollar = () => $$2;
 	const config = {
+		autoForce: false,
 		debug: typeof window !== "undefined" && window.WEX_DEBUG !== void 0 ? !!window.WEX_DEBUG : typeof location !== "undefined" && /^(localhost|127\.|\[::1\])/.test(location.hostname),
 		maxDepth: 50
 	};
@@ -2300,24 +2318,57 @@
 	function filter(name, fn) {
 		globalScope.filters[name] = fn;
 	}
-	function normDirective(def) {
-		if (isFunction(def)) return { fn: def };
-		if (def && typeof def === "object") return def;
-		throw new Error("Wex: directive(name, fn | { mounted, updated, unmounted })");
+	function normDirective(compile, affect) {
+		if (compile && typeof compile === "object" && !(compile instanceof View)) return {
+			compile: compile.compile || null,
+			affect: null,
+			life: compile
+		};
+		if (compile && !isFunction(compile)) throw new Error("Wex: directive(name, compile, affect, priority)");
+		return {
+			compile: compile || null,
+			affect: affect || null,
+			life: null
+		};
 	}
-	function directive(name, def) {
-		globalDirectives.set(name, normDirective(def));
+	function directive(name, compile, affect, priority) {
+		globalDirectives.set(name, normDirective(compile, affect));
 		globalVer++;
 	}
-	function normComponent(name, src, opts) {
+	function normComponent(name, src, extra) {
 		if (src instanceof View) return { view: src };
-		if (isString(src)) return { remote: loadRemote(src, opts) };
-		throw new Error(`Wex 3: component("${name}") принимает view или URL; функции-компоненты удалены`);
+		if (isString(src)) return { remote: loadRemote(src, extra) };
+		if (isFunction(src)) return { legacy: {
+			compile: src,
+			affect: isFunction(extra) ? extra : null
+		} };
+		throw new Error(`Wex: component("${name}") принимает View, URL или функцию compile($el, attrs, slot)`);
 	}
-	function component(name, src, opts) {
-		globalComponents.set(name.toLowerCase(), normComponent(name, src, opts));
+	function component(name, src, extra) {
+		globalComponents.set(name.toLowerCase(), normComponent(name, src, extra));
 		globalVer++;
 	}
+	let postQ = [];
+	let postDepth = 0;
+	function postTask(fn) {
+		postQ.push(fn);
+		if (postDepth === 0) Promise.resolve().then(runPost);
+	}
+	function runPost() {
+		if (postDepth) return;
+		while (postQ.length) {
+			const q = postQ;
+			postQ = [];
+			q.forEach((f) => {
+				try {
+					f();
+				} catch (e) {
+					console.error(e);
+				}
+			});
+		}
+	}
+	setAfterFlush(runPost);
 	var Block = class {
 		constructor(parent, view) {
 			this.view = view;
@@ -2483,7 +2534,7 @@
 		return {
 			frag,
 			ops,
-			rootEl: kids.length === 1 && kids[0].nodeType === 1 && !ops.some((o) => o.path.length === 1 && (o.t === "if" || o.t === "for" || o.t === "slot")) ? kids[0] : null
+			rootEl: kids.length === 1 && kids[0].nodeType === 1 && !ops.some((o) => o.path.length === 1 && (o.t === "if" || o.t === "for" || o.t === "slot" || o.replace)) ? kids[0] : null
 		};
 	}
 	function fragOf(node) {
@@ -2560,7 +2611,9 @@
 			return;
 		}
 		if (tag === "w-static" || env.comps.has(tag)) {
+			const entry = env.comps.get(tag);
 			const attrs = getNodeAttrs(el);
+			const slotHtml = entry && entry.legacy ? el.innerHTML : null;
 			[...el.attributes].forEach((a) => {
 				if (a.name[0] === ":" || a.name[0] === "@") el.removeAttribute(a.name);
 			});
@@ -2568,12 +2621,15 @@
 			while (el.firstChild) f.appendChild(el.firstChild);
 			const slotPlan = f.childNodes.length && (f.childElementCount || f.textContent.trim()) ? makePlan(f, env) : null;
 			planAttrs(el, path, ops, env);
+			const replace = !!entry && (!!entry.legacy || !!entry.view && entry.view.tag !== "template");
 			ops.push({
 				t: "comp",
 				path,
 				name: tag,
 				attrs,
-				slotPlan
+				slotPlan,
+				slotHtml,
+				replace
 			});
 			return;
 		}
@@ -2602,12 +2658,14 @@
 					expr: value
 				});
 			} else if (env.dirs.has(name)) {
-				el.removeAttribute(name);
+				const def = env.dirs.get(name);
 				ops.push({
 					t: "dir",
 					path,
 					name,
-					expr: value
+					expr: value,
+					attrs: getNodeAttrs(el),
+					replace: !!def.compile
 				});
 			} else if (name.charCodeAt(0) !== 64 && name.charCodeAt(0) !== 58 && value.indexOf("{{") !== -1) {
 				if (config.debug && /^(src|href|srcset)$/.test(name)) report("«{{ }}» внутри src/href: браузер запросит сырую строку и получит 404", {
@@ -2695,6 +2753,7 @@
 		if (inst.simple) inst.el.remove();
 		else instNodes(inst).forEach((n) => n.remove());
 	}
+	const OPS = Object.create(null);
 	function applyOp(op, node, view, data, block) {
 		switch (op.t) {
 			case "text": return bindText(op, node, view, data, block);
@@ -2703,9 +2762,7 @@
 			case "for": return bindFor(op, node, view, data, block);
 			case "slot": return bindSlot(op, node, view, data, block);
 			case "comp": return bindComp(op, node, view, data, block);
-			case "on": return bindOn(op, node, view, data);
-			case "dir": return bindDir(op, node, view, data, block);
-			default: return bindBuiltin(op, node, view, data, block);
+			default: return OPS[op.t](op, node, view, data, block);
 		}
 	}
 	function textRun(op, node, view, data) {
@@ -2827,7 +2884,7 @@
 				});
 			}
 			const inst = instantiate(op.sub, view, rd, block);
-			if (trace && inst.simple && inst.el.nodeType === 1) inst.el.setAttribute("data-id", key);
+			if (trace && key !== void 0 && inst.simple && inst.el.nodeType === 1) inst.el.setAttribute("data-id", key);
 			if (stats) stats.rows++;
 			return {
 				key,
@@ -2998,6 +3055,7 @@
 		}
 		const entry = view.__component(op.name);
 		if (!entry) return;
+		if (entry.legacy) return untrack(() => OPS.legacyComp(entry.legacy, op, host, view, data, block));
 		const start = (proto) => {
 			if (!block.disposed) untrack(() => mountComponent(proto, op, host, view, data, block));
 		};
@@ -3021,7 +3079,7 @@
 				hint: "Рекурсивный компонент без условия выхода: остановите рекурсию через w-if."
 			});
 			host.setAttribute("data-wex-error", "max-depth");
-			return;
+			return null;
 		}
 		const comp = proto.clone();
 		comp.__path = parentPath.concat(op.name);
@@ -3061,11 +3119,31 @@
 			data,
 			block
 		} : null;
-		comp.mount(host);
+		let target = host;
+		if (proto.tag !== "template") {
+			const doc = host.ownerDocument;
+			target = doc.createElement(proto.tag);
+			const attrs = Object.assign({}, getNodeAttrs(host), proto.attributes, { "data-hoist": op.name });
+			Object.keys(attrs).forEach((k) => {
+				try {
+					target.setAttribute(k, attrs[k]);
+				} catch (e) {}
+			});
+			const begin = doc.createComment(` ${op.name} begin `);
+			const end = doc.createComment(` ${op.name} end `);
+			host.replaceWith(begin, target, end);
+			host.__dyn = { nodes: () => [
+				begin,
+				target,
+				end
+			] };
+		}
+		comp.mount(target);
 		mounted = true;
 		block.onDispose(() => comp.destroy());
+		return comp;
 	}
-	const NON_BUBBLING = [
+	const NON_BUBBLING$1 = [
 		"focus",
 		"blur",
 		"mouseenter",
@@ -3077,147 +3155,6 @@
 		"error",
 		"toggle"
 	];
-	function bindOn(op, el, view, data) {
-		const h = el.__wOn || (el.__wOn = {});
-		h[op.event] = {
-			view,
-			fname: op.fname,
-			params: op.params,
-			data
-		};
-		view.__delegate(op.event);
-	}
-	const BIND_CHANGE = "[type=checkbox],[type=radio],[type=color],[type=date],[type=datetime-local],[type=week],[type=file],select";
-	function bindBuiltin(op, el, view, data, block) {
-		const expr = op.expr;
-		switch (op.t) {
-			case "w-class": {
-				let prev = [];
-				effect(block, () => {
-					const obj = ev(view, op, data, op) || {};
-					const next = [];
-					for (const key in obj) if (obj[key]) key.split(/\s+/).filter(Boolean).forEach((c) => next.push(c));
-					prev.forEach((c) => {
-						if (next.indexOf(c) === -1) el.classList.remove(c);
-					});
-					next.forEach((c) => el.classList.add(c));
-					prev = next;
-				});
-				return;
-			}
-			case "w-value": return effect(block, () => {
-				const v = ev(view, op, data, op);
-				const s = isNone(v) ? "" : String(v);
-				if (el.value !== s) el.value = s;
-			});
-			case "w-disabled": return effect(block, () => {
-				el.disabled = !!ev(view, op, data, op);
-			});
-			case "w-checked": return effect(block, () => {
-				el.checked = !!ev(view, op, data, op);
-			});
-			case "w-selected": return effect(block, () => {
-				el.selected = !!ev(view, op, data, op);
-			});
-			case "w-id": return effect(block, () => {
-				const v = ev(view, op, data, op);
-				if (v === null) el.removeAttribute("id");
-				else if (v !== void 0) el.setAttribute("id", v);
-			});
-			case "w-src": return effect(block, () => {
-				const v = ev(view, op, data, op);
-				if (isNone(v)) {
-					report(`w-src получил ${v}: src не выставлен`, {
-						view,
-						attr: "w-src",
-						expr
-					});
-					return;
-				}
-				el.setAttribute("src", v);
-			});
-			case "w-html": return effect(block, () => {
-				const v = ev(view, expr.replace(/^\{\{\s*|\s*\}\}$/g, ""), data, op);
-				el.innerHTML = sanitizeSvg(isNone(v) ? "" : String(v));
-			});
-			case "w-bind": {
-				const checkbox = el.matches("[type=checkbox]");
-				const radio = el.matches("[type=radio]");
-				effect(block, () => {
-					const v = ev(view, op, data, op);
-					if (checkbox) el.checked = !!v;
-					else if (radio) el.checked = v === el.value;
-					else {
-						const s = isNone(v) ? "" : String(v);
-						if (el.value !== s) el.value = s;
-					}
-				});
-				el.addEventListener(el.matches(BIND_CHANGE) ? "change" : "input", (e) => {
-					const fn = view.__scope().compile(expr);
-					if (fn.assign) fn.assign(data, checkbox ? el.checked : e.target.value);
-				});
-				return;
-			}
-			case "w-transition": {
-				const transition = expr || "opacity 0.25s ease";
-				const finalTransition = /(opacity|all|transform)/.test(transition) ? transition : `opacity ${transition}`;
-				el.style.transition = finalTransition;
-				el.style.opacity = "0";
-				const show = () => {
-					el.style.opacity = "1";
-				};
-				if (document.hidden) setTimeout(show, 0);
-				else requestAnimationFrame(() => requestAnimationFrame(show));
-				setTimeout(show, 500);
-				const originalRemove = el.remove;
-				el.remove = function() {
-					el.style.opacity = "0";
-					const d = getComputedStyle(el).transitionDuration;
-					const ms = d.includes("ms") ? parseFloat(d) : parseFloat(d) * 1e3;
-					setTimeout(() => originalRemove.call(el), ms || 250);
-				};
-				block.onDispose(() => {
-					el.remove = originalRemove;
-				});
-			}
-		}
-	}
-	function bindDir(op, el, view, data, block) {
-		const def = view.__directive(op.name);
-		if (!def) return;
-		const b = {
-			el,
-			view,
-			expr: op.expr,
-			data,
-			store: {},
-			get state() {
-				return view.state;
-			},
-			get: () => ev(view, op.expr, data, op),
-			parse: (e) => ev(view, e, data, op)
-		};
-		if (def.fn) {
-			let clean = null;
-			effect(block, () => {
-				if (clean) clean();
-				const r = def.fn.call(b, el, b);
-				clean = isFunction(r) ? r : null;
-			});
-			block.onDispose(() => {
-				if (clean) clean();
-			});
-		} else {
-			let mounted = false;
-			effect(block, () => {
-				if (!mounted) {
-					mounted = true;
-					if (def.mounted) def.mounted.call(b, el, b);
-				} else if (def.updated) def.updated.call(b, el, b);
-			});
-			if (def.unmounted) block.onDispose(() => def.unmounted.call(b, el, b));
-		}
-	}
 	const nativeImport = new Function("u", "return import(u)");
 	const remoteCache = {};
 	function startLoad(entry, url) {
@@ -3326,22 +3263,31 @@
 			sigCache = null;
 			envCache = null;
 		};
+		const tick = {};
+		const hasListeners = (event) => handlers.some((h) => h.event === event) || !!($$2 && tplEl && $$2._data(tplEl, "events") && $$2._data(tplEl, "events")[event]);
 		function emit(event, ...args) {
-			if (outside) {
-				const lower = ("@" + event).toLowerCase();
-				const key = "@" + event in outside ? "@" + event : Object.keys(outside).find((k) => k.toLowerCase() === lower);
-				if (key && isFunction(outside[key])) outside[key](...args);
+			if (event[0] !== "$") {
+				if (outside) {
+					const lower = ("@" + event).toLowerCase();
+					const key = "@" + event in outside ? "@" + event : Object.keys(outside).find((k) => k.toLowerCase() === lower);
+					if (key && isFunction(outside[key])) outside[key](...args);
+				}
+				return;
 			}
-			if (event[0] !== "$") return;
 			handlers.slice().forEach((h) => {
 				if (h.event !== event) return;
 				if (h.once) handlers.splice(handlers.indexOf(h), 1);
 				h.fn.call(view, state, ...args);
 			});
+			if ($$2 && tplEl) {
+				const evs = $$2._data(tplEl, "events");
+				if (evs && evs[event]) $$2(tplEl).triggerHandler(event, args);
+			}
 		}
+		const wrapEvent = (e) => $$2 && $$2.event && $$2.event.fix ? $$2.event.fix(e) : e;
 		function attach(a) {
 			if (!root || a.listener) return;
-			const direct = NON_BUBBLING.indexOf(a.event) !== -1;
+			const direct = NON_BUBBLING$1.indexOf(a.event) !== -1;
 			a.listener = function(e) {
 				let target = root;
 				if (a.selector) {
@@ -3350,7 +3296,11 @@
 				}
 				const cb = a.fn.call(view, state);
 				let res;
-				if (isFunction(cb)) res = cb.call(target, e);
+				if (isFunction(cb)) res = cb.call(target, wrapEvent(e));
+				if (res === false) {
+					e.preventDefault();
+					e.stopPropagation();
+				}
 				if (a.once) view.off(a.event, a.selector, a.fn);
 				return res;
 			};
@@ -3387,21 +3337,27 @@
 		}
 		function delegate(event) {
 			if (delegated.has(event) || !root) return;
-			const direct = NON_BUBBLING.indexOf(event) !== -1;
+			const direct = NON_BUBBLING$1.indexOf(event) !== -1;
 			const r = root;
 			const listener = (e) => {
+				let je = null;
 				for (let el = e.target; el && el !== r; el = el.parentNode) {
 					if (direct && el !== e.target) break;
 					const h = el.__wOn && el.__wOn[event];
 					if (!h || h.view !== view) continue;
 					const fn = view.fn(h.fname);
 					if (!fn) continue;
-					const res = h.params ? fn.call(view, state, ...h.params.map((p) => ev(view, p, h.data))) : fn.call(view, state);
-					if ((isFunction(res) ? res.call(el, e) : res) === false) {
-						e.preventDefault();
-						e.stopPropagation();
+					if (!je) {
+						je = wrapEvent(e);
+						if (je !== e) je.delegateTarget = r;
 					}
-					if (e.cancelBubble) break;
+					if (je !== e) je.currentTarget = el;
+					const res = h.params ? fn.call(view, state, ...h.params.map((p) => ev(view, p, h.data))) : fn.call(view, state);
+					if ((isFunction(res) ? res.call(el, je) : res) === false) {
+						je.preventDefault();
+						je.stopPropagation();
+					}
+					if (je !== e ? je.isPropagationStopped() : e.cancelBubble) break;
 				}
 			};
 			r.addEventListener(event, listener, direct);
@@ -3444,6 +3400,7 @@
 		function ensureSubscribed() {
 			if (unsubscribe || !state) return;
 			unsubscribe = subscribe(state, (info) => {
+				trigger(tick, "v", "set");
 				lastInfo = info;
 				if (changePending) return;
 				changePending = true;
@@ -3462,6 +3419,7 @@
 			else prevented = true;
 		}
 		function shouldUpdate() {
+			if (!hasListeners("$update")) return true;
 			let flag = true;
 			emit("$update", state, () => {
 				flag = false;
@@ -3499,10 +3457,12 @@
 			emit("$render");
 		}
 		function mount(el) {
+			if (el && el.jquery) el = el[0];
 			if (isMounted) {
 				if (!el || el === root) return view;
 				view.unmount();
 			}
+			if (!el && tplEl && tplEl.nextElementSibling && tplEl.nextElementSibling.getAttribute("w-name") === id) return view;
 			if (!isUnmounted) init();
 			let target = typeof el === "string" ? document.querySelector(el) : el;
 			if (!target) {
@@ -3513,7 +3473,13 @@
 			}
 			root = target;
 			root.setAttribute("w-name", id);
-			render();
+			postDepth++;
+			try {
+				render();
+			} finally {
+				postDepth--;
+			}
+			runPost();
 			actions.forEach(attach);
 			VMLocalStorage.reloadJqvmLocalStorage(state, "$mount");
 			isMounted = true;
@@ -3556,6 +3522,16 @@
 			});
 			skipped.clear();
 			runEffects(list);
+			runPost();
+		}
+		let forcePending = false;
+		function scheduleForce() {
+			if (forcePending) return;
+			forcePending = true;
+			Promise.resolve().then(() => {
+				forcePending = false;
+				forceUpdate();
+			});
 		}
 		function update(next) {
 			if (next === true) {
@@ -3564,8 +3540,10 @@
 			}
 			if (state && next) {
 				if (isFunction(next)) {
+					const m0 = mutationCount();
 					const res = next(state);
 					if (isObject(res)) Object.assign(state, res);
+					else if (config.autoForce && mutationCount() === m0) scheduleForce();
 				} else if (isObject(next)) Object.assign(state, next);
 			}
 			return view;
@@ -3582,6 +3560,7 @@
 					skipped.clear();
 					runEffects(list);
 				}
+				runPost();
 			}
 			return view;
 		}
@@ -3603,7 +3582,7 @@
 				if (globalComponents.get(name) !== entry) nv.__setComponent(name, entry);
 			});
 			directives.forEach((def, name) => {
-				if (globalDirectives.get(name) !== def) nv.directive(name, def);
+				if (globalDirectives.get(name) !== def) nv.__setDirective(name, def);
 			});
 			Object.keys(ownFilters).forEach((k) => nv.filter(k, ownFilters[k]));
 			handlers.forEach((h) => {
@@ -3648,15 +3627,17 @@
 				return view;
 			},
 			find(sel) {
+				if ($$2) return root ? $$2(root).find(sel) : $$2();
 				return root ? Array.from(root.querySelectorAll(sel)) : [];
 			},
-			component(name, src, opts) {
-				components.set(name.toLowerCase(), normComponent(name, src, opts));
+			component(name, src, extra) {
+				components.set(name.toLowerCase(), normComponent(name, src, extra));
 				invalidate();
+				if (src instanceof View) view.on("$beforeDestroy", () => src.destroy());
 				return view;
 			},
-			directive(name, def) {
-				directives.set(name, normDirective(def));
+			directive(name, compile, affect) {
+				directives.set(name, normDirective(compile, affect));
 				invalidate();
 				return view;
 			},
@@ -3682,6 +3663,12 @@
 				invalidate();
 			},
 			__directive: (name) => directives.get(name),
+			__tick: tick,
+			__subscribe: ensureSubscribed,
+			__setDirective(name, def) {
+				directives.set(name, def);
+				invalidate();
+			},
 			__addHandler(h) {
 				handlers.push({ ...h });
 			},
@@ -3698,14 +3685,18 @@
 			},
 			__env() {
 				return envCache || (envCache = {
-					comps: new Set(components.keys()),
-					dirs: new Set(directives.keys())
+					comps: new Map(components),
+					dirs: new Map(directives)
 				});
 			}
 		});
 		Object.defineProperties(view, {
 			state: { get: () => state },
 			root: { get: () => root },
+			__state: { get: () => state },
+			__root: { get: () => root },
+			tag: { value: tplEl ? tplEl.localName : "template" },
+			attributes: { value: tplEl ? getNodeAttrs(tplEl) : {} },
 			__outside: {
 				get: () => outside,
 				set: (v) => {
@@ -3737,8 +3728,856 @@
 		const attrsExpr = opts.attrs || el && el.getAttribute && el.getAttribute("attrs") || null;
 		return createView(html, initState, el, attrsExpr);
 	}
-	if (typeof window !== "undefined") window.Wex = {
-		__flush: flush,
+	// src/directives.js
+	const $$1 = (...a) => getDollar()(...a);
+	var LScope = class LScope {
+		constructor(view, data) {
+			this.view = view;
+			this.data = data;
+		}
+		parse(exp) {
+			return ev(this.view, exp, this.data);
+		}
+		assign(key, value) {
+			const f = this.view.__scope().compile(key);
+			if (f.assign) f.assign(this.data, value);
+		}
+		$new(locals) {
+			return new LScope(this.view, childData(this.data, locals instanceof LScope ? locals.data : locals || {}));
+		}
+		interpolate(str) {
+			return interpolateString(this.view, this.data, str);
+		}
+		get filters() {
+			return this.view.__scope().filters;
+		}
+	};
+	function childData(parent, locals) {
+		const o = { __proto__: parent };
+		Object.keys(locals).forEach((k) => {
+			Object.defineProperty(o, k, {
+				get: () => locals[k],
+				set: (v) => {
+					locals[k] = v;
+				},
+				enumerable: true,
+				configurable: true
+			});
+		});
+		return o;
+	}
+	function interpolateString(view, data, str) {
+		const parts = parseMustache(str);
+		if (!parts.length) return str;
+		let out = "";
+		for (const p of parts) out += typeof p === "string" ? p : String(ev(view, p, data));
+		return out;
+	}
+	function interpolateNode(el, view, data) {
+		for (const a of [...el.attributes]) if (a.name.charCodeAt(0) !== 64 && a.value.indexOf("{{") !== -1) el.setAttribute(a.name, interpolateString(view, data, a.value));
+		for (let c = el.firstChild; c; c = c.nextSibling) if (c.nodeType === 3 && c.data.indexOf("{{") !== -1) c.data = interpolateString(view, data, c.data);
+		else if (c.nodeType === 1) interpolateNode(c, view, data);
+	}
+	function markupToHtml(out) {
+		if (isString(out)) return out;
+		const h = document.createElement("div");
+		$$1(h).append(out);
+		return h.innerHTML;
+	}
+	function compileInst(html, view, data, block) {
+		return instantiate(getPlan(html, view), view, data, block);
+	}
+	function replaceWith(el, html, view, data, block) {
+		const inst = compileInst(html, view, data, block);
+		el.replaceWith(...inst.simple ? [inst.el] : Array.from(inst.frag.childNodes));
+		el.__dyn = { nodes: () => instNodes(inst) };
+		return inst;
+	}
+	function legacyCtx(view, data, block) {
+		return {
+			scope: new LScope(view, data),
+			view,
+			compile: (temp, scp) => {
+				const inst = compileInst(temp, view, scp ? scp.data : data, block);
+				return inst.simple ? [inst.el] : Array.from(inst.frag.childNodes);
+			},
+			interpolate: ($el, scp) => {
+				const d = scp ? scp.data : data;
+				$el.each(function() {
+					interpolateNode(this, view, d);
+				});
+			}
+		};
+	}
+	function legacyAffect(block, view, data, nodes, attrs, affect, life, component) {
+		if (!affect && !life) return;
+		block.link();
+		postTask(() => {
+			if (block.disposed) return;
+			const bag = nodes.map(() => ({}));
+			const started = [];
+			let revokes = [];
+			const run = (list) => list.forEach((f) => {
+				try {
+					f();
+				} catch (e) {
+					console.error(e);
+				}
+			});
+			view.__subscribe();
+			effect(block, () => {
+				track(view.__tick, "v");
+				run(revokes);
+				revokes = [];
+				const ctx = {
+					$root: $$1(view.root),
+					scope: new LScope(view, data),
+					view,
+					component
+				};
+				nodes.forEach((n, i) => {
+					const $n = $$1(n);
+					if (affect) {
+						const r = affect.call(ctx, $n, attrs);
+						if (isFunction(r)) revokes.push(r);
+					}
+					if (life) {
+						if (!started[i]) {
+							started[i] = true;
+							if (life.mounted) life.mounted.call(ctx, $n, attrs, bag[i]);
+						} else if (life.updated) life.updated.call(ctx, $n, attrs, bag[i]);
+					}
+				});
+			});
+			block.onDispose(() => {
+				run(revokes);
+				if (life && life.unmounted) nodes.forEach((n, i) => {
+					try {
+						life.unmounted.call({ view }, $$1(n), bag[i]);
+					} catch (e) {
+						console.error(e);
+					}
+				});
+			});
+		});
+	}
+	function bindDir(op, el, view, data, block) {
+		const def = view.__directive(op.name);
+		if (!def) return;
+		if (!$$1) {
+			report(`Директива «${op.name}» требует jQuery: вызовите Wex.useJQuery($)`, {
+				level: "error",
+				view
+			});
+			return;
+		}
+		let nodes = [el];
+		if (def.compile) {
+			const $el = $$1(el);
+			const out = def.compile.call(legacyCtx(view, data, block), $el, op.attrs);
+			if (!isNone(out) && out !== $el && out !== el) nodes = instNodes(replaceWith(el, markupToHtml(out), view, data, block));
+		}
+		legacyAffect(block, view, data, nodes, op.attrs, def.affect, def.life, null);
+	}
+	function bindLegacyComp({ compile, affect }, op, host, view, data, block) {
+		if (!$$1) {
+			report(`Компонент «${op.name}» требует jQuery: вызовите Wex.useJQuery($)`, {
+				level: "error",
+				view
+			});
+			return;
+		}
+		const $el = $$1(host);
+		const slot = (locals) => {
+			if (!op.slotPlan) return [];
+			const d = locals ? childData(data, locals instanceof LScope ? locals.data : locals) : data;
+			const inst = instantiate(op.slotPlan, view, d, block);
+			return inst.simple ? [inst.el] : Array.from(inst.frag.childNodes);
+		};
+		slot.template = op.slotHtml || "";
+		const t = document.createElement("template");
+		t.innerHTML = slot.template;
+		slot.nodes = Array.from(t.content.childNodes);
+		const out = compile.call(legacyCtx(view, data, block), $el, op.attrs, slot);
+		let comp = null;
+		let nodes = [host];
+		if (out instanceof View) comp = mountComponent(out, op, host, view, data, block);
+		else if (!isNone(out) && out !== $el && out !== host) nodes = instNodes(replaceWith(host, markupToHtml(out), view, data, block));
+		legacyAffect(block, view, data, nodes, op.attrs, affect, null, comp);
+	}
+	function bindOn(op, el, view, data) {
+		const h = el.__wOn || (el.__wOn = {});
+		h[op.event] = {
+			view,
+			fname: op.fname,
+			params: op.params,
+			data
+		};
+		view.__delegate(op.event);
+	}
+	const BIND_CHANGE = "[type=checkbox],[type=radio],[type=color],[type=date],[type=datetime-local],[type=week],[type=file],select";
+	function bindBuiltin(op, el, view, data, block) {
+		const expr = op.expr;
+		switch (op.t) {
+			case "w-class": {
+				let prev = [];
+				effect(block, () => {
+					const obj = ev(view, op, data, op) || {};
+					const next = [];
+					for (const key in obj) if (obj[key]) key.split(/\s+/).filter(Boolean).forEach((c) => next.push(c));
+					prev.forEach((c) => {
+						if (next.indexOf(c) === -1) el.classList.remove(c);
+					});
+					next.forEach((c) => el.classList.add(c));
+					prev = next;
+				});
+				return;
+			}
+			case "w-value": return effect(block, () => {
+				const v = ev(view, op, data, op);
+				const s = isNone(v) ? "" : String(v);
+				if (el.value !== s) el.value = s;
+			});
+			case "w-disabled": return effect(block, () => {
+				el.disabled = !!ev(view, op, data, op);
+			});
+			case "w-checked": return effect(block, () => {
+				el.checked = !!ev(view, op, data, op);
+			});
+			case "w-selected": return effect(block, () => {
+				el.selected = !!ev(view, op, data, op);
+			});
+			case "w-id": return effect(block, () => {
+				const v = ev(view, op, data, op);
+				if (v === null) el.removeAttribute("id");
+				else if (v !== void 0) el.setAttribute("id", v);
+			});
+			case "w-src": return effect(block, () => {
+				const v = ev(view, op, data, op);
+				if (isNone(v)) {
+					report(`w-src получил ${v}: src не выставлен`, {
+						view,
+						attr: "w-src",
+						expr
+					});
+					return;
+				}
+				el.setAttribute("src", v);
+			});
+			case "w-html": return effect(block, () => {
+				const v = ev(view, expr.replace(/^\{\{\s*|\s*\}\}$/g, ""), data, op);
+				el.innerHTML = sanitizeSvg(isNone(v) ? "" : String(v));
+			});
+			case "w-bind": {
+				const checkbox = el.matches("[type=checkbox]");
+				const radio = el.matches("[type=radio]");
+				effect(block, () => {
+					const v = ev(view, op, data, op);
+					if (checkbox) el.checked = !!v;
+					else if (radio) el.checked = v === el.value;
+					else {
+						const s = isNone(v) ? "" : String(v);
+						if (el.value !== s) el.value = s;
+					}
+				});
+				el.addEventListener(el.matches(BIND_CHANGE) ? "change" : "input", (e) => {
+					const fn = view.__scope().compile(expr);
+					if (fn.assign) fn.assign(data, checkbox ? el.checked : e.target.value);
+				});
+				return;
+			}
+			case "w-transition": {
+				const transition = expr || "opacity 0.25s ease";
+				const finalTransition = /(opacity|all|transform)/.test(transition) ? transition : `opacity ${transition}`;
+				el.style.transition = finalTransition;
+				el.style.opacity = "0";
+				const show = () => {
+					el.style.opacity = "1";
+				};
+				if (document.hidden) setTimeout(show, 0);
+				else requestAnimationFrame(() => requestAnimationFrame(show));
+				setTimeout(show, 500);
+				const originalRemove = el.remove;
+				el.remove = function() {
+					el.style.opacity = "0";
+					const d = getComputedStyle(el).transitionDuration;
+					const ms = d.includes("ms") ? parseFloat(d) : parseFloat(d) * 1e3;
+					setTimeout(() => originalRemove.call(el), ms || 250);
+				};
+				block.onDispose(() => {
+					el.remove = originalRemove;
+				});
+			}
+		}
+	}
+	OPS.on = bindOn;
+	OPS.dir = bindDir;
+	OPS.legacyComp = bindLegacyComp;
+	[
+		"w-class",
+		"w-value",
+		"w-disabled",
+		"w-checked",
+		"w-selected",
+		"w-id",
+		"w-src",
+		"w-html",
+		"w-bind",
+		"w-transition"
+	].forEach((n) => {
+		OPS[n] = bindBuiltin;
+	});
+	// src/dollar.js
+	const NON_BUBBLING = [
+		"focus",
+		"blur",
+		"mouseenter",
+		"mouseleave",
+		"pointerenter",
+		"pointerleave",
+		"scroll",
+		"load",
+		"error",
+		"toggle"
+	];
+	const PX = /^(width|height|top|left|right|bottom|margin.*|padding.*|fontSize|lineHeight|borderWidth|maxWidth|minWidth|maxHeight|minHeight)$/;
+	const EV_PROPS = [
+		"altKey",
+		"ctrlKey",
+		"shiftKey",
+		"metaKey",
+		"button",
+		"buttons",
+		"clientX",
+		"clientY",
+		"pageX",
+		"pageY",
+		"screenX",
+		"screenY",
+		"key",
+		"code",
+		"keyCode",
+		"charCode",
+		"detail",
+		"relatedTarget",
+		"data",
+		"inputType",
+		"deltaX",
+		"deltaY",
+		"isTrusted"
+	];
+	var WEvent = class {
+		constructor(e) {
+			this.originalEvent = e;
+			this.type = e.type;
+			this.target = e.target;
+			this.currentTarget = e.currentTarget;
+			this.timeStamp = e.timeStamp;
+			for (const p of EV_PROPS) if (p in e) this[p] = e[p];
+			this.which = e.which != null ? e.which : e.keyCode || e.charCode || (e.button != null ? e.button + 1 : void 0);
+		}
+		preventDefault() {
+			this.originalEvent.preventDefault();
+			this._d = true;
+		}
+		stopPropagation() {
+			this.originalEvent.stopPropagation();
+			this._s = true;
+		}
+		stopImmediatePropagation() {
+			this.originalEvent.stopImmediatePropagation();
+			this._s = true;
+		}
+		isDefaultPrevented() {
+			return !!this._d || this.originalEvent.defaultPrevented;
+		}
+		isPropagationStopped() {
+			return !!this._s || this.originalEvent.cancelBubble;
+		}
+	};
+	function createDollar() {
+		class W {
+			constructor(nodes) {
+				const n = nodes.length;
+				for (let i = 0; i < n; i++) this[i] = nodes[i];
+				this.length = n;
+			}
+		}
+		const fn = W.prototype;
+		fn.jquery = "wex-$";
+		const parseHTML = (html) => {
+			const t = document.createElement("template");
+			t.innerHTML = html;
+			return Array.from(t.content.childNodes);
+		};
+		const toNodes = (sel, ctx) => {
+			if (sel == null || sel === "") return [];
+			if (sel instanceof W) return Array.from(sel);
+			if (typeof sel === "string") {
+				const s = sel.trim();
+				if (s[0] === "<") return parseHTML(s);
+				const root = ctx ? ctx instanceof W ? ctx[0] : ctx : document;
+				return root ? Array.from(root.querySelectorAll(s)) : [];
+			}
+			if (sel.nodeType || sel === window) return [sel];
+			if (typeof sel.length === "number" && typeof sel !== "function") return Array.from(sel);
+			return [];
+		};
+		const contentNodes = (c) => {
+			if (c == null) return [];
+			if (typeof c === "string") return parseHTML(c);
+			if (c.nodeType) return [c];
+			return Array.from(c).reduce((a, x) => a.concat(contentNodes(x)), []);
+		};
+		const eachEl = (w, cb) => {
+			for (let i = 0; i < w.length; i++) cb(w[i], i);
+		};
+		const place = (w, content, put) => {
+			const src = contentNodes(content);
+			eachEl(w, (el, i) => put(el, i < w.length - 1 ? src.map((n) => n.cloneNode(true)) : src));
+			return w;
+		};
+		const $ = function(sel, ctx) {
+			if (typeof sel === "function") {
+				if (document.readyState !== "loading") sel($);
+				else document.addEventListener("DOMContentLoaded", () => sel($));
+				return;
+			}
+			return new W(toNodes(sel, ctx));
+		};
+		$.fn = fn;
+		Object.assign(fn, {
+			get(i) {
+				return i === void 0 ? Array.from(this) : this[i < 0 ? this.length + i : i];
+			},
+			toArray() {
+				return Array.from(this);
+			},
+			eq(i) {
+				const el = this[i < 0 ? this.length + i : i];
+				return new W(el ? [el] : []);
+			},
+			first() {
+				return this.eq(0);
+			},
+			last() {
+				return this.eq(-1);
+			},
+			slice(a, b) {
+				return new W(Array.from(this).slice(a, b));
+			},
+			each(cb) {
+				for (let i = 0; i < this.length; i++) if (cb.call(this[i], i, this[i]) === false) break;
+				return this;
+			},
+			map(cb) {
+				return new W(Array.from(this).map((el, i) => cb.call(el, i, el)).filter((v) => v != null));
+			},
+			filter(sel) {
+				const test = typeof sel === "function" ? (el, i) => sel.call(el, i, el) : (el) => typeof sel === "string" ? el.matches && el.matches(sel) : el === sel;
+				return new W(Array.from(this).filter(test));
+			},
+			not(sel) {
+				const test = typeof sel === "function" ? (el, i) => sel.call(el, i, el) : (el) => typeof sel === "string" ? el.matches && el.matches(sel) : el === sel;
+				return new W(Array.from(this).filter((el, i) => !test(el, i)));
+			},
+			is(sel) {
+				return Array.from(this).some((el, i) => typeof sel === "function" ? sel.call(el, i, el) : typeof sel === "string" ? el.matches && el.matches(sel) : el === (sel instanceof W ? sel[0] : sel));
+			},
+			find(sel) {
+				const out = [];
+				eachEl(this, (el) => {
+					if (el.querySelectorAll) out.push(...el.querySelectorAll(sel));
+				});
+				return new W(out);
+			},
+			closest(sel) {
+				const out = [];
+				eachEl(this, (el) => {
+					const c = el.closest && el.closest(sel);
+					if (c && out.indexOf(c) === -1) out.push(c);
+				});
+				return new W(out);
+			},
+			parent() {
+				const out = [];
+				eachEl(this, (el) => {
+					const p = el.parentNode;
+					if (p && p.nodeType === 1 && out.indexOf(p) === -1) out.push(p);
+				});
+				return new W(out);
+			},
+			children(sel) {
+				const out = [];
+				eachEl(this, (el) => {
+					for (const c of el.children || []) if (!sel || c.matches(sel)) out.push(c);
+				});
+				return new W(out);
+			},
+			next() {
+				const out = [];
+				eachEl(this, (el) => {
+					if (el.nextElementSibling) out.push(el.nextElementSibling);
+				});
+				return new W(out);
+			},
+			prev() {
+				const out = [];
+				eachEl(this, (el) => {
+					if (el.previousElementSibling) out.push(el.previousElementSibling);
+				});
+				return new W(out);
+			},
+			siblings() {
+				const out = [];
+				eachEl(this, (el) => {
+					for (const c of el.parentNode ? el.parentNode.children : []) if (c !== el) out.push(c);
+				});
+				return new W(out);
+			},
+			index() {
+				const el = this[0];
+				return el && el.parentNode ? Array.prototype.indexOf.call(el.parentNode.children, el) : -1;
+			}
+		});
+		Object.assign(fn, {
+			attr(name, val) {
+				if (name && typeof name === "object") {
+					for (const k in name) this.attr(k, name[k]);
+					return this;
+				}
+				if (val === void 0) {
+					const v = this[0] && this[0].getAttribute(name);
+					return v === null ? void 0 : v;
+				}
+				eachEl(this, (el) => {
+					if (val === null) el.removeAttribute(name);
+					else el.setAttribute(name, val);
+				});
+				return this;
+			},
+			removeAttr(name) {
+				eachEl(this, (el) => el.removeAttribute(name));
+				return this;
+			},
+			prop(name, val) {
+				if (name && typeof name === "object") {
+					for (const k in name) this.prop(k, name[k]);
+					return this;
+				}
+				if (val === void 0) return this[0] ? this[0][name] : void 0;
+				eachEl(this, (el) => {
+					el[name] = val;
+				});
+				return this;
+			},
+			val(v) {
+				if (v === void 0) return this[0] ? this[0].value : void 0;
+				eachEl(this, (el) => {
+					el.value = v == null ? "" : v;
+				});
+				return this;
+			},
+			data(key, val) {
+				if (val === void 0) {
+					const el = this[0];
+					if (!el) return void 0;
+					if (el.__wexData && key in el.__wexData) return el.__wexData[key];
+					const raw = el.dataset ? el.dataset[key] : void 0;
+					if (raw === void 0) return void 0;
+					try {
+						return JSON.parse(raw);
+					} catch (e) {
+						return raw;
+					}
+				}
+				eachEl(this, (el) => {
+					(el.__wexData || (el.__wexData = {}))[key] = val;
+				});
+				return this;
+			},
+			hasClass(c) {
+				return Array.from(this).some((el) => el.classList && el.classList.contains(c));
+			},
+			addClass(c) {
+				const cs = String(c).split(/\s+/).filter(Boolean);
+				eachEl(this, (el) => el.classList.add(...cs));
+				return this;
+			},
+			removeClass(c) {
+				const cs = String(c).split(/\s+/).filter(Boolean);
+				eachEl(this, (el) => el.classList.remove(...cs));
+				return this;
+			},
+			toggleClass(c, state) {
+				String(c).split(/\s+/).filter(Boolean).forEach((cl) => eachEl(this, (el) => state === void 0 ? el.classList.toggle(cl) : el.classList.toggle(cl, !!state)));
+				return this;
+			},
+			css(name, val) {
+				if (name && typeof name === "object") {
+					for (const k in name) this.css(k, name[k]);
+					return this;
+				}
+				if (val === void 0) return this[0] ? getComputedStyle(this[0])[name] : void 0;
+				eachEl(this, (el) => {
+					const v = typeof val === "number" && PX.test(name) ? val + "px" : val;
+					if (name.indexOf("-") !== -1) el.style.setProperty(name, v);
+					else el.style[name] = v;
+				});
+				return this;
+			},
+			show() {
+				eachEl(this, (el) => {
+					el.style.display = "";
+				});
+				return this;
+			},
+			hide() {
+				eachEl(this, (el) => {
+					el.style.display = "none";
+				});
+				return this;
+			},
+			toggle(state) {
+				eachEl(this, (el) => {
+					const show = state === void 0 ? el.style.display === "none" : !!state;
+					el.style.display = show ? "" : "none";
+				});
+				return this;
+			},
+			width(v) {
+				if (v === void 0) return this[0] ? this[0].getBoundingClientRect().width : void 0;
+				return this.css("width", v);
+			},
+			height(v) {
+				if (v === void 0) return this[0] ? this[0].getBoundingClientRect().height : void 0;
+				return this.css("height", v);
+			},
+			offset() {
+				const el = this[0];
+				if (!el) return void 0;
+				const r = el.getBoundingClientRect();
+				return {
+					top: r.top + window.pageYOffset,
+					left: r.left + window.pageXOffset
+				};
+			},
+			focus() {
+				eachEl(this, (el) => el.focus && el.focus());
+				return this;
+			},
+			blur() {
+				eachEl(this, (el) => el.blur && el.blur());
+				return this;
+			},
+			click() {
+				eachEl(this, (el) => el.click && el.click());
+				return this;
+			}
+		});
+		Object.assign(fn, {
+			html(v) {
+				if (v === void 0) return this[0] ? this[0].innerHTML : void 0;
+				eachEl(this, (el) => {
+					if (typeof v === "string") el.innerHTML = v;
+					else {
+						el.textContent = "";
+						contentNodes(v).forEach((n) => el.appendChild(n));
+					}
+				});
+				return this;
+			},
+			text(v) {
+				if (v === void 0) return this[0] ? this[0].textContent : void 0;
+				eachEl(this, (el) => {
+					el.textContent = v;
+				});
+				return this;
+			},
+			empty() {
+				eachEl(this, (el) => {
+					el.textContent = "";
+				});
+				return this;
+			},
+			remove() {
+				eachEl(this, (el) => el.remove());
+				return this;
+			},
+			detach() {
+				return this.remove();
+			},
+			clone() {
+				return new W(Array.from(this).map((el) => el.cloneNode(true)));
+			},
+			append(c) {
+				return place(this, c, (el, ns) => ns.forEach((n) => el.appendChild(n)));
+			},
+			prepend(c) {
+				return place(this, c, (el, ns) => el.prepend(...ns));
+			},
+			after(c) {
+				return place(this, c, (el, ns) => el.after(...ns));
+			},
+			before(c) {
+				return place(this, c, (el, ns) => el.before(...ns));
+			},
+			replaceWith(c) {
+				return place(this, c, (el, ns) => el.replaceWith(...ns));
+			},
+			appendTo(target) {
+				$(target).append(this);
+				return this;
+			},
+			prependTo(target) {
+				$(target).prepend(this);
+				return this;
+			}
+		});
+		const fix = (e) => new WEvent(e);
+		const addHandler = (el, typeSpec, selector, handler, once) => {
+			const [type, ...ns] = typeSpec.split(".");
+			if (!type) return;
+			const capture = NON_BUBBLING.indexOf(type) !== -1;
+			const rec = {
+				type,
+				ns: ns.join("."),
+				selector,
+				handler,
+				once,
+				capture
+			};
+			rec.listener = (e) => {
+				let target = el;
+				if (selector) {
+					target = e.target && e.target.closest ? e.target.closest(selector) : null;
+					if (!target || !el.contains(target)) return;
+				}
+				const we = fix(e);
+				we.currentTarget = target;
+				if (selector) we.delegateTarget = el;
+				if (once) removeHandlers(el, type, rec.ns, selector, handler);
+				if (handler.call(target, we, ...e.__wexExtra || []) === false) {
+					we.preventDefault();
+					we.stopPropagation();
+				}
+			};
+			const reg = el.__wexEv || (el.__wexEv = {});
+			(reg[type] || (reg[type] = [])).push(rec);
+			el.addEventListener(type, rec.listener, capture);
+		};
+		const removeHandlers = (el, type, ns, selector, handler) => {
+			const reg = el.__wexEv;
+			if (!reg) return;
+			Object.keys(reg).forEach((t) => {
+				if (type && t !== type) return;
+				reg[t] = reg[t].filter((rec) => {
+					const hit = (!ns || rec.ns === ns) && (selector === void 0 || rec.selector === selector) && (!handler || rec.handler === handler);
+					if (hit) el.removeEventListener(rec.type, rec.listener, rec.capture);
+					return !hit;
+				});
+				if (!reg[t].length) delete reg[t];
+			});
+		};
+		const bind = (w, types, selector, handler, once) => {
+			if (typeof selector === "function") {
+				handler = selector;
+				selector = void 0;
+			}
+			String(types).split(/\s+/).filter(Boolean).forEach((spec) => eachEl(w, (el) => addHandler(el, spec, selector, handler, once)));
+			return w;
+		};
+		const fire = (w, type, extra, bubbles) => {
+			eachEl(w, (el) => {
+				if (type === "click" && bubbles && extra == null && el.click) {
+					el.click();
+					return;
+				}
+				const e = new Event(type, {
+					bubbles,
+					cancelable: true
+				});
+				e.__wexExtra = extra == null ? [] : Array.isArray(extra) ? extra : [extra];
+				el.dispatchEvent(e);
+			});
+			return w;
+		};
+		Object.assign(fn, {
+			on(types, selector, handler) {
+				return bind(this, types, selector, handler, false);
+			},
+			one(types, selector, handler) {
+				return bind(this, types, selector, handler, true);
+			},
+			off(types, selector, handler) {
+				if (typeof selector === "function") {
+					handler = selector;
+					selector = void 0;
+				}
+				eachEl(this, (el) => {
+					if (!types) removeHandlers(el);
+					else String(types).split(/\s+/).filter(Boolean).forEach((spec) => {
+						const [t, ...ns] = spec.split(".");
+						removeHandlers(el, t, ns.join("."), selector, handler);
+					});
+				});
+				return this;
+			},
+			trigger(type, extra) {
+				return fire(this, type, extra, true);
+			},
+			triggerHandler(type, extra) {
+				return fire(this, type, extra, false);
+			}
+		});
+		$.event = { fix };
+		$._data = (el, key) => key === "events" ? el.__wexEv : void 0;
+		$.noop = () => {};
+		$.isFunction = (v) => typeof v === "function";
+		$.isArray = Array.isArray;
+		$.isPlainObject = (v) => !!v && typeof v === "object" && (Object.getPrototypeOf(v) === Object.prototype || Object.getPrototypeOf(v) === null);
+		$.trim = (s) => s == null ? "" : String(s).trim();
+		$.contains = (a, b) => a !== b && a.contains(b);
+		$.parseHTML = (html) => parseHTML(html);
+		$.each = (obj, cb) => {
+			if (Array.isArray(obj) || obj && typeof obj.length === "number") {
+				for (let i = 0; i < obj.length; i++) if (cb.call(obj[i], i, obj[i]) === false) break;
+			} else for (const k of Object.keys(obj || {})) if (cb.call(obj[k], k, obj[k]) === false) break;
+			return obj;
+		};
+		$.extend = function(...args) {
+			let deep = false;
+			if (typeof args[0] === "boolean") deep = args.shift();
+			const target = args.shift() || {};
+			for (const src of args) {
+				if (!src) continue;
+				for (const k of Object.keys(src)) {
+					const v = src[k];
+					if (deep && $.isPlainObject(v)) target[k] = $.extend(true, $.isPlainObject(target[k]) ? target[k] : {}, v);
+					else if (deep && Array.isArray(v)) target[k] = $.extend(true, Array.isArray(target[k]) ? target[k] : [], v);
+					else if (v !== void 0) target[k] = v;
+				}
+			}
+			return target;
+		};
+		return $;
+	}
+	// src/index.js
+	function install($) {
+		$.fn.vm = function(initState) {
+			return createView(this[0].innerHTML, initState, this[0]);
+		};
+		$.fn.state = function(...args) {
+			return this.vm(...args);
+		};
+		setDollar($);
+		return $;
+	}
+	function useJQuery(jQuery) {
+		return install(jQuery);
+	}
+	const mini = createDollar();
+	const api = {
 		view,
 		component,
 		directive,
@@ -3750,477 +4589,40 @@
 		toRaw,
 		isReactive,
 		untrack,
-		VERSION: WEX_VERSION
+		useJQuery,
+		View,
+		VERSION: WEX_VERSION,
+		__flush: flush,
+		$: mini
 	};
+	const $ = mini;
+	if (typeof window !== "undefined") {
+		const jq = window.jQuery;
+		if (jq && jq.fn && jq.fn.jquery && jq.fn.jquery !== "wex-$") {
+			useJQuery(jq);
+			api.$ = jq;
+		} else {
+			install(mini);
+			if (!window.$) window.$ = mini;
+		}
+		window.Wex = api;
+		if (!window.jqvm) window.jqvm = api;
+	}
 	console.log("[Wex]: загружена версия: 3.0.0");
-	// src/shared-state.js
-	function shareState(initState, options = {}) {
-		const state = reactive(initState);
-		if (options.onChange) subscribe(state, ({ key, target }) => options.onChange(key, target[key]));
-		return function() {
-			if (options.drive) options.drive((arg) => this.update(arg));
-			return state;
-		};
-	}
-	// src/async.js
-	function createAsyncComponent(defer, callback) {
-		let component = null;
-		let deferer = null;
-		return function(...args) {
-			if (!deferer) {
-				const { view } = this;
-				deferer = defer().then((res) => {
-					if (typeof Symbol !== "undefined" && res && res[Symbol.toStringTag] === "Module") component = res.default;
-					else if (res && res.__esModule) component = res.default;
-					else component = res;
-					if (callback) component = callback.call(view, component, ...args) || component;
-					view.update(true);
-				});
-			}
-			return component;
-		};
-	}
-	// src/wire.js
-	var strategies = {
-		drop: function(serverState, key, incoming) {
-			serverState[key] = incoming;
-		},
-		push: function(serverState, key, incoming) {
-			var current = serverState[key];
-			if (Array.isArray(current) && Array.isArray(incoming)) serverState[key] = current.concat(incoming);
-			else serverState[key] = incoming;
-		},
-		nomerge: function() {},
-		error: function(serverState, key, incoming, failHandlers) {
-			var current = serverState[key];
-			if (!(current === null || current === void 0 || Array.isArray(current) && current.length === 0 || typeof current === "object" && !Array.isArray(current) && Object.keys(current).length === 0)) {
-				var err = /* @__PURE__ */ new Error("wire:error — ключ \"" + key + "\" уже содержит данные");
-				err.strategy = "error";
-				err.key = key;
-				failHandlers.forEach(function(fn) {
-					fn(err);
-				});
-				return;
-			}
-			serverState[key] = incoming;
-		},
-		merge: function(serverState, key, incoming) {
-			var current = serverState[key];
-			if (Array.isArray(current) && Array.isArray(incoming)) serverState[key] = current.concat(incoming);
-			else serverState[key] = incoming;
-		}
-	};
-	function defaultAjax(options) {
-		if (typeof $ !== "undefined" && $.ajax) return $.ajax(options);
-		throw new Error("$wire: jQuery не найден. Подключите jQuery или передайте ajax в опциях createWire.");
-	}
-	function createWire(options) {
-		options = options || {};
-		var ajaxFn = options.ajax || defaultAjax;
-		var csrf = options.csrf || null;
-		var pending = {};
-		var listeners = {};
-		function emit(event) {
-			var args = Array.prototype.slice.call(arguments, 1);
-			(listeners[event] || []).forEach(function(fn) {
-				fn.apply(null, args);
-			});
-		}
-		function on(event, fn) {
-			if (!listeners[event]) listeners[event] = [];
-			listeners[event].push(fn);
-			return wire;
-		}
-		var prefetched = {};
-		var ttl = options.prefetchTtl || 3e4;
-		function buildOptions(method, url, data) {
-			var o = {
-				url,
-				method: method.toUpperCase(),
-				headers: {}
-			};
-			if (csrf) o.headers["X-CSRF-TOKEN"] = csrf;
-			if (data && (method === "post" || method === "put")) {
-				o.data = JSON.stringify(data);
-				o.contentType = "application/json";
-			}
-			return o;
-		}
-		function prefetch(url) {
-			var hit = prefetched[url];
-			if (hit && Date.now() - hit.at < ttl) return wire;
-			var entry = {
-				req: ajaxFn(buildOptions("get", url)),
-				at: Date.now()
-			};
-			prefetched[url] = entry;
-			entry.req.fail(function() {
-				if (prefetched[url] === entry) delete prefetched[url];
-			});
-			return wire;
-		}
-		function takePrefetched(url) {
-			var hit = prefetched[url];
-			if (!hit) return null;
-			delete prefetched[url];
-			return Date.now() - hit.at < ttl ? hit.req : null;
-		}
-		function request(method, url, data, strategy) {
-			strategy = strategy || "drop";
-			var doneHandlers = [];
-			var failHandlers = [];
-			var alwaysHandlers = [];
-			var target = null;
-			var chain = {
-				to: function(ref, key) {
-					target = key !== void 0 ? {
-						__wire: true,
-						obj: ref,
-						key
-					} : ref;
-					return chain;
-				},
-				before: function(fn) {
-					fn();
-					return chain;
-				},
-				done: function(fn) {
-					doneHandlers.push(fn);
-					return chain;
-				},
-				fail: function(fn) {
-					failHandlers.push(fn);
-					return chain;
-				},
-				always: function(fn) {
-					alwaysHandlers.push(fn);
-					return chain;
-				},
-				withState: function(s) {
-					return chain;
-				}
-			};
-			pending[url] = true;
-			emit("$wiring", "start", url);
-			var cached = method === "get" ? takePrefetched(url) : null;
-			var req = cached || ajaxFn(buildOptions(method, url, data));
-			function attach() {
-				req.done(function(responseData) {
-					if (target) {
-						if (target.__wire) (strategies[strategy] || strategies.drop)(target.obj, target.key, responseData, failHandlers);
-						else if (Array.isArray(target)) {
-							if (strategy !== "push") target.length = 0;
-							if (Array.isArray(responseData)) Array.prototype.push.apply(target, responseData);
-							else target.push(responseData);
-						} else if (target && typeof target === "object") {
-							if (strategy !== "push") Object.keys(target).forEach(function(k) {
-								delete target[k];
-							});
-							if (responseData && typeof responseData === "object") Object.assign(target, responseData);
-							else if (typeof console !== "undefined") console.warn("[wire] " + url + " вернул не объект/массив, а " + typeof responseData + ": записывать в .to() нечего");
-						} else if (typeof console !== "undefined") console.warn("[wire] .to() получил " + Object.prototype.toString.call(target) + ": данные из " + url + " не записаны");
-					}
-					doneHandlers.forEach(function(fn) {
-						fn(responseData);
-					});
-				});
-				req.fail(function(jqXHR, textStatus) {
-					if (typeof console !== "undefined") console.error("[wire] " + method.toUpperCase() + " " + url + " → " + (jqXHR && jqXHR.status) + " " + textStatus);
-					failHandlers.forEach(function(fn) {
-						fn(jqXHR, textStatus);
-					});
-				});
-				req.always(function() {
-					delete pending[url];
-					emit("$wiring", "end", url);
-					alwaysHandlers.forEach(function(fn) {
-						fn();
-					});
-				});
-			}
-			if (cached) Promise.resolve().then(attach);
-			else attach();
-			return chain;
-		}
-		function wire(url) {
-			if (url === void 0) return Object.keys(pending).length > 0;
-			return !!pending[url];
-		}
-		wire.get = function(url, strategy) {
-			return request("get", url, null, strategy);
-		};
-		wire.post = function(url, data, strategy) {
-			return request("post", url, data, strategy);
-		};
-		wire.put = function(url, data, strategy) {
-			return request("put", url, data, strategy);
-		};
-		wire.delete = function(url, strategy) {
-			return request("delete", url, null, strategy);
-		};
-		wire.prefetch = prefetch;
-		wire.on = on;
-		return wire;
-	}
-	const $wire = createWire();
-	// src/lazy.js
-	const cfg = {
-		margin: "200px",
-		timeout: 15e3
-	};
-	function findScroller(el, selector) {
-		if (selector) return document.querySelector(selector);
-		for (let n = el.parentElement; n && n !== document.body; n = n.parentElement) {
-			const o = getComputedStyle(n).overflowY;
-			if (o === "auto" || o === "scroll" || o === "overlay") return n;
-		}
-		return null;
-	}
-	function pickTarget(el, dir) {
-		const edge = (n) => dir === "up" ? n.firstElementChild : n.lastElementChild;
-		let cur = edge(el);
-		while (cur && getComputedStyle(cur).display === "contents") {
-			const next = edge(cur);
-			if (!next) return el;
-			cur = next;
-		}
-		return cur || el;
-	}
-	function makeLazy(el, o) {
-		const scroller = findScroller(el, o.root);
-		const scrollEl = scroller || document.scrollingElement || document.documentElement;
-		if (o.dir === "up") scrollEl.style.overflowAnchor = "none";
-		const lz = {
-			key: o.key,
-			view: o.view,
-			busy: false,
-			ended: false,
-			finished: false,
-			page: 0,
-			lastCount: -1,
-			stall: 0,
-			restore: null,
-			timer: null,
-			rearm: null
-		};
-		lz.io = new IntersectionObserver((entries) => {
-			if (!el.isConnected) return lz.destroy();
-			if (entries.some((e) => e.isIntersecting)) trigger();
-		}, {
-			root: scroller,
-			rootMargin: o.margin || cfg.margin
-		});
-		function settle() {
-			const r = lz.restore;
-			if (!r || !lz.finished) return;
-			lz.restore = null;
-			scrollEl.scrollTop = r.top + (scrollEl.scrollHeight - r.height);
-		}
-		function release() {
-			if (!lz.busy) return;
-			clearTimeout(lz.timer);
-			lz.busy = false;
-			lz.finished = true;
-			clearTimeout(lz.rearm);
-			lz.rearm = setTimeout(() => {
-				settle();
-				if (el.isConnected && !lz.ended) lz.watch();
-			}, 60);
-		}
-		function end() {
-			release();
-			lz.ended = true;
-			lz.io.disconnect();
-		}
-		function fail(ms = 3e3) {
-			clearTimeout(lz.timer);
-			lz.timer = setTimeout(release, ms);
-		}
-		function trigger() {
-			if (lz.busy || lz.ended || !el.isConnected) return;
-			const count = el.children.length;
-			if (lz.page > 0 && count === lz.lastCount) {
-				if (++lz.stall >= 2) {
-					lz.ended = true;
-					lz.io.disconnect();
-					console.warn("Wex w-lazy: список не вырос после двух подгрузок, подгрузка остановлена. Вызовите lazy.end(), когда данных больше нет.", el);
-					return;
-				}
-			} else lz.stall = 0;
-			lz.lastCount = count;
-			lz.busy = true;
-			lz.finished = false;
-			lz.page++;
-			lz.restore = o.dir === "up" ? {
-				height: scrollEl.scrollHeight,
-				top: scrollEl.scrollTop
-			} : null;
-			lz.timer = setTimeout(release, cfg.timeout);
-			lz.view.emit("$lazy", {
-				el,
-				direction: o.dir,
-				page: lz.page,
-				offset: count,
-				done: release,
-				end,
-				fail
-			});
-		}
-		lz.watch = () => {
-			if (lz.ended) return;
-			lz.io.disconnect();
-			lz.io.observe(pickTarget(el, o.dir));
-		};
-		lz.settle = settle;
-		lz.destroy = () => {
-			clearTimeout(lz.timer);
-			clearTimeout(lz.rearm);
-			lz.io.disconnect();
-			delete el.__wLazy;
-		};
-		return lz;
-	}
-	directive("w-lazy", null, function($el, attrs) {
-		const el = $el[0];
-		const { view, scope } = this;
-		const key = attrs["w-lazy-key"] ? scope.parse(attrs["w-lazy-key"]) : void 0;
-		let lz = el.__wLazy;
-		if (lz && lz.key !== key) {
-			lz.destroy();
-			lz = null;
-		}
-		if (!lz) lz = el.__wLazy = makeLazy(el, {
-			dir: (attrs["w-lazy"] || "").trim() === "up" ? "up" : "down",
-			margin: attrs["w-lazy-margin"],
-			root: attrs["w-lazy-root"],
-			key,
-			view
-		});
-		lz.view = view;
-		lz.settle();
-		lz.watch();
-	});
-	function createLazy(options = {}) {
-		Object.assign(cfg, options);
-		return function() {};
-	}
-	// src/prefetch.js
-	const unquote = (s) => String(s).trim().replace(/^(['"])(.*)\1$/, "$2");
-	const PATH = /^[a-zA-Z_$][\w$]*(\.[\w$]+)*$/;
-	directive("w-prefetch", null, function($el, attrs) {
-		const { scope, view } = this;
-		const el = $el[0];
-		const raw = attrs["w-prefetch"];
-		const ctx = {
-			view,
-			el,
-			attr: "w-prefetch",
-			expr: raw,
-			scope
-		};
-		el.__wPrefetch = true;
-		const wire = globalThis.$wire;
-		if (!wire || typeof wire.prefetch !== "function") {
-			report("w-prefetch: $wire или $wire.prefetch недоступен", {
-				...ctx,
-				level: "error",
-				hint: "Проверьте, что в wire есть wire.prefetch = prefetch и $wire доступен глобально"
-			});
-			return;
-		}
-		const url = unquote(scope.interpolate(raw || ""));
-		if (!url || url === "undefined" || url === "null" || url.indexOf("{{") !== -1) {
-			report(`w-prefetch: некорректный URL ${JSON.stringify(url)}`, {
-				...ctx,
-				level: "error",
-				hint: "Ожидается строка вида w-prefetch=\"/api/posts.json\" или w-prefetch=\"/api/posts/{{ id }}.json\""
-			});
-			return;
-		}
-		let path = null;
-		const rawTo = attrs["w-to"];
-		if (rawTo !== void 0) {
-			const toCtx = {
-				...ctx,
-				attr: "w-to",
-				expr: rawTo
-			};
-			path = unquote(scope.interpolate(rawTo)).replace(/^state\./, "");
-			if (!PATH.test(path)) {
-				report(`w-to: некорректный путь ${JSON.stringify(path)}`, {
-					...toCtx,
-					level: "error",
-					hint: "Ожидается имя переменной из state: w-to=\"posts\" или w-to=\"data.posts\""
-				});
-				path = null;
-			} else {
-				let current;
-				try {
-					current = scope.parse(path);
-				} catch (e) {
-					current = void 0;
-				}
-				if (current === void 0) report(`w-to: «${path}» не найден в state`, {
-					...toCtx,
-					scope,
-					hint: "Объявите переменную в .state({ " + path.split(".")[0] + ": [] }), иначе запись может быть нереактивной"
-				});
-			}
-		}
-		const prefetch = () => wire.prefetch(url);
-		const load = () => {
-			wire.get(url).done((data) => {
-				if (data === null || data === void 0) report(`w-to: ${url} вернул ${data}`, {
-					...ctx,
-					attr: "w-to",
-					expr: rawTo,
-					scope
-				});
-				try {
-					scope.assign(path, data);
-				} catch (e) {
-					report(`w-to: не удалось записать в «${path}»: ${e.message}`, {
-						...ctx,
-						attr: "w-to",
-						expr: rawTo,
-						scope,
-						level: "error"
-					});
-				}
-			}).fail((xhr, status) => {
-				report(`w-prefetch: ${url} → ${xhr && xhr.status || "?"} ${status}`, {
-					...ctx,
-					level: "error",
-					hint: "404: проверьте путь и регистр имени файла; parsererror: проверьте, что JSON валидный"
-				});
-			});
-		};
-		$el.on("mouseenter.wprefetch focus.wprefetch touchstart.wprefetch", prefetch);
-		if (path) $el.on("click.wprefetch", load);
-		return () => {
-			$el.off(".wprefetch");
-			delete el.__wPrefetch;
-		};
-	});
-	directive("w-to", null, function($el, attrs) {
-		if (!$el[0].__wPrefetch) report("w-to без w-prefetch: атрибут ни на что не влияет", {
-			view: this.view,
-			el: $el[0],
-			attr: "w-to",
-			expr: attrs["w-to"],
-			level: "error",
-			hint: "Добавьте w-prefetch=\"/url.json\" на тот же элемент"
-		});
-	});
-	// src/index.js
-	if (typeof window !== "undefined") window.$wire = $wire;
-	exports.$wire = $wire;
+	exports.$ = $;
 	exports.View = View;
+	exports.WEX_VERSION = WEX_VERSION;
 	exports.component = component;
-	exports.createAsyncComponent = createAsyncComponent;
-	exports.createLazy = createLazy;
-	exports.createWire = createWire;
+	exports.config = config;
+	exports.default = api;
 	exports.directive = directive;
 	exports.filter = filter;
-	exports.shareState = shareState;
+	exports.isReactive = isReactive;
+	exports.preloadComponent = preloadComponent;
+	exports.reactive = reactive;
+	exports.report = report;
+	exports.toRaw = toRaw;
+	exports.untrack = untrack;
+	exports.useJQuery = useJQuery;
+	exports.view = view;
 });

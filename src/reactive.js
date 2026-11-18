@@ -11,6 +11,10 @@ const targetMap = new WeakMap()   // raw -> Map<key, Set<Effect>>
 const subs = new WeakMap()        // raw -> Set<fn>   (подписка на любое изменение поддерева)
 const parents = new WeakMap()     // raw child -> Set<raw parent>
 let subCount = 0
+let mutations = 0
+let afterFlush = null
+export const mutationCount = () => mutations
+export const setAfterFlush = (fn) => { afterFlush = fn }
 let activeEffect = null
 let seq = 0
 
@@ -165,6 +169,7 @@ export function flush() {
         }
     }
     if (queue.size) { console.error('Wex: бесконечный цикл обновлений'); queue.forEach(e => { e.queued = false }); queue.clear() }
+    if (afterFlush) afterFlush()
 }
 
 // ---------- подписка на поддерево (для $change и storage) ----------
@@ -245,6 +250,7 @@ const handler = {
         if (ok && (!had || prev !== next)) {
             if (isPlain(next)) link(next, target)
             const type = had ? 'set' : 'add'
+            mutations++
             if (subCount) notify(target, { target, key, type })
             trigger(target, key, type, Array.isArray(target) && key === 'length' ? next : undefined)
         }
@@ -255,6 +261,7 @@ const handler = {
         const had = hasOwn(target, key)
         const ok = Reflect.deleteProperty(target, key)
         if (ok && had) {
+            mutations++
             if (subCount) notify(target, { target, key, type: 'delete' })
             trigger(target, key, 'delete')
         }

@@ -3,11 +3,18 @@ export const WEX_VERSION = '3.0.0'
 import { ScopeX } from './vendor/ScopeX'
 import { isNone, isFunction, isString, isObject, isEqual, getNodeAttrs, camelCase, parseKey, parseMustache, sanitizeSvg } from './utils.js'
 import { VMLocalStorage } from './store.js'
-import { reactive, toRaw, isReactive, subscribe, Effect, untrack, track, trigger, flush, runEffects, readList, runLeaf } from './reactive.js'
+import { reactive, toRaw, isReactive, subscribe, Effect, untrack, track, trigger, flush, runEffects, readList, runLeaf, mutationCount, setAfterFlush } from './reactive.js'
 
 export { reactive, toRaw, isReactive, untrack, flush as __flush }
 
+// jQuery подключается через useJQuery($) (или находится в window.jQuery): нужен для $('#tpl').state(...),
+// старых директив/компонентов ($el в compile/affect), jQuery-событий и view.find()
+let $ = null
+export const setDollar = (d) => { $ = d }
+export const getDollar = () => $
+
 export const config = {
+  autoForce: false,   // true: view.update(fn) без мутаций через прокси перерисовывает всё view (поведение Wex 2)
   debug: typeof window !== 'undefined' && window.WEX_DEBUG !== undefined
       ? !!window.WEX_DEBUG
       : typeof location !== 'undefined' && /^(localhost|127\.|\[::1\])/.test(location.hostname),
@@ -46,19 +53,45 @@ let globalVer = 0
 
 export function filter(name, fn) { globalScope.filters[name] = fn }
 
-function normDirective(def) {
-  if (isFunction(def)) return { fn: def }
-  if (def && typeof def === 'object') return def
-  throw new Error('Wex: directive(name, fn | { mounted, updated, unmounted })')
+// directive(name, compile, affect, priority)  как в Wex 2:
+//   compile($el, attrs)       на элементе при создании; может вернуть новую разметку (строка, узлы, jQuery)
+//   affect($el, attrs)        после вставки в DOM и при каждом изменении прочитанных данных; может вернуть revoke()
+//   this = { $root, scope, view, component }  (в compile: { scope, view, compile, interpolate })
+// directive(name, { compile, mounted($el, attrs, data), updated(...), unmounted($el, data), priority })
+function normDirective(compile, affect) {
+  if (compile && typeof compile === 'object' && !(compile instanceof View)) {
+    return { compile: compile.compile || null, affect: null, life: compile }
+  }
+  if (compile && !isFunction(compile)) throw new Error('Wex: directive(name, compile, affect, priority)')
+  return { compile: compile || null, affect: affect || null, life: null }
 }
-export function directive(name, def) { globalDirectives.set(name, normDirective(def)); globalVer++ }
+export function directive(name, compile, affect, priority) { globalDirectives.set(name, normDirective(compile, affect)); globalVer++ }
 
-function normComponent(name, src, opts) {
+// component(name, View) | component(name, 'url', { lazy }) | component(name, compile($el, attrs, slot), affect)
+function normComponent(name, src, extra) {
   if (src instanceof View) return { view: src }
-  if (isString(src)) return { remote: loadRemote(src, opts) }
-  throw new Error(`Wex 3: component("${name}") принимает view или URL; функции-компоненты удалены`)
+  if (isString(src)) return { remote: loadRemote(src, extra) }
+  if (isFunction(src)) return { legacy: { compile: src, affect: isFunction(extra) ? extra : null } }
+  throw new Error(`Wex: component("${name}") принимает View, URL или функцию compile($el, attrs, slot)`)
 }
-export function component(name, src, opts) { globalComponents.set(name.toLowerCase(), normComponent(name, src, opts)); globalVer++ }
+export function component(name, src, extra) { globalComponents.set(name.toLowerCase(), normComponent(name, src, extra)); globalVer++ }
+
+// ---------- очередь «после вставки в DOM»: affect/mounted старых директив ----------
+let postQ = []
+let postDepth = 0
+export function postTask(fn) {
+  postQ.push(fn)
+  if (postDepth === 0) Promise.resolve().then(runPost)
+}
+export function runPost() {
+  if (postDepth) return
+  while (postQ.length) {
+    const q = postQ
+    postQ = []
+    q.forEach((f) => { try { f() } catch (e) { console.error(e) } })
+  }
+}
+setAfterFlush(runPost)
 
 // ---------- блоки: владелец эффектов и очистки ----------
 class Block {
@@ -92,7 +125,7 @@ class Block {
   }
 }
 
-function effect(block, fn) {
+export function effect(block, fn) {
   if (block.static) { untrack(fn); return null }
   const e = new Effect(fn)
   e.view = block.view
@@ -137,7 +170,7 @@ function makeFn(sc, expr) {
   return sc.compile(expr)
 }
 
-function ev(view, h, data, ctx) {
+export function ev(view, h, data, ctx) {
   try {
     const sc = view.__scope()
     if (typeof h === 'string') return sc.compile(h)(data)
@@ -157,7 +190,7 @@ const planCache = new Map()   // сигнатура реестра -> Map(html -
 const WFOR_RE = /^[a-z][a-zA-Z0-9_$]*(,[a-z][a-zA-Z0-9_$]*){0,1} in [a-z][a-zA-Z0-9_$]*( traceby [a-z][a-zA-Z0-9_$.]*)?/
 const BUILTIN = new Set(['w-class', 'w-value', 'w-disabled', 'w-checked', 'w-selected', 'w-bind', 'w-src', 'w-html', 'w-id', 'w-on', 'w-transition'])
 
-function getPlan(html, view) {
+export function getPlan(html, view) {
   const sig = view.__sig()
   let m = planCache.get(sig)
   if (!m) planCache.set(sig, (m = new Map()))
@@ -178,7 +211,7 @@ function makePlan(frag, env) {
   // единственный корневой элемент без структурной директивы: клонируем его напрямую, без фрагмента
   const kids = frag.childNodes
   const rootEl = kids.length === 1 && kids[0].nodeType === 1
-  && !ops.some(o => o.path.length === 1 && (o.t === 'if' || o.t === 'for' || o.t === 'slot'))
+  && !ops.some(o => o.path.length === 1 && (o.t === 'if' || o.t === 'for' || o.t === 'slot' || o.replace))
       ? kids[0] : null
   return { frag, ops, rootEl }
 }
@@ -240,14 +273,18 @@ function planElement(el, path, ops, env, parent) {
   }
 
   if (tag === 'w-static' || env.comps.has(tag)) {
+    const entry = env.comps.get(tag)
     const attrs = getNodeAttrs(el)
+    const slotHtml = entry && entry.legacy ? el.innerHTML : null
     ;[...el.attributes].forEach((a) => { if (a.name[0] === ':' || a.name[0] === '@') el.removeAttribute(a.name) })
     const f = doc.createDocumentFragment()
     while (el.firstChild) f.appendChild(el.firstChild)
     const has = f.childNodes.length && (f.childElementCount || f.textContent.trim())
     const slotPlan = has ? makePlan(f, env) : null
     planAttrs(el, path, ops, env)
-    ops.push({ t: 'comp', path, name: tag, attrs, slotPlan })
+    // legacy-компонент и компонент с другим корневым тегом заменяют свой элемент
+    const replace = !!entry && (!!entry.legacy || (!!entry.view && entry.view.tag !== 'template'))
+    ops.push({ t: 'comp', path, name: tag, attrs, slotPlan, slotHtml, replace })
     return
   }
 
@@ -269,8 +306,9 @@ function planAttrs(el, path, ops, env) {
       else ops.push({ t: name, path, expr: value })
     }
     else if (env.dirs.has(name)) {
-      el.removeAttribute(name)
-      ops.push({ t: 'dir', path, name, expr: value })
+      // атрибут директивы остаётся в DOM (плагины ищут по нему); attrs - слепок всех атрибутов элемента
+      const def = env.dirs.get(name)
+      ops.push({ t: 'dir', path, name, expr: value, attrs: getNodeAttrs(el), replace: !!def.compile })
     }
     else if (name.charCodeAt(0) !== 64 && name.charCodeAt(0) !== 58 && value.indexOf('{{') !== -1) {
       if (config.debug && /^(src|href|srcset)$/.test(name)) {
@@ -307,7 +345,7 @@ function buildResolver(plan) {
   return new Function(base, 'return [' + parts.join(',') + ']')
 }
 
-function instantiate(plan, view, data, parentBlock, opts) {
+export function instantiate(plan, view, data, parentBlock, opts) {
   const block = new Block(parentBlock, view)
   if (opts && opts.static) block.static = true
   const ops = plan.ops
@@ -330,7 +368,7 @@ function instantiate(plan, view, data, parentBlock, opts) {
   return inst
 }
 
-function instNodes(inst) {
+export function instNodes(inst) {
   if (inst.simple) return [inst.el]
   const out = []
   for (const n of inst.rootItems) {
@@ -350,6 +388,9 @@ function instRemove(inst) {
   else instNodes(inst).forEach(n => n.remove())
 }
 
+// редкие операции (встроенные w-директивы, w-on, старые директивы и компоненты) регистрирует directives.js
+export const OPS = Object.create(null)
+
 function applyOp(op, node, view, data, block) {
   switch (op.t) {
     case 'text': return bindText(op, node, view, data, block)
@@ -358,9 +399,7 @@ function applyOp(op, node, view, data, block) {
     case 'for': return bindFor(op, node, view, data, block)
     case 'slot': return bindSlot(op, node, view, data, block)
     case 'comp': return bindComp(op, node, view, data, block)
-    case 'on': return bindOn(op, node, view, data)
-    case 'dir': return bindDir(op, node, view, data, block)
-    default: return bindBuiltin(op, node, view, data, block)
+    default: return OPS[op.t](op, node, view, data, block)
   }
 }
 
@@ -467,7 +506,7 @@ function bindFor(op, anchor, view, data, block) {
       Object.defineProperty(rd, kname, { get() { track(kh, 'v'); return kh.v }, enumerable: true, configurable: true })
     }
     const inst = instantiate(op.sub, view, rd, block)
-    if (trace && inst.simple && inst.el.nodeType === 1) inst.el.setAttribute('data-id', key)
+    if (trace && key !== undefined && inst.simple && inst.el.nodeType === 1) inst.el.setAttribute('data-id', key)
     if (stats) stats.rows++
     return { key, raw: toRaw(item), inst, kh, idx: 0, rd, stamp }
   }
@@ -621,6 +660,7 @@ function bindComp(op, host, view, data, block) {
   }
   const entry = view.__component(op.name)
   if (!entry) return
+  if (entry.legacy) return untrack(() => OPS.legacyComp(entry.legacy, op, host, view, data, block))
   const start = (proto) => { if (!block.disposed) untrack(() => mountComponent(proto, op, host, view, data, block)) }
   if (entry.remote) {
     const r = entry.remote
@@ -635,12 +675,12 @@ function bindComp(op, host, view, data, block) {
   else start(entry.view)
 }
 
-function mountComponent(proto, op, host, view, data, block) {
+export function mountComponent(proto, op, host, view, data, block) {
   const parentPath = view.__path || ['root']
   if (parentPath.length > config.maxDepth) {
     report(`Превышена глубина вложенности компонентов (${config.maxDepth}), «${op.name}» не создан`, { level: 'error', view, hint: 'Рекурсивный компонент без условия выхода: остановите рекурсию через w-if.' })
     host.setAttribute('data-wex-error', 'max-depth')
-    return
+    return null
   }
   const comp = proto.clone()
   comp.__path = parentPath.concat(op.name)
@@ -675,131 +715,27 @@ function mountComponent(proto, op, host, view, data, block) {
   }
 
   comp.__slot = op.slotPlan ? { plan: op.slotPlan, view, data, block } : null
-  comp.mount(host)
+
+  // шаблон компонента не <template>: вместо хост-элемента встаёт его тег (с атрибутами и маркерами begin/end)
+  let target = host
+  if (proto.tag !== 'template') {
+    const doc = host.ownerDocument
+    target = doc.createElement(proto.tag)
+    const attrs = Object.assign({}, getNodeAttrs(host), proto.attributes, { 'data-hoist': op.name })
+    Object.keys(attrs).forEach((k) => { try { target.setAttribute(k, attrs[k]) } catch (e) { /* :prop и т.п. */ } })
+    const begin = doc.createComment(` ${op.name} begin `)
+    const end = doc.createComment(` ${op.name} end `)
+    host.replaceWith(begin, target, end)
+    host.__dyn = { nodes: () => [begin, target, end] }
+  }
+  comp.mount(target)
   mounted = true
   block.onDispose(() => comp.destroy())
+  return comp
 }
 
 // ---------- события и встроенные директивы ----------
 const NON_BUBBLING = ['focus', 'blur', 'mouseenter', 'mouseleave', 'pointerenter', 'pointerleave', 'scroll', 'load', 'error', 'toggle']
-
-function bindOn(op, el, view, data) {
-  const h = el.__wOn || (el.__wOn = {})
-  h[op.event] = { view, fname: op.fname, params: op.params, data }
-  view.__delegate(op.event)
-}
-
-const BIND_CHANGE = '[type=checkbox],[type=radio],[type=color],[type=date],[type=datetime-local],[type=week],[type=file],select'
-
-function bindBuiltin(op, el, view, data, block) {
-  const expr = op.expr
-  switch (op.t) {
-    case 'w-class': {
-      let prev = []
-      effect(block, () => {
-        const obj = ev(view, op, data, op) || {}
-        const next = []
-        for (const key in obj) if (obj[key]) key.split(/\s+/).filter(Boolean).forEach(c => next.push(c))
-        prev.forEach((c) => { if (next.indexOf(c) === -1) el.classList.remove(c) })
-        next.forEach(c => el.classList.add(c))
-        prev = next
-      })
-      return
-    }
-    case 'w-value':
-      return effect(block, () => {
-        const v = ev(view, op, data, op)
-        const s = isNone(v) ? '' : String(v)
-        if (el.value !== s) el.value = s
-      })
-    case 'w-disabled': return effect(block, () => { el.disabled = !!ev(view, op, data, op) })
-    case 'w-checked': return effect(block, () => { el.checked = !!ev(view, op, data, op) })
-    case 'w-selected': return effect(block, () => { el.selected = !!ev(view, op, data, op) })
-    case 'w-id':
-      return effect(block, () => {
-        const v = ev(view, op, data, op)
-        if (v === null) el.removeAttribute('id')
-        else if (v !== undefined) el.setAttribute('id', v)
-      })
-    case 'w-src':
-      return effect(block, () => {
-        const v = ev(view, op, data, op)
-        if (isNone(v)) { report(`w-src получил ${v}: src не выставлен`, { view, attr: 'w-src', expr }); return }
-        el.setAttribute('src', v)
-      })
-    case 'w-html':
-      return effect(block, () => {
-        const v = ev(view, expr.replace(/^\{\{\s*|\s*\}\}$/g, ''), data, op)
-        el.innerHTML = sanitizeSvg(isNone(v) ? '' : String(v))
-      })
-    case 'w-bind': {
-      const checkbox = el.matches('[type=checkbox]')
-      const radio = el.matches('[type=radio]')
-      effect(block, () => {
-        const v = ev(view, op, data, op)
-        if (checkbox) el.checked = !!v
-        else if (radio) el.checked = v === el.value
-        else {
-          const s = isNone(v) ? '' : String(v)
-          if (el.value !== s) el.value = s
-        }
-      })
-      el.addEventListener(el.matches(BIND_CHANGE) ? 'change' : 'input', (e) => {
-        const fn = view.__scope().compile(expr)
-        if (fn.assign) fn.assign(data, checkbox ? el.checked : e.target.value)
-      })
-      return
-    }
-    case 'w-transition': {
-      const transition = expr || 'opacity 0.25s ease'
-      const finalTransition = /(opacity|all|transform)/.test(transition) ? transition : `opacity ${transition}`
-      el.style.transition = finalTransition
-      el.style.opacity = '0'
-      const show = () => { el.style.opacity = '1' }
-      if (document.hidden) setTimeout(show, 0)
-      else requestAnimationFrame(() => requestAnimationFrame(show))
-      setTimeout(show, 500)
-      const originalRemove = el.remove
-      el.remove = function () {
-        el.style.opacity = '0'
-        const d = getComputedStyle(el).transitionDuration
-        const ms = d.includes('ms') ? parseFloat(d) : parseFloat(d) * 1000
-        setTimeout(() => originalRemove.call(el), ms || 250)
-      }
-      block.onDispose(() => { el.remove = originalRemove })
-    }
-  }
-}
-
-// directive(name, fn)  fn(el, b) выполняется в эффекте, может вернуть cleanup
-// directive(name, { mounted(el, b), updated(el, b), unmounted(el, b) })   b.get() читает выражение (с отслеживанием)
-function bindDir(op, el, view, data, block) {
-  const def = view.__directive(op.name)
-  if (!def) return
-  const b = {
-    el, view, expr: op.expr, data, store: {},
-    get state() { return view.state },
-    get: () => ev(view, op.expr, data, op),
-    parse: e => ev(view, e, data, op),
-  }
-  if (def.fn) {
-    let clean = null
-    effect(block, () => {
-      if (clean) clean()
-      const r = def.fn.call(b, el, b)
-      clean = isFunction(r) ? r : null
-    })
-    block.onDispose(() => { if (clean) clean() })
-  }
-  else {
-    let mounted = false
-    effect(block, () => {
-      if (!mounted) { mounted = true; if (def.mounted) def.mounted.call(b, el, b) }
-      else if (def.updated) def.updated.call(b, el, b)
-    })
-    if (def.unmounted) block.onDispose(() => def.unmounted.call(b, el, b))
-  }
-}
 
 // ---------- удалённые компоненты ----------
 const nativeImport = new Function('u', 'return import(u)')
@@ -865,7 +801,7 @@ function cloneState(value) {
   return value
 }
 
-function createView(html, initState = {}, tplEl = null, attrsExpr = null) {
+export function createView(html, initState = {}, tplEl = null, attrsExpr = null) {
   const id = (tplEl && (tplEl.id || tplEl.getAttribute('w-id'))) || ('v' + (++viewSeq))
   const view = new View()
   const components = new Map(globalComponents)
@@ -896,21 +832,34 @@ function createView(html, initState = {}, tplEl = null, attrsExpr = null) {
   let gateOpen = true
 
   const invalidate = () => { sigCache = null; envCache = null }
+  const tick = {}   // «что-то изменилось в state»: на него подписаны affect/updated старых директив
 
   // ---- события ----
+  const hasListeners = (event) => handlers.some(h => h.event === event)
+      || !!($ && tplEl && $._data(tplEl, 'events') && $._data(tplEl, 'events')[event])
+
   function emit(event, ...args) {
-    if (outside) {
-      const lower = ('@' + event).toLowerCase()
-      const key = ('@' + event) in outside ? '@' + event : Object.keys(outside).find(k => k.toLowerCase() === lower)
-      if (key && isFunction(outside[key])) outside[key](...args)
+    if (event[0] !== '$') {
+      if (outside) {
+        const lower = ('@' + event).toLowerCase()
+        const key = ('@' + event) in outside ? '@' + event : Object.keys(outside).find(k => k.toLowerCase() === lower)
+        if (key && isFunction(outside[key])) outside[key](...args)
+      }
+      return
     }
-    if (event[0] !== '$') return
     handlers.slice().forEach((h) => {
       if (h.event !== event) return
       if (h.once) handlers.splice(handlers.indexOf(h), 1)
       h.fn.call(view, state, ...args)
     })
+    // подписчики, повешенные через jQuery на элемент шаблона: $(tpl).on('$mount', (e, state) => ...)
+    if ($ && tplEl) {
+      const evs = $._data(tplEl, 'events')
+      if (evs && evs[event]) $(tplEl).triggerHandler(event, args)
+    }
   }
+
+  const wrapEvent = e => ($ && $.event && $.event.fix ? $.event.fix(e) : e)
 
   function attach(a) {
     if (!root || a.listener) return
@@ -923,7 +872,8 @@ function createView(html, initState = {}, tplEl = null, attrsExpr = null) {
       }
       const cb = a.fn.call(view, state)
       let res
-      if (isFunction(cb)) res = cb.call(target, e)
+      if (isFunction(cb)) res = cb.call(target, wrapEvent(e))
+      if (res === false) { e.preventDefault(); e.stopPropagation() }
       if (a.once) view.off(a.event, a.selector, a.fn)
       return res
     }
@@ -957,18 +907,21 @@ function createView(html, initState = {}, tplEl = null, attrsExpr = null) {
     const direct = NON_BUBBLING.indexOf(event) !== -1
     const r = root
     const listener = (e) => {
+      let je = null
       for (let el = e.target; el && el !== r; el = el.parentNode) {
         if (direct && el !== e.target) break
         const h = el.__wOn && el.__wOn[event]
         if (!h || h.view !== view) continue
         const fn = view.fn(h.fname)
         if (!fn) continue
+        if (!je) { je = wrapEvent(e); if (je !== e) je.delegateTarget = r }
+        if (je !== e) je.currentTarget = el
         const res = h.params
             ? fn.call(view, state, ...h.params.map(p => ev(view, p, h.data)))
             : fn.call(view, state)
-        const out = isFunction(res) ? res.call(el, e) : res
-        if (out === false) { e.preventDefault(); e.stopPropagation() }
-        if (e.cancelBubble) break
+        const out = isFunction(res) ? res.call(el, je) : res
+        if (out === false) { je.preventDefault(); je.stopPropagation() }
+        if (je !== e ? je.isPropagationStopped() : e.cancelBubble) break
       }
     }
     r.addEventListener(event, listener, direct)
@@ -1004,6 +957,7 @@ function createView(html, initState = {}, tplEl = null, attrsExpr = null) {
   function ensureSubscribed() {
     if (unsubscribe || !state) return
     unsubscribe = subscribe(state, (info) => {
+      trigger(tick, 'v', 'set')
       lastInfo = info
       if (changePending) return
       changePending = true
@@ -1020,6 +974,7 @@ function createView(html, initState = {}, tplEl = null, attrsExpr = null) {
     else prevented = true
   }
   function shouldUpdate() {
+    if (!hasListeners('$update')) return true
     let flag = true
     emit('$update', state, () => { flag = false })
     return flag
@@ -1064,10 +1019,13 @@ function createView(html, initState = {}, tplEl = null, attrsExpr = null) {
   }
 
   function mount(el) {
+    if (el && el.jquery) el = el[0]
     if (isMounted) {
       if (!el || el === root) return view
       view.unmount()
     }
+    // повторный mount() без аргументов: рядом с шаблоном уже стоит корень этого view
+    if (!el && tplEl && tplEl.nextElementSibling && tplEl.nextElementSibling.getAttribute('w-name') === id) return view
     if (!isUnmounted) init()
     let target = typeof el === 'string' ? document.querySelector(el) : el
     if (!target) {
@@ -1079,7 +1037,9 @@ function createView(html, initState = {}, tplEl = null, attrsExpr = null) {
     }
     root = target
     root.setAttribute('w-name', id)
-    render()
+    postDepth++
+    try { render() } finally { postDepth-- }
+    runPost()
     actions.forEach(attach)
     VMLocalStorage.reloadJqvmLocalStorage(state, '$mount')
     isMounted = true
@@ -1123,14 +1083,25 @@ function createView(html, initState = {}, tplEl = null, attrsExpr = null) {
     skipped.forEach((e) => { if (list.indexOf(e) === -1) list.push(e) })
     skipped.clear()
     runEffects(list)
+    runPost()
+  }
+
+  let forcePending = false
+  function scheduleForce() {
+    if (forcePending) return
+    forcePending = true
+    Promise.resolve().then(() => { forcePending = false; forceUpdate() })
   }
 
   function update(next) {
     if (next === true) { forceUpdate(); return view }
     if (state && next) {
       if (isFunction(next)) {
+        const m0 = mutationCount()
         const res = next(state)
         if (isObject(res)) Object.assign(state, res)
+        // изменения не через прокси (Chart.js, экземпляры классов): перерисовать вручную, как в Wex 2
+        else if (config.autoForce && mutationCount() === m0) scheduleForce()
       }
       else if (isObject(next)) Object.assign(state, next)
     }
@@ -1146,6 +1117,7 @@ function createView(html, initState = {}, tplEl = null, attrsExpr = null) {
         skipped.clear()
         runEffects(list)
       }
+      runPost()
     }
     return view
   }
@@ -1162,7 +1134,7 @@ function createView(html, initState = {}, tplEl = null, attrsExpr = null) {
     handlers.forEach(h => nv.__addHandler(h))
     actions.forEach(a => nv.on(...[a.event, a.selector, a.fn].filter(Boolean)))
     components.forEach((entry, name) => { if (globalComponents.get(name) !== entry) nv.__setComponent(name, entry) })
-    directives.forEach((def, name) => { if (globalDirectives.get(name) !== def) nv.directive(name, def) })
+    directives.forEach((def, name) => { if (globalDirectives.get(name) !== def) nv.__setDirective(name, def) })
     Object.keys(ownFilters).forEach(k => nv.filter(k, ownFilters[k]))
     handlers.forEach((h) => { if (h.event === '$clone') h.fn.call(view, state, nv) })
     return nv
@@ -1187,9 +1159,17 @@ function createView(html, initState = {}, tplEl = null, attrsExpr = null) {
       }
       return view
     },
-    find(sel) { return root ? Array.from(root.querySelectorAll(sel)) : [] },
-    component(name, src, opts) { components.set(name.toLowerCase(), normComponent(name, src, opts)); invalidate(); return view },
-    directive(name, def) { directives.set(name, normDirective(def)); invalidate(); return view },
+    find(sel) {
+      if ($) return root ? $(root).find(sel) : $()
+      return root ? Array.from(root.querySelectorAll(sel)) : []
+    },
+    component(name, src, extra) {
+      components.set(name.toLowerCase(), normComponent(name, src, extra))
+      invalidate()
+      if (src instanceof View) view.on('$beforeDestroy', () => src.destroy())
+      return view
+    },
+    directive(name, compile, affect) { directives.set(name, normDirective(compile, affect)); invalidate(); return view },
     filter(name, f) {
       ownFilters[name] = f
       scope = new ScopeX({}, { filters: Object.assign({}, globalScope.filters, ownFilters) })
@@ -1205,6 +1185,9 @@ function createView(html, initState = {}, tplEl = null, attrsExpr = null) {
     __component: name => components.get(name),
     __setComponent(name, entry) { components.set(name, entry); invalidate() },
     __directive: name => directives.get(name),
+    __tick: tick,
+    __subscribe: ensureSubscribed,
+    __setDirective(name, def) { directives.set(name, def); invalidate() },
     __addHandler(h) { handlers.push({ ...h }) },
     __delegate: delegate,
     __setProp(key, value) { if (!state) { outside = outside || {}; outside[key] = value } else setProp(key, value) },
@@ -1213,12 +1196,16 @@ function createView(html, initState = {}, tplEl = null, attrsExpr = null) {
       return sigCache
     },
     __env() {
-      return envCache || (envCache = { comps: new Set(components.keys()), dirs: new Set(directives.keys()) })
+      return envCache || (envCache = { comps: new Map(components), dirs: new Map(directives) })
     },
   })
   Object.defineProperties(view, {
     state: { get: () => state },
     root: { get: () => root },
+    __state: { get: () => state },
+    __root: { get: () => root },
+    tag: { value: tplEl ? tplEl.localName : 'template' },
+    attributes: { value: tplEl ? getNodeAttrs(tplEl) : {} },
     // outside выставляет родитель до mount
     __outside: { get: () => outside, set: (v) => { outside = v } },
     __slot: { value: null, writable: true },
@@ -1240,8 +1227,3 @@ export function view(source, initState, opts = {}) {
   const attrsExpr = opts.attrs || (el && el.getAttribute && el.getAttribute('attrs')) || null
   return createView(html, initState, el, attrsExpr)
 }
-
-
-export default { view, component, directive, filter, preloadComponent, config, report, reactive, toRaw, isReactive, untrack, VERSION: WEX_VERSION }
-if (typeof window !== 'undefined') window.Wex = { __flush: flush, view, component, directive, filter, preloadComponent, config, report, reactive, toRaw, isReactive, untrack, VERSION: WEX_VERSION }
-console.log('[Wex]: загружена версия: ' + WEX_VERSION)

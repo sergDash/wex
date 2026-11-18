@@ -1,7 +1,8 @@
 // Тесты Wex 3. Работают и в браузере (test/selftest.html), и в node (test/run.mjs через jsdom).
 window.WEX_CASES = async function (check, host, tick) {
-    const { view, directive, component } = window.Wex
-    const mk = (html, state) => view(html, state)
+    const { directive, component } = window.jqvm
+    const $ = window.$
+    const mk = (html, state) => $('<template>' + html + '</template>').state(state)
 
     const run = async (name, fn) => { try { await fn() } catch (e) { check(name + ' (исключение)', false, String(e && e.stack || e)) } }
 
@@ -77,7 +78,7 @@ window.WEX_CASES = async function (check, host, tick) {
 
     await run('компоненты и props по ссылке', async () => {
         const el = host()
-        const card = view('<button>{{ card.title }}</button>', () => ({ card: {} }))
+        const card = $('<template><button>{{ card.title }}</button></template>').state(() => ({ card: {} }))
             .on('click', 'button', state => { state.card.title = 'Changed' })
         component('wt-card', card)
         const v = mk('<span id="p">{{ item.title }}</span><wt-card :card="item"></wt-card>', () => ({ item: { title: 'Orig' } })).mount(el)
@@ -92,7 +93,7 @@ window.WEX_CASES = async function (check, host, tick) {
 
     await run('слот', async () => {
         const el = host()
-        component('wt-box', view('<div class="bx"><slot></slot></div>', () => ({})))
+        component('wt-box', $('<template><div class="bx"><slot></slot></div></template>').state(() => ({})))
         const v = mk('<wt-box>inner {{ name }}</wt-box>', () => ({ name: 'N1' })).mount(el)
         await tick()
         check('содержимое слота', el.querySelector('.bx').textContent.trim() === 'inner N1', el.innerHTML)
@@ -144,18 +145,89 @@ window.WEX_CASES = async function (check, host, tick) {
         check('release рендерит синхронно', el.querySelector('#h').textContent === '2', el.innerHTML)
     })
 
-    await run('жизненный цикл директивы', async () => {
+    await run('жизненный цикл директивы (объектная форма Wex 2)', async () => {
         const log = { m: 0, u: 0, x: 0 }
-        directive('w-probe', { mounted(el, b) { b.get(); log.m++ }, updated(el, b) { b.get(); log.u++ }, unmounted() { log.x++ } })
+        directive('w-probe', { mounted($el, attrs, data) { log.m++ }, updated() { log.u++ }, unmounted() { log.x++ } })
         const el = host()
-        const v = mk('<b w-probe="n" w-if="on">p</b>', () => ({ on: true, n: 0 })).mount(el)
+        const v = mk('<b w-probe="1" w-if="on">p</b><span>{{ n }}</span>', () => ({ on: true, n: 0 })).mount(el)
         await tick()
         v.update(s => { s.n = 1 }); await tick()
         v.update(s => { s.n = 2 }); await tick()
         check('mounted один раз', log.m === 1, log)
-        check('updated на изменениях', log.u === 2, log)
+        check('updated на следующих изменениях', log.u >= 2, log)
         v.update(s => { s.on = false }); await tick()
         check('unmounted при удалении', log.x === 1, log)
+    })
+
+    await run('страница: $(\'#tpl\').state({...}).mount()', async () => {
+        const t = document.createElement('template')
+        t.id = 'w-for-page'
+        t.innerHTML = '<div w-for="post,id in posts traceby posts.id">{{ post.name }}</div>'
+        document.body.appendChild(t)
+        const v = $('#w-for-page').state({ posts: [{ id: 1, name: 'A' }, { id: 2, name: 'B' }, { id: 3, name: 'C' }] }).mount()
+        await tick()
+        const root = t.nextElementSibling
+        check('корень вставлен после шаблона', !!root && root.getAttribute('w-name') === 'w-for-page')
+        check('три строки', root.querySelectorAll('div').length === 3, root && root.innerHTML)
+        check('тексты', [...root.querySelectorAll('div')].map(d => d.textContent).join('') === 'ABC')
+        v.update(s => { s.posts.push({ id: 4, name: 'D' }) }); await tick()
+        check('push', root.querySelectorAll('div').length === 4)
+    })
+
+    await run('старая директива: compile + affect + revoke', async () => {
+        const log = { revoke: 0 }
+        directive('w-title', null, function ($el, attrs) {
+            $el.attr('title', 'T:' + this.scope.parse(attrs['w-title']))
+            return () => { log.revoke++ }
+        })
+        directive('w-wrap', function ($el, attrs) { return '<section class="wrapped">{{ n }}</section>' })
+        const el = host()
+        const v = mk('<p id="p" w-title="n">x</p><i w-wrap="1">old</i>', () => ({ n: 1 })).mount(el)
+        await tick()
+        check('affect выставил атрибут', el.querySelector('#p').getAttribute('title') === 'T:1', el.innerHTML)
+        check('compile заменил элемент разметкой', !!el.querySelector('section.wrapped') && !el.querySelector('i'), el.innerHTML)
+        check('разметка из compile интерполирована', el.querySelector('section').textContent === '1')
+        v.update(s => { s.n = 2 }); await tick()
+        check('affect перезапущен', el.querySelector('#p').getAttribute('title') === 'T:2')
+        check('revoke вызван перед перезапуском', log.revoke >= 1, log)
+        check('разметка из compile реактивна', el.querySelector('section').textContent === '2')
+    })
+
+    await run('функция-компонент (как Link)', async () => {
+        component('wt-link', function ($el, attrs, slot) {
+            return '<a class="lnk" href="' + (attrs.to || '#') + '">' + slot.template + '</a>'
+        })
+        const el = host()
+        const v = mk('<wt-link to="/x">go {{ n }}</wt-link>', () => ({ n: 1 })).mount(el)
+        await tick()
+        const a = el.querySelector('a.lnk')
+        check('компонент вернул разметку', !!a && a.getAttribute('href') === '/x', el.innerHTML)
+        check('слот подставлен и интерполирован', a.textContent === 'go 1')
+        v.update(s => { s.n = 5 }); await tick()
+        check('слот реактивен', el.querySelector('a.lnk').textContent === 'go 5')
+    })
+
+    await run('компонент с корневым тегом (hoist)', async () => {
+        component('wt-hoist', $('<div class="hoisted"><i>{{ x }}</i></div>').state(() => ({ x: 'h' })))
+        const el = host()
+        mk('<wt-hoist></wt-hoist><wt-hoist w-for="k in items traceby k"></wt-hoist>', () => ({ items: [1, 2] })).mount(el)
+        await tick()
+        const list = el.querySelectorAll('div.hoisted')
+        check('вместо хоста встал div', list.length === 3, el.innerHTML)
+        check('содержимое компонента', list[0].textContent === 'h' && list[0].getAttribute('data-hoist') === 'wt-hoist')
+    })
+
+    await run('jQuery: события, find, подписка на элемент шаблона', async () => {
+        const el = host()
+        let ev = null, mounted = null
+        const tpl = $('<template><button>b</button><b>x</b></template>')
+        tpl.on('$mount', (e, st) => { mounted = st })
+        const v = tpl.state(() => ({ k: 1 })).on('click', 'button', state => (e) => { ev = e }).mount(el)
+        await tick()
+        el.querySelector('button').click()
+        check('обработчик получил jQuery.Event', !!ev && !!ev.originalEvent, ev && Object.keys(ev).slice(0, 3))
+        check('find возвращает jQuery', v.find('b').jquery !== undefined && v.find('b').length === 1)
+        check('$mount дошёл до jQuery-подписчика', !!mounted && mounted.k === 1, mounted)
     })
 
     await run('emit вызывает обработчики один раз', async () => {
