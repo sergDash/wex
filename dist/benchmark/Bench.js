@@ -1,16 +1,19 @@
-// Честное сравнение Wex 3 / petite-vue / Preact на одном и том же списке.
-// Строка: <li class="r">{{label}} <b>even</b>(если id чётный) <i>a</i><i>b</i></li>  -> одинаковый DOM у всех.
+// Честное сравнение Wex 3 / petite-vue / Preact / Solid / Alpine / Vue 3 / Knockout на одном и том же списке.
+// Строка: <li class="r">{{label}} <b>even</b>(если id чётный) <i>a</i><i>b</i></li>  -> одинаковый textContent у всех.
 (function () {
     const N = 2000
     const makeRows = (offset = 0) => Array.from({ length: N }, (_, i) => ({ id: i, label: 'row ' + (i + offset), tags: ['a', 'b'] }))
     const median = a => { const s = [...a].sort((x, y) => x - y); return s[s.length >> 1] }
     const frame = () => new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)))
+    const microtasks = () => new Promise(r => queueMicrotask(() => queueMicrotask(r)))
 
     // ---------- адаптеры ----------
+    // available() — загружена ли библиотека; load() (необязательно) — асинхронная подгрузка ES-модулей; hint — подсказка при отсутствии.
     const adapters = []
 
     adapters.push({
         name: 'Wex 3',
+        hint: 'соберите dist/wex.js',
         available: () => !!window.Wex,
         setup(el) {
             const rows = makeRows()
@@ -33,6 +36,7 @@
 
     adapters.push({
         name: 'petite-vue',
+        hint: 'нет доступа к unpkg?',
         available: () => !!window.PetiteVue,
         setup(el) {
             const P = window.PetiteVue
@@ -56,6 +60,7 @@
 
     adapters.push({
         name: 'Preact',
+        hint: 'нет доступа к unpkg?',
         available: () => !!window.preact,
         setup(el) {
             const { h, render } = window.preact
@@ -74,6 +79,123 @@
                 remove: i => { rows = rows.slice(0, i).concat(rows.slice(i + 1)); draw() },
                 replace: r => { rows = r; draw() },
                 destroy: () => { render(null, el) },
+            }
+        },
+    })
+
+    // Solid: у него нет глобальной сборки без компилятора JSX, поэтому берём ES-модули с esm.sh
+    // и шаблоны через solid-js/html (runtime-шаблоны, без шага сборки).
+    // Состояние — createStore (глубокая реактивность), «Замена всех данных» — идиоматичный reconcile по id.
+    let solid = null
+    adapters.push({
+        name: 'Solid',
+        hint: 'нет доступа к esm.sh?',
+        available: () => !!solid,
+        async load() {
+            if (solid) return
+            const base = 'https://esm.sh/solid-js@1.9.3'
+            const [core, store, web, html] = await Promise.all([
+                import(base), import(base + '/store'), import(base + '/web'), import(base + '/html'),
+            ])
+            solid = { For: core.For, batch: core.batch, createStore: store.createStore, reconcile: store.reconcile, render: web.render, html: html.default }
+        },
+        setup(el) {
+            const { For, batch, createStore, reconcile, render, html } = solid
+            const [s, set] = createStore({ rows: makeRows() })
+            const dispose = render(() => html`<ul><${For} each=${() => s.rows}>${r => html`<li class="r">${() => r.label + ' '}${() => r.id % 2 === 0 ? html`<b>even</b>` : null}<${For} each=${() => r.tags}>${t => html`<i>${t}</i>`}<//></li>`}<//></ul>`, el)
+            return {
+                flush: () => {},   // Solid обновляет DOM синхронно
+                update: (i, l) => { set('rows', i, 'label', l) },
+                updateMany: (step, l) => { batch(() => { for (let i = 0; i < N; i += step) set('rows', i, 'label', l + i) }) },
+                swap: (a, b) => { set('rows', rows => { const c = rows.slice(); const t = c[a]; c[a] = c[b]; c[b] = t; return c }) },
+                reverse: () => { set('rows', rows => rows.slice().reverse()) },
+                push: row => { set('rows', s.rows.length, row) },
+                remove: i => { set('rows', rows => rows.filter((_, k) => k !== i)) },
+                replace: r => { set('rows', reconcile(r, { key: 'id', merge: true })) },
+                destroy: () => dispose(),
+            }
+        },
+    })
+
+    // Alpine: берём ESM-сборку и инициализируем поддерево вручную (Alpine.initTree), без Alpine.start().
+    // Иначе Alpine вешает MutationObserver на весь документ и разбирает DOM, который создают другие библиотеки,
+    // искажая их замеры. В Alpine нет интерполяции {{ }}, поэтому текст строки — в <span x-text>
+    // (textContent при этом тот же, что у остальных).
+    let Alpine = null, alpineId = 0
+    adapters.push({
+        name: 'Alpine',
+        hint: 'нет доступа к jsdelivr?',
+        available: () => !!Alpine,
+        async load() {
+            if (!Alpine) Alpine = (await import('https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/module.esm.js')).default
+        },
+        setup(el) {
+            const name = 'bench' + (++alpineId)
+            Alpine.store(name, { rows: makeRows() })
+            const s = Alpine.store(name)   // реактивный прокси
+            el.innerHTML = `<div x-data><ul><template x-for="r in $store.${name}.rows" :key="r.id"><li class="r"><span x-text="r.label + ' '"></span><template x-if="r.id % 2 === 0"><b>even</b></template><template x-for="t in r.tags"><i x-text="t"></i></template></li></template></ul></div>`
+            const root = el.firstElementChild
+            Alpine.initTree(root)
+            return {
+                flush: microtasks,   // планировщик Alpine — микротаски
+                update: (i, l) => { s.rows[i].label = l },
+                updateMany: (step, l) => { for (let i = 0; i < N; i += step) s.rows[i].label = l + i },
+                swap: (a, b) => { const t = s.rows[a]; s.rows[a] = s.rows[b]; s.rows[b] = t },
+                reverse: () => { s.rows.reverse() },
+                push: row => { s.rows.push(row) },
+                remove: i => { s.rows.splice(i, 1) },
+                replace: r => { s.rows = r },
+                destroy: () => { Alpine.destroyTree(root); el.innerHTML = '' },
+            }
+        },
+    })
+
+    adapters.push({
+        name: 'Vue 3',
+        hint: 'нет доступа к unpkg?',
+        available: () => !!window.Vue,
+        setup(el) {
+            const V = window.Vue
+            el.innerHTML = '<ul><li v-for="r in rows" :key="r.id" class="r">{{ r.label }} <b v-if="r.id % 2 === 0">even</b><i v-for="t in r.tags">{{ t }}</i></li></ul>'
+            const s = V.reactive({ rows: makeRows() })
+            const app = V.createApp({ setup: () => V.toRefs(s) })
+            app.mount(el)
+            return {
+                flush: () => V.nextTick(),
+                update: (i, l) => { s.rows[i].label = l },
+                updateMany: (step, l) => { for (let i = 0; i < N; i += step) s.rows[i].label = l + i },
+                swap: (a, b) => { const t = s.rows[a]; s.rows[a] = s.rows[b]; s.rows[b] = t },
+                reverse: () => { s.rows.reverse() },
+                push: row => { s.rows.push(row) },
+                remove: i => { s.rows.splice(i, 1) },
+                replace: r => { s.rows = r },
+                destroy: () => { app.unmount(); el.innerHTML = '' },
+            }
+        },
+    })
+
+    // Knockout: observable / observableArray, обновления синхронные, ключей в foreach нет (сравнение массивов по ссылкам).
+    // Текст — через виртуальные элементы <!-- ko text: ... -->, чтобы DOM остался без лишних обёрток.
+    adapters.push({
+        name: 'Knockout',
+        hint: 'нет доступа к unpkg?',
+        available: () => !!window.ko,
+        setup(el) {
+            const ko = window.ko
+            const toKo = r => ({ id: r.id, label: ko.observable(r.label), tags: r.tags })
+            const rows = ko.observableArray(makeRows().map(toKo))
+            el.innerHTML = '<ul data-bind="foreach: rows"><li class="r"><!-- ko text: label --><!-- /ko --> <!-- ko if: id % 2 === 0 --><b>even</b><!-- /ko --><!-- ko foreach: tags --><i data-bind="text: $data"></i><!-- /ko --></li></ul>'
+            ko.applyBindings({ rows }, el)
+            return {
+                flush: () => {},
+                update: (i, l) => { rows()[i].label(l) },
+                updateMany: (step, l) => { const a = rows(); for (let i = 0; i < N; i += step) a[i].label(l + i) },
+                swap: (a, b) => { const c = rows().slice(); const t = c[a]; c[a] = c[b]; c[b] = t; rows(c) },
+                reverse: () => { rows.reverse() },
+                push: row => { rows.push(toKo(row)) },
+                remove: i => { rows.splice(i, 1) },
+                replace: r => { rows(r.map(toKo)) },
+                destroy: () => { ko.cleanNode(el); el.innerHTML = '' },
             }
         },
     })
@@ -103,7 +225,15 @@
         return { script, paint: performance.now() - t0 }
     }
 
+    // Подгружает ES-модульные библиотеки и возвращает список недоступных (для предупреждения в интерфейсе).
+    let prepared = null
+    function prepare() {
+        if (!prepared) prepared = Promise.all(adapters.map(a => a.load ? a.load().catch(e => { a.loadError = String(e && e.message || e) }) : null))
+        return prepared.then(() => adapters.filter(a => !a.available()).map(a => `${a.name} (${a.loadError || a.hint})`))
+    }
+
     async function run({ iterations = 15, warmup = 3, host, onProgress }) {
+        await prepare()
         const libs = adapters.filter(a => a.available())
         const boxes = libs.map((a) => {
             const d = document.createElement('div')
@@ -152,5 +282,5 @@
         return { scenarios: SCEN, libs: libs.map(a => a.name), results, warnings, stat: { median, iterations } }
     }
 
-    window.WexBench = { run, SCEN, median }
+    window.WexBench = { run, prepare, SCEN, median }
 })()

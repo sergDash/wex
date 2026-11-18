@@ -1,16 +1,16 @@
 <!DOCTYPE html>
-<html lang="ru"><head><meta charset="UTF-8"><title>Wex 3 vs petite-vue vs Preact</title>
+<html lang="ru"><head><meta charset="UTF-8"><title>Wex 3 vs petite-vue vs Preact vs Solid vs Alpine vs Vue 3 vs Knockout</title>
     <style>
-        body{font:14px/1.5 system-ui,sans-serif;margin:24px auto;max-width:980px;padding:0 16px;color:#111}
+        body{font:14px/1.5 system-ui,sans-serif;margin:24px auto;max-width:1400px;padding:0 16px;color:#111}
         h1{font-size:20px;margin:0 0 4px} .sub{color:#666;margin-bottom:16px}
         button{font:inherit;padding:8px 18px;border-radius:8px;border:1px solid #111;background:#111;color:#fff;cursor:pointer}
         button:disabled{opacity:.5} label{margin-left:14px}
         input{width:56px;font:inherit}
         #status{margin:12px 0;color:#444;min-height:21px}
         table{border-collapse:collapse;width:100%;margin:8px 0 28px} th,td{padding:6px 10px;border-bottom:1px solid #e5e5e5;text-align:left;vertical-align:middle}
-        th{font-size:12px;color:#666;font-weight:600} td.t{width:34%}
-        .cell{position:relative;min-width:150px} .bar{position:absolute;left:0;top:3px;bottom:3px;background:#dbeafe;border-radius:3px;z-index:0}
-        .cell span{position:relative;z-index:1;font-variant-numeric:tabular-nums} .cell small{color:#777;margin-left:6px}
+        th{font-size:12px;color:#666;font-weight:600} td.t{width:20%}
+        .cell{position:relative;min-width:110px} .bar{position:absolute;left:0;top:3px;bottom:3px;background:#dbeafe;border-radius:3px;z-index:0}
+        .cell span{position:relative;z-index:1;font-variant-numeric:tabular-nums} .cell small{position:relative;z-index:1;color:#777;margin-left:6px}
         .win .bar{background:#bbf7d0} .win span{font-weight:700;color:#15803d}
         .warn{background:#fef3c7;border:1px solid #f59e0b;padding:8px 12px;border-radius:8px;margin:8px 0}
         .box{height:160px;overflow:auto;contain:content;border:1px solid #ddd;margin:4px 0;font-size:11px}
@@ -19,10 +19,13 @@
     <script src="../wex.js"></script>
     <script src="https://unpkg.com/petite-vue@0.4.1/dist/petite-vue.umd.js"></script>
     <script src="https://unpkg.com/preact@10.24.3/dist/preact.umd.js"></script>
+    <script src="https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js"></script>
+    <script src="https://unpkg.com/knockout@3.5.1/build/output/knockout-latest.js"></script>
+    <!-- Solid и Alpine подгружаются из bench.js как ES-модули (esm.sh / jsdelivr) -->
     <script src="./bench.js"></script>
 </head><body>
-<h1>Wex 3 vs petite-vue vs Preact</h1>
-<div class="sub">Один и тот же список из 2000 строк (по 2 вложенных элемента и условный узел), одинаковый DOM, чередование библиотек, медиана по прогонам.</div>
+<h1>Wex 3 vs petite-vue vs Preact vs Solid vs Alpine vs Vue 3 vs Knockout</h1>
+<div class="sub">Один и тот же список из 2000 строк (по 2 вложенных элемента и условный узел), одинаковый textContent, чередование библиотек, медиана по прогонам.</div>
 <button id="go">Запустить</button>
 <label>прогонов <input id="it" type="number" value="15" min="3" max="60"></label>
 <div id="status">Держите вкладку на виду: без requestAnimationFrame замер «до отрисовки» не идёт.</div>
@@ -30,7 +33,11 @@
 <div id="tables"></div>
 <div id="host"></div>
 <p class="note">«Скрипт» = время от действия до готового DOM (JS + создание узлов). «До отрисовки» = то же + стили, раскладка и покраска до следующего кадра.
-    Зелёным отмечен лучший по медиане. Preact обновляет иммутабельно и перерисовывает дерево целиком (без memo), так он устроен; petite-vue и Wex реактивные.</p>
+    Зелёным отмечен лучший по медиане. Preact обновляет иммутабельно и перерисовывает дерево целиком (без memo), так он устроен; petite-vue, Vue 3, Solid, Alpine и Wex реактивные;
+    Knockout работает на observable.<br>
+    Нюансы: Solid — createStore + шаблоны solid-js/html (глобальной сборки у него нет), «замена всех данных» через reconcile по id; Alpine — ESM-сборка с ручным
+    Alpine.initTree (без document-wide MutationObserver, чтобы не искажать замеры остальных), текст строки в &lt;span x-text&gt;, т.к. интерполяции нет;
+    Knockout — без ключей в foreach, при замене объектов строки пересоздаются; Vue 3 — глобальная сборка vue.global.prod.js с in-DOM шаблоном.</p>
 <script>
     const $ = id => document.getElementById(id)
     const fmt = v => v < 1 ? v.toFixed(2) : v < 10 ? v.toFixed(1) : v.toFixed(0)
@@ -50,10 +57,8 @@
 
     $('go').onclick = async () => {
         $('go').disabled = true; $('warn').innerHTML = ''; $('tables').innerHTML = ''
-        const missing = []
-        if (!window.Wex) missing.push('Wex (соберите dist/wex.js)')
-        if (!window.PetiteVue) missing.push('petite-vue (нет доступа к unpkg?)')
-        if (!window.preact) missing.push('Preact (нет доступа к unpkg?)')
+        $('status').textContent = 'Загрузка библиотек…'
+        const missing = await WexBench.prepare()
         if (missing.length) $('warn').innerHTML = `<div class="warn">Не загружено: ${missing.join(', ')}. Будут сравниваться только доступные.</div>`
         const data = await WexBench.run({
             iterations: +$('it').value || 15, host: $('host'),
@@ -61,7 +66,7 @@
         })
         $('status').textContent = 'Готово.'
         $('tables').innerHTML = table('Скрипт (JS + DOM)', data, 'script') + table('До отрисовки (скрипт + стили + раскладка + покраска)', data, 'paint')
-        if (data.warnings.length) $('warn').innerHTML = data.warnings.map(w => `<div class="warn">${w}</div>`).join('')
+        if (data.warnings.length) $('warn').innerHTML += data.warnings.map(w => `<div class="warn">${w}</div>`).join('')
         $('go').disabled = false
     }
 </script></body></html>
