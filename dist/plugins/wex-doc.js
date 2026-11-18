@@ -1,11 +1,14 @@
 (function(global, factory) {
-	typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.WexDoc = {}));
+  typeof exports === 'object' && typeof module !== 'undefined' ?  factory(exports) :
+  typeof define === 'function' && define.amd ? define(['exports'], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.WexDoc = {})));
 })(this, function(exports) {
-	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-	// \0rolldown/runtime.js
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+// \0rolldown/runtime.js
 	var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
-	// src/utils.js
-	var import_ScopeX = (/* @__PURE__ */ __commonJSMin(((exports) => {
+
+// src/vendor/ScopeX.js
+	var require_ScopeX = /* @__PURE__ */ __commonJSMin(((exports) => {
 		(function(fn) {
 			var ScopeX = fn();
 			if (typeof exports !== "undefined") {
@@ -1848,10 +1851,18 @@
 			}
 			return ScopeX;
 		});
-	})))();
+	}));
+
+// src/utils.js
+	var import_ScopeX = require_ScopeX();
 	const isFunction = (v) => typeof v === "function";
-	// src/reactive.js
+
+// src/reactive.js
 	const RAW = Symbol("wex.raw");
+	let afterFlush = null;
+	const setAfterFlush = (fn) => {
+		afterFlush = fn;
+	};
 	let activeEffect = null;
 	let seq = 0;
 	const toRaw = (v) => v && typeof v === "object" && v[RAW] || v;
@@ -1893,7 +1904,7 @@
 		}
 		d.length = 0;
 	}
-	new Effect(null);
+	const probe = new Effect(null);
 	const searchers = {};
 	[
 		"includes",
@@ -1907,17 +1918,18 @@
 			return res;
 		};
 	});
-	// src/wex.js
+
+// src/wex.js
 	const config = {
 		autoForce: false,
 		debug: typeof window !== "undefined" && window.WEX_DEBUG !== void 0 ? !!window.WEX_DEBUG : typeof location !== "undefined" && /^(localhost|127\.|\[::1\])/.test(location.hostname),
 		maxDepth: 50
 	};
-	typeof window !== "undefined" && window.WEX_PROFILE && (window.WEX_STATS = {
+	const stats = typeof window !== "undefined" && window.WEX_PROFILE ? window.WEX_STATS = {
 		instantiate: 0,
 		list: 0,
 		rows: 0
-	});
+	} : null;
 	function View() {}
 	const reported = /* @__PURE__ */ new Set();
 	function report(title, ctx = {}) {
@@ -1940,7 +1952,7 @@
 		if (ctx.hint) console.log("Подсказка:", ctx.hint);
 		console.groupEnd();
 	}
-	new import_ScopeX.ScopeX({}, { filters: {} });
+	const globalScope = new import_ScopeX.ScopeX({}, { filters: {} });
 	const globalDirectives = /* @__PURE__ */ new Map();
 	let globalVer = 0;
 	function normDirective(compile, affect) {
@@ -1960,8 +1972,26 @@
 		globalDirectives.set(name, normDirective(compile, affect));
 		globalVer++;
 	}
-	new Function("u", "return import(u)");
-	// src/plugins/editor/wex-doc.js
+	let postQ = [];
+	let postDepth = 0;
+	function runPost() {
+		if (postDepth) return;
+		while (postQ.length) {
+			const q = postQ;
+			postQ = [];
+			q.forEach((f) => {
+				try {
+					f();
+				} catch (e) {
+					console.error(e);
+				}
+			});
+		}
+	}
+	setAfterFlush(runPost);
+	const nativeImport = new Function("u", "return import(u)");
+
+// src/plugins/editor/wex-doc.js
 	const FORMATS = [
 		"bold",
 		"italic",
@@ -2110,19 +2140,20 @@ html.dark :where(.wxe-doc) a{color:#60a5fa}
 		safeUrl,
 		esc
 	};
-	exports.FORMATS = FORMATS;
-	exports.addStyle = addStyle;
-	exports.classOk = classOk;
-	exports.clone = clone;
-	exports.emptyDoc = emptyDoc;
-	exports.esc = esc;
-	exports.isDoc = isDoc;
-	exports.protect = protect;
-	exports.registerNode = registerNode;
-	exports.renderChildren = renderChildren;
-	exports.renderDoc = renderDoc;
-	exports.renderNode = renderNode;
-	exports.renderNodes = renderNodes;
-	exports.safeUrl = safeUrl;
-	exports.stable = stable;
+
+exports.FORMATS = FORMATS;
+exports.addStyle = addStyle;
+exports.classOk = classOk;
+exports.clone = clone;
+exports.emptyDoc = emptyDoc;
+exports.esc = esc;
+exports.isDoc = isDoc;
+exports.protect = protect;
+exports.registerNode = registerNode;
+exports.renderChildren = renderChildren;
+exports.renderDoc = renderDoc;
+exports.renderNode = renderNode;
+exports.renderNodes = renderNodes;
+exports.safeUrl = safeUrl;
+exports.stable = stable;
 });

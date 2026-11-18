@@ -1,9 +1,12 @@
 (function(global, factory) {
-	typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.WexImageEditor = {}));
+  typeof exports === 'object' && typeof module !== 'undefined' ?  factory(exports) :
+  typeof define === 'function' && define.amd ? define(['exports'], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.WexImageEditor = {})));
 })(this, function(exports) {
-	// \0rolldown/runtime.js
+// \0rolldown/runtime.js
 	var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
-	// src/plugins/image-editor/wex-image-editor.js
+
+// src/plugins/image-editor/wex-image-editor.js
 	var require_wex_image_editor = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		/*!
 		* Wex Image Editor: расширяемое ядро редактора изображений (без зависимостей, не требует Wex).
@@ -1035,10 +1038,11 @@
 			if (typeof module !== "undefined" && module.exports) module.exports = ImageEditor;
 		})(typeof window !== "undefined" ? window : globalThis);
 	}));
-	Object.defineProperty(exports, "default", {
-		enumerable: true,
-		get: function() {
-			return require_wex_image_editor();
-		}
-	});
+
+Object.defineProperty(exports, "default", {
+  enumerable: true,
+  get: function () {
+    return require_wex_image_editor();
+  }
+});
 });

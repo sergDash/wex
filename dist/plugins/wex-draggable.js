@@ -1,5 +1,6 @@
 // \0rolldown/runtime.js
 var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
+
 // src/plugins/draggable/wex-draggable.js
 var require_wex_draggable = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	(function(global) {
@@ -1271,4 +1272,5 @@ var require_wex_draggable = /* @__PURE__ */ __commonJSMin(((exports, module) => 
 		if (typeof module !== "undefined" && module.exports) module.exports = createDraggable;
 	})(typeof window !== "undefined" ? window : globalThis);
 }));
+
 export default require_wex_draggable();

@@ -1,14 +1,14 @@
 (function(global, factory) {
-	typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.jqvm = {}));
+  typeof exports === 'object' && typeof module !== 'undefined' ?  factory(exports) :
+  typeof define === 'function' && define.amd ? define(['exports'], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.jqvm = {})));
 })(this, function(exports) {
-	Object.defineProperties(exports, {
-		__esModule: { value: true },
-		[Symbol.toStringTag]: { value: "Module" }
-	});
-	// \0rolldown/runtime.js
+Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toStringTag]: { value: 'Module' } });
+// \0rolldown/runtime.js
 	var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
-	// src/utils.js
-	var import_ScopeX = (/* @__PURE__ */ __commonJSMin(((exports) => {
+
+// src/vendor/ScopeX.js
+	var require_ScopeX = /* @__PURE__ */ __commonJSMin(((exports) => {
 		(function(fn) {
 			var ScopeX = fn();
 			if (typeof exports !== "undefined") {
@@ -1851,7 +1851,10 @@
 			}
 			return ScopeX;
 		});
-	})))();
+	}));
+
+// src/utils.js
+	var import_ScopeX = require_ScopeX();
 	const isNone = (v) => v === null || v === void 0;
 	const isFunction = (v) => typeof v === "function";
 	const isString = (v) => typeof v === "string";
@@ -1910,7 +1913,8 @@
 		});
 		return tpl.innerHTML;
 	}
-	// src/store.js
+
+// src/store.js
 	var VMLocalStorage = class {
 		static getKey = (key) => "JQVM_ls_" + key;
 		static getVal = (key) => {
@@ -1948,7 +1952,8 @@
 			});
 		};
 	};
-	// src/reactive.js
+
+// src/reactive.js
 	const RAW = Symbol("wex.raw");
 	const ITERATE = Symbol("wex.iterate");
 	const proxies = /* @__PURE__ */ new WeakMap();
@@ -2272,7 +2277,8 @@
 		}
 		return p;
 	}
-	// src/wex.js
+
+// src/wex.js
 	const WEX_VERSION = "3.0.0";
 	let $$2 = null;
 	const setDollar = (d) => {
@@ -3728,7 +3734,8 @@
 		const attrsExpr = opts.attrs || el && el.getAttribute && el.getAttribute("attrs") || null;
 		return createView(html, initState, el, attrsExpr);
 	}
-	// src/directives.js
+
+// src/directives.js
 	const $$1 = (...a) => getDollar()(...a);
 	var LScope = class LScope {
 		constructor(view, data) {
@@ -4027,7 +4034,8 @@
 	].forEach((n) => {
 		OPS[n] = bindBuiltin;
 	});
-	// src/dollar.js
+
+// src/dollar.js
 	const NON_BUBBLING = [
 		"focus",
 		"blur",
@@ -4562,7 +4570,8 @@
 		};
 		return $;
 	}
-	// src/index.js
+
+// src/index.js
 	function install($) {
 		$.fn.vm = function(initState) {
 			return createView(this[0].innerHTML, initState, this[0]);
@@ -4608,21 +4617,22 @@
 		window.Wex = api;
 		if (!window.jqvm) window.jqvm = api;
 	}
-	console.log("[Wex]: загружена версия: 3.0.0");
-	exports.$ = $;
-	exports.View = View;
-	exports.WEX_VERSION = WEX_VERSION;
-	exports.component = component;
-	exports.config = config;
-	exports.default = api;
-	exports.directive = directive;
-	exports.filter = filter;
-	exports.isReactive = isReactive;
-	exports.preloadComponent = preloadComponent;
-	exports.reactive = reactive;
-	exports.report = report;
-	exports.toRaw = toRaw;
-	exports.untrack = untrack;
-	exports.useJQuery = useJQuery;
-	exports.view = view;
+	console.log("[Wex]: загружена версия: " + WEX_VERSION);
+
+exports.$ = $;
+exports.View = View;
+exports.WEX_VERSION = WEX_VERSION;
+exports.component = component;
+exports.config = config;
+exports.default = api;
+exports.directive = directive;
+exports.filter = filter;
+exports.isReactive = isReactive;
+exports.preloadComponent = preloadComponent;
+exports.reactive = reactive;
+exports.report = report;
+exports.toRaw = toRaw;
+exports.untrack = untrack;
+exports.useJQuery = useJQuery;
+exports.view = view;
 });

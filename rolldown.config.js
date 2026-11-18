@@ -53,11 +53,11 @@ module.exports = (env = {}) => {
             name: library,
             exports: 'named',
             globals: externals,
+            minify: minimize,
         },
 
         external: Object.keys(externals),
         plugins: [...plugins],
-        minify: minimize,
 
         transform: {
             oxc: true,
