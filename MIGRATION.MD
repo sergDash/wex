@@ -1,5 +1,13 @@
 # Wex 3: быстрое ядро, интерфейс Wex 2, без jQuery
 
+## Основные изменения:
+- Вырезан jQuery 
+- Компилятор Wex стал oxc-compiler вместо Babel
+- Nodejs стал 26 вместо 18 
+- Вырезаны все внутренние зависимости Wex, он теперь node_modules-agnostic
+- Уменьшин вес основной сборки
+- Увеличен performance
+
 ## Файлы
 - `src/wex.js`: ядро (шаблоны, реактивные привязки, w-if / w-for / слоты / компоненты). Горячий путь, его не трогали.
 - `src/directives.js`: встроенные `w-class / w-value / w-bind / w-on / w-src / w-html / w-id / w-transition / w-disabled / w-checked / w-selected`
