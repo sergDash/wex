@@ -7,12 +7,12 @@ Wex - это реактивный фронтенд фреймворк с выс�
 
 Обычная версия [_141kb_]:
 ```html
-<script src="https://cdn.jsdelivr.net/gh/wemmbley/wex@oxc-compiler/dist/wex.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/wemmbley/wex@3.x/dist/wex.js"></script>
 ```
 
 Минифицированная версия [_71kb_]:
 ```html
-<script src="https://cdn.jsdelivr.net/gh/wemmbley/wex@oxc-compiler/dist/wex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/wemmbley/wex@3.x/dist/wex.min.js"></script>
 ```
 
 ## Спецификация
