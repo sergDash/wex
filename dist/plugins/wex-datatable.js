@@ -10,8 +10,12 @@
 */
 (function(global) {
 	"use strict";
-	const $ = global.jQuery;
+	const $ = global.jQuery || global.$;
 	const { component } = global.jqvm;
+	const hit = (e, sel) => {
+		const t = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+		return t && t.closest && t.closest(sel) || e.currentTarget;
+	};
 	const DEFAULTS = {
 		name: "DataTable",
 		perPage: 15,
@@ -398,14 +402,14 @@
 			state.loading = true;
 			state.error = "";
 			refresh(state);
-			$.when(send(state.url, buildPayload(state))).done((res) => {
+			Promise.resolve(send(state.url, buildPayload(state))).then((res) => {
 				if (token === state._token) apply(state, res);
-			}).fail(() => {
+			}).catch(() => {
 				if (token === state._token) {
 					state.rows = [];
 					state.error = "Failed to load data";
 				}
-			}).always(() => {
+			}).then(() => {
 				if (token === state._token) {
 					state.loading = false;
 					refresh(state);
@@ -498,11 +502,11 @@
 			instances.delete(state);
 		}).on("click", function(state) {
 			return function(e) {
-				if (state.panel.type && !$(e.target).closest(".dt-panel, .dt-open").length) state.panel = closedPanel();
+				if (state.panel.type && !(e.target.closest && e.target.closest(".dt-panel, .dt-open"))) state.panel = closedPanel();
 			};
 		}).on("click", ".dt-open", function(state) {
 			return function(e) {
-				const btn = e.currentTarget;
+				const btn = hit(e, ".dt-open");
 				const type = btn.getAttribute("data-panel");
 				const field = btn.getAttribute("data-field") || "";
 				if (state.panel.type === type && state.panel.field === field) {
@@ -511,7 +515,7 @@
 				}
 				const W = 290;
 				const card = btn.closest(".dt-card").getBoundingClientRect();
-				const th = btn.closest("th");
+				const th = btn.closest("[role=\"columnheader\"]");
 				let left, top;
 				if (th) {
 					const r = th.getBoundingClientRect();
@@ -548,7 +552,7 @@
 			};
 		}).on("change", ".dt-f-field", function(state) {
 			return function(e) {
-				state.form.field = e.currentTarget.value;
+				state.form.field = hit(e, ".dt-f-field").value;
 				state.form.operator = "equals";
 				state.form.value = "";
 				state.form.value2 = "";
@@ -556,7 +560,7 @@
 			};
 		}).on("change", ".dt-f-op", function(state) {
 			return function(e) {
-				state.form.operator = e.currentTarget.value;
+				state.form.operator = hit(e, ".dt-f-op").value;
 				syncForm(state);
 			};
 		}).on("click", ".dt-apply-filter", function(state) {
@@ -596,7 +600,7 @@
 			};
 		}).on("click", ".dt-remove", function(state) {
 			return function(e) {
-				const id = e.currentTarget.getAttribute("data-id");
+				const id = hit(e, ".dt-remove").getAttribute("data-id");
 				const i = state.activeFilters.findIndex((f) => String(f.id) === id);
 				if (i < 0) return;
 				state.activeFilters.splice(i, 1);
@@ -622,11 +626,12 @@
 			};
 		}).on("click", ".dt-sort", function(state) {
 			return function(e) {
-				const field = e.currentTarget.getAttribute("data-field");
+				const field = hit(e, ".dt-sort").getAttribute("data-field");
+				const shift = !!(e.shiftKey || e.originalEvent && e.originalEvent.shiftKey);
 				const cur = state.sort.find((s) => s.field === field);
 				const next = !cur ? "asc" : cur.dir === "asc" ? "desc" : null;
 				let list = [];
-				if (o.multiSort && e.shiftKey) {
+				if (o.multiSort && shift) {
 					list = state.sort.map((s) => ({
 						field: s.field,
 						dir: s.dir
@@ -648,27 +653,29 @@
 			};
 		}).on("click", ".dt-page", function(state) {
 			return function(e) {
-				const v = e.currentTarget.getAttribute("data-page");
+				const v = hit(e, ".dt-page").getAttribute("data-page");
 				const p = v === "prev" ? state.page - 1 : v === "next" ? state.page + 1 : parseInt(v, 10);
 				if (p) goPage(state, p);
 			};
 		}).on("change", ".dt-per-page", function(state) {
 			return function(e) {
-				state.perPage = parseInt(e.currentTarget.value, 10) || o.perPage;
+				state.perPage = parseInt(hit(e, ".dt-per-page").value, 10) || o.perPage;
 				reload(state, true);
 			};
 		}).on("change", ".dt-select", function(state) {
 			const v = this;
 			return function(e) {
-				state.selected[e.currentTarget.getAttribute("data-key")] = e.currentTarget.checked;
+				const el = hit(e, ".dt-select");
+				state.selected[el.getAttribute("data-key")] = el.checked;
 				refresh(state);
 				v.emit("select", Object.keys(state.selected).filter((k) => state.selected[k]));
 			};
 		}).on("change", ".dt-select-all", function(state) {
 			const v = this;
 			return function(e) {
+				const checked = hit(e, ".dt-select-all").checked;
 				state.rows.forEach((r) => {
-					state.selected[r._key] = e.currentTarget.checked;
+					state.selected[r._key] = checked;
 				});
 				refresh(state);
 				v.emit("select", Object.keys(state.selected).filter((k) => state.selected[k]));
@@ -676,8 +683,8 @@
 		});
 		component(o.name, view);
 		return function() {
-			rootView = this.view;
-			rootView.on("$route", function() {
+			rootView = this && this.view || null;
+			if (rootView) rootView.on("$route", function() {
 				instances.forEach(onRoute);
 			});
 			return {};

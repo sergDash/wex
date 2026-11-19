@@ -15,11 +15,16 @@
 // Свой пункт тулбара — объект прямо в массиве toolbar или Editor.register(name, def):
 //   { name, title, icon: '<svg…>', hotkey: 'mod+alt+k', isActive(ed) {…}, run(ed) {…} }
 
-import { directive } from '../../wex.js'
 import {
     FORMATS, esc, safeUrl, classOk, renderDoc, renderNodes,
-    stable, emptyDoc, isDoc, clone, protect, addStyle,
+    stable, emptyDoc, isDoc, clone, addStyle, docAffect
 } from './wex-doc.js'
+import * as Wex from '../../wex.js'
+
+const wexView = Wex.view || (window.Wex && window.Wex.view)
+const component = Wex.component
+
+const { directive } = Wex
 
 // =====================================================================
 // Парсер: DOM → JSON
@@ -344,7 +349,11 @@ export class Editor {
     }
 
     _selection() {
-        if (!this.root.isConnected) { this.destroy(); return } // элемент убрали без нашего ведома
+        if (!this.root.isConnected) {
+            if (this._wasConnected) this.destroy()
+            return
+        }
+        this._wasConnected = true
         if (this._sel()) this.updateToolbar()
     }
 
@@ -543,44 +552,36 @@ export class HotKeys {
 // =====================================================================
 // Интеграция с Wex
 // =====================================================================
+export function createEditorView(options = {}) {
+    return wexView('<!---->', () => ({ doc: null }))
+        .on('$init', function () { this.__subscribe() })
+        .on('$mount', function (state) {
+            const doc = isDoc(state.doc) ? clone(state.doc) : emptyDoc()
+            const ed = new Editor(this.root, Object.assign({}, options, { doc }))
+            this.__ed = ed                                  // на экземпляре, а не в замыкании: view клонируется
+            ed.on('change', next => this.emit('change', next))
+        })
+        .on('$change', function (state) {                   // doc изменили снаружи (загрузка с сервера)
+            const ed = this.__ed
+            if (!ed) return
+            const doc = isDoc(state.doc) ? clone(state.doc) : emptyDoc()
+            if (stable(doc) !== ed.key) ed.setDoc(doc)
+        })
+        .on('$unmount', function () {
+            if (this.__ed) { this.__ed.destroy(); this.__ed = null }
+        })
+}
 
-let settings = {}
+directive('w-editor', null, editorAffect)
 
-// как createRouter: view.plugin(createEditor({ ... }))
 export function createEditor(options = {}) {
     return function () {
         settings = options
+        // прямо на view: не зависит от того, в каком экземпляре ядра зарегистрирована глобальная директива
+        this.view.directive('w-editor', null, editorAffect)
+        this.view.directive('w-doc', null, docAffect)
     }
 }
-
-// Документ живёт в state. Редактор держит рабочую копию в DOM (иначе каждый символ
-// сбрасывал бы каретку): изменения уходят в state через assign, а значение из state
-// подтягивается обратно, только если оно изменилось снаружи.
-directive('w-editor', null, function ($el, attrs) {
-    const host = $el[0]
-    const path = attrs['w-editor']
-    const raw = this.scope.parse(path)
-    const doc = isDoc(raw) ? clone(raw) : emptyDoc()
-    const key = stable(doc)
-
-    let inst = host.__wexEditor
-    if (!inst) {
-        const editor = new Editor(host, Object.assign({}, settings, { doc }))
-        inst = host.__wexEditor = { editor, scope: this.scope, path, key }
-        editor.on('change', (next) => {
-            inst.key = stable(next)
-            inst.scope.assign(inst.path, next)
-        })
-        protect(host, () => { editor.destroy(); delete host.__wexEditor })
-        return
-    }
-
-    inst.scope = this.scope // scope может смениться между рендерами
-    if (key !== inst.key) {
-        inst.key = key
-        if (key !== inst.editor.key) inst.editor.setDoc(doc) // изменили снаружи (загрузка с сервера и т.п.)
-    }
-})
 
 // =====================================================================
 // Стили интерфейса. Без Quas, чтобы редактор не зависел от порядка подключения.

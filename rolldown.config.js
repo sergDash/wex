@@ -32,6 +32,15 @@ module.exports = (env = {}) => {
     const docs = !!env.docs;
     const dist = path.join(__dirname, 'dist');
 
+    // Rolldown передаёт в globals уже разрешённый абсолютный путь (/.../src/wex.js), а не строку из import,
+    // поэтому ключ externals ищем сначала точно, потом по имени файла ('../../wex.js' -> 'wex.js')
+    const makeGlobals = (externals) => (id) => {
+        if (externals[id]) return externals[id];
+        const base = id.split(/[\\/]/).pop();
+        const key = Object.keys(externals).find(k => k.split('/').pop() === base);
+        return key ? externals[key] : undefined;
+    };
+
     const createConfig = ({
                               entry,
                               filename,
@@ -52,7 +61,7 @@ module.exports = (env = {}) => {
             format: library ? 'umd' : 'es',
             name: library,
             exports: 'named',
-            globals: externals,
+            globals: makeGlobals(externals),
             minify: minimize,
         },
 
@@ -91,9 +100,10 @@ module.exports = (env = {}) => {
     });
 
     // Исправленная функция для плагинов (путь строится правильно без дублирования)
-    const createPluginConfigs = (entryPath, filename, library, externals = {}) => {
+    // entryFile нужен, когда исходник называется не так, как итоговый бандл (router.js -> wex-router.js)
+    const createPluginConfigs = (entryPath, filename, library, externals = {}, entryFile = filename) => {
         const options = {
-            entry: `src/plugins/${entryPath}/${filename}.js`,
+            entry: `src/plugins/${entryPath}/${entryFile}.js`,
             filename: `${filename}.js`,
             library,
             externals,
@@ -129,6 +139,18 @@ module.exports = (env = {}) => {
     );
     const draggable = createPluginConfigs('draggable', 'wex-draggable');
     const monsterMenu = createPluginConfigs('monster-menu', 'wex-monster-menu');
+    // Роутер: ядро и $wire берутся из глобала jqvm (общий экземпляр с основным движком),
+    // ключи externals должны совпадать с import-путями в src/plugins/router/router.js
+    const router = createPluginConfigs(
+        'router',
+        'wex-router',
+        'WexRouter',
+        {
+            '../../wex.js': 'jqvm',
+            '../../wire.js': 'jqvm',
+        },
+        'router'
+    );
 
     return [
         coreBundle, coreMin,
@@ -142,5 +164,6 @@ module.exports = (env = {}) => {
         ...imageEditor,
         ...draggable,
         ...monsterMenu,
+        ...router,
     ];
 };

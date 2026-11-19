@@ -1974,7 +1974,7 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 		if (v === null || typeof v !== "object") return false;
 		if (Array.isArray(v)) return true;
 		const p = Object.getPrototypeOf(v);
-		return p === Object.prototype || p === null;
+		return p === Object.prototype || p === null || p !== void 0 && Object.getPrototypeOf(p) === null;
 	};
 	const toRaw = (v) => v && typeof v === "object" && v[RAW] || v;
 	const isReactive = (v) => !!(v && typeof v === "object" && v[RAW]);
@@ -2280,11 +2280,11 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 
 // src/wex.js
 	const WEX_VERSION = "3.0.0";
-	let $$2 = null;
+	let $$3 = null;
 	const setDollar = (d) => {
-		$$2 = d;
+		$$3 = d;
 	};
-	const getDollar = () => $$2;
+	const getDollar = () => $$3;
 	const config = {
 		autoForce: false,
 		debug: typeof window !== "undefined" && window.WEX_DEBUG !== void 0 ? !!window.WEX_DEBUG : typeof location !== "undefined" && /^(localhost|127\.|\[::1\])/.test(location.hostname),
@@ -2505,7 +2505,7 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 		}
 	}
 	const planCache = /* @__PURE__ */ new Map();
-	const WFOR_RE = /^[a-z][a-zA-Z0-9_$]*(,[a-z][a-zA-Z0-9_$]*){0,1} in [a-z][a-zA-Z0-9_$]*( traceby [a-z][a-zA-Z0-9_$.]*)?/;
+	const WFOR_RE = /^\s*([A-Za-z_$][\w$]*)\s*(?:,\s*([A-Za-z_$][\w$]*))?\s+in\s+([\s\S]+?)(?:\s+traceby\s+([\s\S]+?))?\s*$/;
 	const BUILTIN = /* @__PURE__ */ new Set([
 		"w-class",
 		"w-value",
@@ -2569,11 +2569,15 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 		const tag = el.localName;
 		if (el.hasAttribute("w-for")) {
 			const attr = el.getAttribute("w-for");
-			if (!WFOR_RE.test(attr)) throw new Error("w-for should match formatter `value,key in data traceby id`!");
-			const [kv, , list, , trace] = attr.split(" ");
-			const [vname, kname] = kv.split(",");
+			const m = WFOR_RE.exec(attr);
+			if (!m) throw new Error("w-for should match formatter `value, index in data` (ключ: `traceby expr` или атрибут w-key=\"expr\")");
+			const vname = m[1];
+			const kname = m[2];
+			const list = m[3].trim();
+			const trace = (m[4] || el.getAttribute("w-key") || "").trim() || void 0;
 			const row = el.cloneNode(true);
 			row.removeAttribute("w-for");
+			row.removeAttribute("w-key");
 			parent.replaceChild(doc.createComment(" w-for "), el);
 			ops.push({
 				t: "for",
@@ -3089,6 +3093,7 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 		}
 		const comp = proto.clone();
 		comp.__path = parentPath.concat(op.name);
+		comp.__parent = view;
 		const outside = {};
 		comp.__outside = outside;
 		let mounted = false;
@@ -3183,7 +3188,7 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 			const inner = tpl.innerHTML;
 			const T = {
 				state: (init) => createView(inner, init),
-				vm: () => createView(inner, () => ({}))
+				vm: () => createView(inner, () => ({}), null, null, true)
 			};
 			const code = doc.querySelector("script[type=\"module\"]")?.textContent;
 			let v;
@@ -3229,7 +3234,7 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 	let viewSeq = 0;
 	function cloneState(value) {
 		if (Array.isArray(value)) return value.map(cloneState);
-		if (value && Object.getPrototypeOf(value) === Object.prototype) {
+		if (value && typeof value === "object" && (Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(Object.getPrototypeOf(value) || {}) === null)) {
 			const out = {};
 			Object.keys(value).forEach((k) => {
 				out[k] = cloneState(value[k]);
@@ -3238,10 +3243,10 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 		}
 		return value;
 	}
-	function createView(html, initState = {}, tplEl = null, attrsExpr = null) {
+	function createView(html, initState = {}, tplEl = null, attrsExpr = null, open = false) {
 		const id = tplEl && (tplEl.id || tplEl.getAttribute("w-id")) || "v" + ++viewSeq;
 		const view = new View();
-		const components = new Map(globalComponents);
+		const components = /* @__PURE__ */ new Map();
 		const directives = new Map(globalDirectives);
 		const ownFilters = {};
 		let scope = globalScope;
@@ -3265,12 +3270,14 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 		let prevented = false;
 		let gateId = -1;
 		let gateOpen = true;
+		let envVer = globalVer;
 		const invalidate = () => {
 			sigCache = null;
 			envCache = null;
+			envVer = globalVer;
 		};
 		const tick = {};
-		const hasListeners = (event) => handlers.some((h) => h.event === event) || !!($$2 && tplEl && $$2._data(tplEl, "events") && $$2._data(tplEl, "events")[event]);
+		const hasListeners = (event) => handlers.some((h) => h.event === event) || !!($$3 && tplEl && $$3._data(tplEl, "events") && $$3._data(tplEl, "events")[event]);
 		function emit(event, ...args) {
 			if (event[0] !== "$") {
 				if (outside) {
@@ -3285,12 +3292,12 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 				if (h.once) handlers.splice(handlers.indexOf(h), 1);
 				h.fn.call(view, state, ...args);
 			});
-			if ($$2 && tplEl) {
-				const evs = $$2._data(tplEl, "events");
-				if (evs && evs[event]) $$2(tplEl).triggerHandler(event, args);
+			if ($$3 && tplEl) {
+				const evs = $$3._data(tplEl, "events");
+				if (evs && evs[event]) $$3(tplEl).triggerHandler(event, args);
 			}
 		}
-		const wrapEvent = (e) => $$2 && $$2.event && $$2.event.fix ? $$2.event.fix(e) : e;
+		const wrapEvent = (e) => $$3 && $$3.event && $$3.event.fix ? $$3.event.fix(e) : e;
 		function attach(a) {
 			if (!root || a.listener) return;
 			const direct = NON_BUBBLING$1.indexOf(a.event) !== -1;
@@ -3387,8 +3394,11 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 					lower[k.toLowerCase()] = k;
 				});
 			}
-			const real = key in state ? key : lower[key.toLowerCase()];
-			if (!real) return;
+			let real = key in state ? key : lower[key.toLowerCase()];
+			if (!real) {
+				if (!open) return;
+				real = key;
+			}
 			const prev = toRaw(state[real]);
 			const next = toRaw(value);
 			if (prev === next) return;
@@ -3576,7 +3586,7 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 			return view;
 		}
 		function clone() {
-			const nv = createView(html, isFunction(initState) ? initState : cloneState(initState), tplEl, attrsExpr);
+			const nv = createView(html, isFunction(initState) ? initState : cloneState(initState), tplEl, attrsExpr, open);
 			each(fns, (action, name) => nv.fn(name, action));
 			handlers.forEach((h) => nv.__addHandler(h));
 			actions.forEach((a) => nv.on(...[
@@ -3584,9 +3594,7 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 				a.selector,
 				a.fn
 			].filter(Boolean)));
-			components.forEach((entry, name) => {
-				if (globalComponents.get(name) !== entry) nv.__setComponent(name, entry);
-			});
+			components.forEach((entry, name) => nv.__setComponent(name, entry));
 			directives.forEach((def, name) => {
 				if (globalDirectives.get(name) !== def) nv.__setDirective(name, def);
 			});
@@ -3633,13 +3641,13 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 				return view;
 			},
 			find(sel) {
-				if ($$2) return root ? $$2(root).find(sel) : $$2();
+				if ($$3) return root ? $$3(root).find(sel) : $$3();
 				return root ? Array.from(root.querySelectorAll(sel)) : [];
 			},
 			component(name, src, extra) {
 				components.set(name.toLowerCase(), normComponent(name, src, extra));
 				invalidate();
-				if (src instanceof View) view.on("$beforeDestroy", () => src.destroy());
+				if (src instanceof View && src !== view) view.on("$beforeDestroy", () => src.destroy());
 				return view;
 			},
 			directive(name, compile, affect) {
@@ -3663,7 +3671,8 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 				return view;
 			},
 			__scope: () => scope,
-			__component: (name) => components.get(name),
+			__component: (name) => components.get(name) || view.__parent && view.__parent.__component(name) || globalComponents.get(name),
+			__comps: () => components,
 			__setComponent(name, entry) {
 				components.set(name, entry);
 				invalidate();
@@ -3686,14 +3695,23 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 				} else setProp(key, value);
 			},
 			__sig() {
-				if (sigCache === null) sigCache = Array.from(components.keys()).sort().join() + "|" + Array.from(directives.keys()).sort().join();
+				if (envVer !== globalVer) invalidate();
+				if (sigCache === null) sigCache = Array.from(view.__env().comps.keys()).sort().join() + "|" + Array.from(directives.keys()).sort().join();
 				return sigCache;
 			},
 			__env() {
-				return envCache || (envCache = {
-					comps: new Map(components),
-					dirs: new Map(directives)
-				});
+				if (envVer !== globalVer) invalidate();
+				if (!envCache) {
+					const comps = new Map(globalComponents);
+					const chain = [];
+					for (let v = view; v; v = v.__parent) chain.unshift(v);
+					chain.forEach((v) => v.__comps().forEach((e, k) => comps.set(k, e)));
+					envCache = {
+						comps,
+						dirs: new Map(directives)
+					};
+				}
+				return envCache;
 			}
 		});
 		Object.defineProperties(view, {
@@ -3716,6 +3734,10 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 			__path: {
 				value: null,
 				writable: true
+			},
+			__parent: {
+				value: null,
+				writable: true
 			}
 		});
 		return view;
@@ -3736,7 +3758,7 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 	}
 
 // src/directives.js
-	const $$1 = (...a) => getDollar()(...a);
+	const $$2 = (...a) => getDollar()(...a);
 	var LScope = class LScope {
 		constructor(view, data) {
 			this.view = view;
@@ -3788,7 +3810,7 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 	function markupToHtml(out) {
 		if (isString(out)) return out;
 		const h = document.createElement("div");
-		$$1(h).append(out);
+		$$2(h).append(out);
 		return h.innerHTML;
 	}
 	function compileInst(html, view, data, block) {
@@ -3837,13 +3859,13 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 				run(revokes);
 				revokes = [];
 				const ctx = {
-					$root: $$1(view.root),
+					$root: $$2(view.root),
 					scope: new LScope(view, data),
 					view,
 					component
 				};
 				nodes.forEach((n, i) => {
-					const $n = $$1(n);
+					const $n = $$2(n);
 					if (affect) {
 						const r = affect.call(ctx, $n, attrs);
 						if (isFunction(r)) revokes.push(r);
@@ -3860,7 +3882,7 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 				run(revokes);
 				if (life && life.unmounted) nodes.forEach((n, i) => {
 					try {
-						life.unmounted.call({ view }, $$1(n), bag[i]);
+						life.unmounted.call({ view }, $$2(n), bag[i]);
 					} catch (e) {
 						console.error(e);
 					}
@@ -3871,7 +3893,7 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 	function bindDir(op, el, view, data, block) {
 		const def = view.__directive(op.name);
 		if (!def) return;
-		if (!$$1) {
+		if (!$$2) {
 			report(`Директива «${op.name}» требует jQuery: вызовите Wex.useJQuery($)`, {
 				level: "error",
 				view
@@ -3880,21 +3902,21 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 		}
 		let nodes = [el];
 		if (def.compile) {
-			const $el = $$1(el);
+			const $el = $$2(el);
 			const out = def.compile.call(legacyCtx(view, data, block), $el, op.attrs);
 			if (!isNone(out) && out !== $el && out !== el) nodes = instNodes(replaceWith(el, markupToHtml(out), view, data, block));
 		}
 		legacyAffect(block, view, data, nodes, op.attrs, def.affect, def.life, null);
 	}
 	function bindLegacyComp({ compile, affect }, op, host, view, data, block) {
-		if (!$$1) {
+		if (!$$2) {
 			report(`Компонент «${op.name}» требует jQuery: вызовите Wex.useJQuery($)`, {
 				level: "error",
 				view
 			});
 			return;
 		}
-		const $el = $$1(host);
+		const $el = $$2(host);
 		const slot = (locals) => {
 			if (!op.slotPlan) return [];
 			const d = locals ? childData(data, locals instanceof LScope ? locals.data : locals) : data;
@@ -4103,6 +4125,182 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 			return !!this._s || this.originalEvent.cancelBubble;
 		}
 	};
+	const toQuery = (data) => {
+		if (data == null || typeof data === "string") return data || "";
+		const sp = new URLSearchParams();
+		const add = (k, v) => {
+			if (v == null) return;
+			if (Array.isArray(v)) v.forEach((x, i) => add(typeof x === "object" ? k + "[" + i + "]" : k + "[]", x));
+			else if (typeof v === "object") Object.keys(v).forEach((n) => add(k + "[" + n + "]", v[n]));
+			else sp.append(k, v);
+		};
+		Object.keys(data).forEach((k) => add(k, data[k]));
+		return sp.toString();
+	};
+	function ajax(url, options) {
+		if (url && typeof url === "object") {
+			options = url;
+			url = options.url;
+		}
+		const o = Object.assign({
+			method: "GET",
+			headers: {},
+			cache: true,
+			timeout: 0
+		}, options || {});
+		const method = String(o.method || o.type || "GET").toUpperCase();
+		const ctx = o.context || null;
+		const lists = {
+			done: [],
+			fail: [],
+			always: []
+		};
+		let status = "pending";
+		let args = [];
+		let nativePromise = null;
+		const jq = {
+			readyState: 0,
+			status: 0,
+			statusText: "",
+			responseText: "",
+			responseJSON: void 0,
+			done(fn) {
+				lists.done.push(fn);
+				if (status === "resolved") fn.apply(ctx, args);
+				return jq;
+			},
+			fail(fn) {
+				lists.fail.push(fn);
+				if (status === "rejected") fn.apply(ctx, args);
+				return jq;
+			},
+			always(fn) {
+				lists.always.push(fn);
+				if (status !== "pending") fn.apply(ctx, args);
+				return jq;
+			},
+			state: () => status,
+			promise() {
+				return nativePromise || (nativePromise = new Promise((res, rej) => {
+					lists.done.push((d) => res(d));
+					lists.fail.push((x, t, e) => rej(Object.assign(/* @__PURE__ */ new Error(t + (e ? ": " + e : "")), {
+						jqXHR: x,
+						textStatus: t
+					})));
+					if (status === "resolved") res(args[0]);
+					if (status === "rejected") rej(new Error(args[1]));
+				}));
+			},
+			then(a, b) {
+				return jq.promise().then(a, b);
+			},
+			catch(b) {
+				return jq.promise().catch(b);
+			},
+			abort(text) {
+				if (status === "pending") {
+					xhr.abort();
+					finish(false, "abort", text || "abort");
+				}
+				return jq;
+			},
+			getResponseHeader: (name) => xhr.getResponseHeader(name),
+			getAllResponseHeaders: () => xhr.getAllResponseHeaders(),
+			setRequestHeader(n, v) {
+				o.headers[n] = v;
+				return jq;
+			}
+		};
+		const finish = (ok, textStatus, errorOrData) => {
+			if (status !== "pending") return;
+			status = ok ? "resolved" : "rejected";
+			args = ok ? [
+				errorOrData,
+				textStatus,
+				jq
+			] : [
+				jq,
+				textStatus,
+				errorOrData
+			];
+			const run = (list) => list.slice().forEach((fn) => {
+				try {
+					fn.apply(ctx, args);
+				} catch (e) {
+					console.error(e);
+				}
+			});
+			run(ok ? lists.done : lists.fail);
+			run(lists.always);
+			const cb = ok ? o.success : o.error;
+			if (typeof cb === "function") cb.apply(ctx, args);
+			if (typeof o.complete === "function") o.complete.call(ctx, jq, textStatus);
+		};
+		const xhr = new XMLHttpRequest();
+		let target = url == null ? o.url : url;
+		let body = null;
+		const hasBody = method !== "GET" && method !== "HEAD";
+		let contentType = o.contentType === false ? false : o.contentType || (hasBody ? "application/x-www-form-urlencoded; charset=UTF-8" : void 0);
+		if (o.data != null) {
+			if (!hasBody) {
+				const q = toQuery(o.data);
+				if (q) target += (target.indexOf("?") === -1 ? "?" : "&") + q;
+			} else if (typeof o.data === "string" || typeof FormData !== "undefined" && o.data instanceof FormData || typeof Blob !== "undefined" && o.data instanceof Blob) body = o.data;
+			else if (contentType && contentType.indexOf("json") !== -1) body = JSON.stringify(o.data);
+			else body = toQuery(o.data);
+			if (typeof FormData !== "undefined" && body instanceof FormData) contentType = false;
+		}
+		if (o.cache === false && !hasBody) target += (target.indexOf("?") === -1 ? "?" : "&") + "_=" + Date.now();
+		xhr.open(method, target, true, o.username, o.password);
+		if (o.xhrFields) Object.assign(xhr, o.xhrFields);
+		if (o.withCredentials) xhr.withCredentials = true;
+		const headers = Object.assign({}, o.headers);
+		const has = (n) => Object.keys(headers).some((k) => k.toLowerCase() === n.toLowerCase());
+		if (contentType && body != null && !has("content-type")) headers["Content-Type"] = contentType;
+		if (!has("accept")) headers.Accept = o.dataType === "json" ? "application/json, text/javascript, */*; q=0.01" : "*/*";
+		if (!has("x-requested-with") && !/^[a-z]+:\/\//i.test(target)) headers["X-Requested-With"] = "XMLHttpRequest";
+		Object.keys(headers).forEach((k) => xhr.setRequestHeader(k, headers[k]));
+		if (o.timeout) xhr.timeout = o.timeout;
+		xhr.onload = () => {
+			jq.readyState = 4;
+			jq.status = xhr.status;
+			jq.statusText = xhr.statusText;
+			jq.responseText = xhr.responseText;
+			const ct = xhr.getResponseHeader("Content-Type") || "";
+			const ok = xhr.status >= 200 && xhr.status < 300 || xhr.status === 304;
+			let data = xhr.responseText;
+			if ((o.dataType || (/json/.test(ct) ? "json" : /xml/.test(ct) ? "xml" : "text")) === "json" || !o.dataType && data && /^\s*[\[{]/.test(data) && /json/.test(ct)) {
+				if (data === "") data = void 0;
+				else try {
+					data = JSON.parse(data);
+					jq.responseJSON = data;
+				} catch (e) {
+					if (ok) {
+						finish(false, "parsererror", e);
+						return;
+					}
+					data = void 0;
+				}
+			} else if (xhr.status === 204) data = void 0;
+			if (ok) finish(true, xhr.status === 204 ? "nocontent" : xhr.status === 304 ? "notmodified" : "success", data);
+			else {
+				if (data !== void 0 && jq.responseJSON === void 0 && /json/.test(ct)) try {
+					jq.responseJSON = JSON.parse(xhr.responseText);
+				} catch (e) {}
+				finish(false, "error", xhr.statusText);
+			}
+		};
+		xhr.onerror = () => {
+			jq.readyState = 4;
+			finish(false, "error", "");
+		};
+		xhr.ontimeout = () => {
+			jq.readyState = 4;
+			finish(false, "timeout", "timeout");
+		};
+		xhr.send(body);
+		return jq;
+	}
 	function createDollar() {
 		class W {
 			constructor(nodes) {
@@ -4538,12 +4736,49 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 				return fire(this, type, extra, false);
 			}
 		});
+		$.ajax = ajax;
+		$.get = (url, data, success, dataType) => typeof data === "function" ? ajax({
+			url,
+			success: data,
+			dataType: success
+		}) : ajax({
+			url,
+			data,
+			success,
+			dataType
+		});
+		$.getJSON = (url, data, success) => typeof data === "function" ? ajax({
+			url,
+			success: data,
+			dataType: "json"
+		}) : ajax({
+			url,
+			data,
+			success,
+			dataType: "json"
+		});
+		$.post = (url, data, success, dataType) => typeof data === "function" ? ajax({
+			url,
+			method: "POST",
+			success: data,
+			dataType: success
+		}) : ajax({
+			url,
+			method: "POST",
+			data,
+			success,
+			dataType
+		});
 		$.event = { fix };
 		$._data = (el, key) => key === "events" ? el.__wexEv : void 0;
 		$.noop = () => {};
 		$.isFunction = (v) => typeof v === "function";
 		$.isArray = Array.isArray;
-		$.isPlainObject = (v) => !!v && typeof v === "object" && (Object.getPrototypeOf(v) === Object.prototype || Object.getPrototypeOf(v) === null);
+		$.isPlainObject = (v) => {
+			if (!v || typeof v !== "object") return false;
+			const p = Object.getPrototypeOf(v);
+			return p === null || p === Object.prototype || Object.getPrototypeOf(p) === null;
+		};
 		$.trim = (s) => s == null ? "" : String(s).trim();
 		$.contains = (a, b) => a !== b && a.contains(b);
 		$.parseHTML = (html) => parseHTML(html);
@@ -4570,6 +4805,203 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 		};
 		return $;
 	}
+
+// src/wire.js
+	var strategies = {
+		drop: function(serverState, key, incoming) {
+			serverState[key] = incoming;
+		},
+		push: function(serverState, key, incoming) {
+			var current = serverState[key];
+			if (Array.isArray(current) && Array.isArray(incoming)) serverState[key] = current.concat(incoming);
+			else serverState[key] = incoming;
+		},
+		nomerge: function() {},
+		error: function(serverState, key, incoming, failHandlers) {
+			var current = serverState[key];
+			if (!(current === null || current === void 0 || Array.isArray(current) && current.length === 0 || typeof current === "object" && !Array.isArray(current) && Object.keys(current).length === 0)) {
+				var err = /* @__PURE__ */ new Error("wire:error — ключ \"" + key + "\" уже содержит данные");
+				err.strategy = "error";
+				err.key = key;
+				failHandlers.forEach(function(fn) {
+					fn(err);
+				});
+				return;
+			}
+			serverState[key] = incoming;
+		},
+		merge: function(serverState, key, incoming) {
+			var current = serverState[key];
+			if (Array.isArray(current) && Array.isArray(incoming)) serverState[key] = current.concat(incoming);
+			else serverState[key] = incoming;
+		}
+	};
+	function noopAjax() {
+		return {
+			done: function() {
+				return this;
+			},
+			fail: function() {
+				return this;
+			},
+			always: function() {
+				return this;
+			}
+		};
+	}
+	function defaultAjax(options) {
+		if (typeof $ !== "undefined" && $.ajax && $.fn && $.fn.jquery && $.fn.jquery !== "wex-$") return $.ajax(options);
+		return ajax(options);
+	}
+	function createWire(options) {
+		options = options || {};
+		var ajaxFn = options.ajax || defaultAjax;
+		var csrf = options.csrf || null;
+		var pending = {};
+		var listeners = {};
+		function emit(event) {
+			var args = Array.prototype.slice.call(arguments, 1);
+			(listeners[event] || []).forEach(function(fn) {
+				fn.apply(null, args);
+			});
+		}
+		function on(event, fn) {
+			if (!listeners[event]) listeners[event] = [];
+			listeners[event].push(fn);
+			return wire;
+		}
+		var prefetched = {};
+		var ttl = options.prefetchTtl || 3e4;
+		function buildOptions(method, url, data) {
+			var o = {
+				url,
+				method: method.toUpperCase(),
+				headers: {}
+			};
+			if (csrf) o.headers["X-CSRF-TOKEN"] = csrf;
+			if (data && (method === "post" || method === "put")) {
+				o.data = JSON.stringify(data);
+				o.contentType = "application/json";
+			}
+			return o;
+		}
+		function prefetch(url) {
+			var hit = prefetched[url];
+			if (hit && Date.now() - hit.at < ttl) return wire;
+			var entry = {
+				req: ajaxFn(buildOptions("get", url)),
+				at: Date.now()
+			};
+			prefetched[url] = entry;
+			entry.req.fail(function() {
+				if (prefetched[url] === entry) delete prefetched[url];
+			});
+			return wire;
+		}
+		function takePrefetched(url) {
+			var hit = prefetched[url];
+			if (!hit) return null;
+			delete prefetched[url];
+			return Date.now() - hit.at < ttl ? hit.req : null;
+		}
+		function request(method, url, data, strategy) {
+			strategy = strategy || "drop";
+			var doneHandlers = [];
+			var failHandlers = [];
+			var alwaysHandlers = [];
+			var target = null;
+			var chain = {
+				to: function(ref, key) {
+					target = key !== void 0 ? {
+						__wire: true,
+						obj: ref,
+						key
+					} : ref;
+					return chain;
+				},
+				before: function(fn) {
+					fn();
+					return chain;
+				},
+				done: function(fn) {
+					doneHandlers.push(fn);
+					return chain;
+				},
+				fail: function(fn) {
+					failHandlers.push(fn);
+					return chain;
+				},
+				always: function(fn) {
+					alwaysHandlers.push(fn);
+					return chain;
+				},
+				withState: function(s) {
+					return chain;
+				}
+			};
+			pending[url] = true;
+			emit("$wiring", "start", url);
+			var cached = method === "get" ? takePrefetched(url) : null;
+			var req = cached || ajaxFn(buildOptions(method, url, data));
+			function attach() {
+				req.done(function(responseData) {
+					if (target) {
+						if (target.__wire) (strategies[strategy] || strategies.drop)(target.obj, target.key, responseData, failHandlers);
+						else if (Array.isArray(target)) {
+							if (strategy !== "push") target.length = 0;
+							if (Array.isArray(responseData)) Array.prototype.push.apply(target, responseData);
+							else target.push(responseData);
+						} else if (target && typeof target === "object") {
+							if (strategy !== "push") Object.keys(target).forEach(function(k) {
+								delete target[k];
+							});
+							if (responseData && typeof responseData === "object") Object.assign(target, responseData);
+							else if (typeof console !== "undefined") console.warn("[wire] " + url + " вернул не объект/массив, а " + typeof responseData + ": записывать в .to() нечего");
+						} else if (typeof console !== "undefined") console.warn("[wire] .to() получил " + Object.prototype.toString.call(target) + ": данные из " + url + " не записаны");
+					}
+					doneHandlers.forEach(function(fn) {
+						fn(responseData);
+					});
+				});
+				req.fail(function(jqXHR, textStatus) {
+					if (typeof console !== "undefined") console.error("[wire] " + method.toUpperCase() + " " + url + " → " + (jqXHR && jqXHR.status) + " " + textStatus);
+					failHandlers.forEach(function(fn) {
+						fn(jqXHR, textStatus);
+					});
+				});
+				req.always(function() {
+					delete pending[url];
+					emit("$wiring", "end", url);
+					alwaysHandlers.forEach(function(fn) {
+						fn();
+					});
+				});
+			}
+			if (cached) Promise.resolve().then(attach);
+			else attach();
+			return chain;
+		}
+		function wire(url) {
+			if (url === void 0) return Object.keys(pending).length > 0;
+			return !!pending[url];
+		}
+		wire.get = function(url, strategy) {
+			return request("get", url, null, strategy);
+		};
+		wire.post = function(url, data, strategy) {
+			return request("post", url, data, strategy);
+		};
+		wire.put = function(url, data, strategy) {
+			return request("put", url, data, strategy);
+		};
+		wire.delete = function(url, strategy) {
+			return request("delete", url, null, strategy);
+		};
+		wire.prefetch = prefetch;
+		wire.on = on;
+		return wire;
+	}
+	const $wire = createWire();
 
 // src/index.js
 	function install($) {
@@ -4602,10 +5034,13 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 		View,
 		VERSION: WEX_VERSION,
 		__flush: flush,
-		$: mini
+		$: mini,
+		$wire,
+		createWire
 	};
-	const $ = mini;
+	const $$1 = mini;
 	if (typeof window !== "undefined") {
+		if (!window.$wire) window.$wire = $wire;
 		const jq = window.jQuery;
 		if (jq && jq.fn && jq.fn.jquery && jq.fn.jquery !== "wex-$") {
 			useJQuery(jq);
@@ -4619,15 +5054,18 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 	}
 	console.log("[Wex]: загружена версия: " + WEX_VERSION);
 
-exports.$ = $;
+exports.$ = $$1;
+exports.$wire = $wire;
 exports.View = View;
 exports.WEX_VERSION = WEX_VERSION;
 exports.component = component;
 exports.config = config;
+exports.createWire = createWire;
 exports.default = api;
 exports.directive = directive;
 exports.filter = filter;
 exports.isReactive = isReactive;
+exports.noopAjax = noopAjax;
 exports.preloadComponent = preloadComponent;
 exports.reactive = reactive;
 exports.report = report;

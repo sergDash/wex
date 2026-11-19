@@ -7,8 +7,8 @@
     <script>try{const t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.classList.toggle('dark',t==='dark')}catch(e){}</script>
     <script>window.Quas = { AutoDarkMode: false };</script>
     <script src="https://cdn.jsdelivr.net/gh/wemmbley/quas@master/Source/Quas.js"></script>
-    <script src="https://unpkg.com/jquery@3.7.1/dist/jquery.min.js"></script>
     <script src="../../../dist/wex.js"></script>
+    <script src="../../../dist/plugins/wex-router.min.js"></script>
     <script src="../../../src/plugins/datatable/wex-datatable.js"></script>
 </head>
 <body class="min-h-screen bg-slate-100 p-4 antialiased sm:p-8 dark:bg-slate-950">
@@ -25,7 +25,7 @@
 <script src="Renderers.js"></script>
 <script src="ThemeChanger.js"></script>
 <script>
-    const { createRouter } = jqvm
+    const { createRouter } = WexRouter
     const router = createRouter({ mode: 'hash', routes: { home: '/' } })
     const dt = createDataTable({
         renderers: { StatusBadge, Thumb, RowActions },

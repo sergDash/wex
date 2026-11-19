@@ -1,4 +1,4 @@
-export const WEX_VERSION = '3.0.0'
+export const WEX_VERSION = '3.1.1'
 
 import { ScopeX } from './vendor/ScopeX'
 import { isNone, isFunction, isString, isObject, isEqual, getNodeAttrs, camelCase, parseKey, parseMustache, sanitizeSvg } from './utils.js'
@@ -187,7 +187,8 @@ export function ev(view, h, data, ctx) {
 
 // ---------- план шаблона: разбирается один раз ----------
 const planCache = new Map()   // сигнатура реестра -> Map(html -> plan)
-const WFOR_RE = /^[a-z][a-zA-Z0-9_$]*(,[a-z][a-zA-Z0-9_$]*){0,1} in [a-z][a-zA-Z0-9_$]*( traceby [a-z][a-zA-Z0-9_$.]*)?/
+// w-for="todo in todos" | "todo, index in todos" | "... traceby todo.id"; ключ также можно задать атрибутом w-key="todo.id"
+const WFOR_RE = /^\s*([A-Za-z_$][\w$]*)\s*(?:,\s*([A-Za-z_$][\w$]*))?\s+in\s+([\s\S]+?)(?:\s+traceby\s+([\s\S]+?))?\s*$/
 const BUILTIN = new Set(['w-class', 'w-value', 'w-disabled', 'w-checked', 'w-selected', 'w-bind', 'w-src', 'w-html', 'w-id', 'w-on', 'w-transition'])
 
 export function getPlan(html, view) {
@@ -242,11 +243,15 @@ function planElement(el, path, ops, env, parent) {
 
   if (el.hasAttribute('w-for')) {
     const attr = el.getAttribute('w-for')
-    if (!WFOR_RE.test(attr)) throw new Error('w-for should match formatter `value,key in data traceby id`!')
-    const [kv, , list, , trace] = attr.split(' ')
-    const [vname, kname] = kv.split(',')
+    const m = WFOR_RE.exec(attr)
+    if (!m) throw new Error('w-for should match formatter `value, index in data` (ключ: `traceby expr` или атрибут w-key="expr")')
+    const vname = m[1]
+    const kname = m[2]
+    const list = m[3].trim()
+    const trace = (m[4] || el.getAttribute('w-key') || '').trim() || undefined
     const row = el.cloneNode(true)
     row.removeAttribute('w-for')
+    row.removeAttribute('w-key')
     parent.replaceChild(doc.createComment(' w-for '), el)
     ops.push({ t: 'for', path, vname, kname, list, trace, listH: { expr: list }, traceH: trace ? { expr: trace } : null, sub: makePlan(fragOf(row), env) })
     return
@@ -684,6 +689,7 @@ export function mountComponent(proto, op, host, view, data, block) {
   }
   const comp = proto.clone()
   comp.__path = parentPath.concat(op.name)
+  comp.__parent = view
   const outside = {}
   comp.__outside = outside
   let mounted = false
@@ -763,7 +769,7 @@ function startLoad(entry, url) {
     if (!tpl) throw new Error(`Wex: no <template> in ${url}`)
     const inner = tpl.innerHTML
     // то, что раньше было $tpl: объект с .state(init) и .vm()
-    const T = { state: init => createView(inner, init), vm: () => createView(inner, () => ({})) }
+    const T = { state: init => createView(inner, init), vm: () => createView(inner, () => ({}), null, null, true) }
     const code = doc.querySelector('script[type="module"]')?.textContent
     let v
     if (code) {
@@ -793,7 +799,7 @@ export function preloadComponent(url) { return loadRemote(url) }
 let viewSeq = 0
 function cloneState(value) {
   if (Array.isArray(value)) return value.map(cloneState)
-  if (value && Object.getPrototypeOf(value) === Object.prototype) {
+  if (value && typeof value === 'object' && (Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(Object.getPrototypeOf(value) || {}) === null)) {
     const out = {}
     Object.keys(value).forEach((k) => { out[k] = cloneState(value[k]) })
     return out
@@ -801,10 +807,11 @@ function cloneState(value) {
   return value
 }
 
-export function createView(html, initState = {}, tplEl = null, attrsExpr = null) {
+// open: пропы создают ключи state (для удалённых компонентов без <script>, у которых нет своего начального state)
+export function createView(html, initState = {}, tplEl = null, attrsExpr = null, open = false) {
   const id = (tplEl && (tplEl.id || tplEl.getAttribute('w-id'))) || ('v' + (++viewSeq))
   const view = new View()
-  const components = new Map(globalComponents)
+  const components = new Map()   // только свои; глобальные и родительские ищутся при обращении (нужно для рекурсивных компонентов)
   const directives = new Map(globalDirectives)
   const ownFilters = {}
   let scope = globalScope
@@ -831,7 +838,8 @@ export function createView(html, initState = {}, tplEl = null, attrsExpr = null)
   let gateId = -1
   let gateOpen = true
 
-  const invalidate = () => { sigCache = null; envCache = null }
+  let envVer = globalVer
+  const invalidate = () => { sigCache = null; envCache = null; envVer = globalVer }
   const tick = {}   // «что-то изменилось в state»: на него подписаны affect/updated старых директив
 
   // ---- события ----
@@ -936,8 +944,8 @@ export function createView(html, initState = {}, tplEl = null, attrsExpr = null)
   }
   function setProp(key, value, lower) {
     if (!lower) { lower = {}; Object.keys(state).forEach((k) => { lower[k.toLowerCase()] = k }) }
-    const real = key in state ? key : lower[key.toLowerCase()]
-    if (!real) return
+    let real = key in state ? key : lower[key.toLowerCase()]
+    if (!real) { if (!open) return; real = key }
     const prev = toRaw(state[real])
     const next = toRaw(value)
     if (prev === next) return
@@ -1129,11 +1137,11 @@ export function createView(html, initState = {}, tplEl = null, attrsExpr = null)
   }
 
   function clone() {
-    const nv = createView(html, isFunction(initState) ? initState : cloneState(initState), tplEl, attrsExpr)
+    const nv = createView(html, isFunction(initState) ? initState : cloneState(initState), tplEl, attrsExpr, open)
     each(fns, (action, name) => nv.fn(name, action))
     handlers.forEach(h => nv.__addHandler(h))
     actions.forEach(a => nv.on(...[a.event, a.selector, a.fn].filter(Boolean)))
-    components.forEach((entry, name) => { if (globalComponents.get(name) !== entry) nv.__setComponent(name, entry) })
+    components.forEach((entry, name) => nv.__setComponent(name, entry))
     directives.forEach((def, name) => { if (globalDirectives.get(name) !== def) nv.__setDirective(name, def) })
     Object.keys(ownFilters).forEach(k => nv.filter(k, ownFilters[k]))
     handlers.forEach((h) => { if (h.event === '$clone') h.fn.call(view, state, nv) })
@@ -1166,7 +1174,7 @@ export function createView(html, initState = {}, tplEl = null, attrsExpr = null)
     component(name, src, extra) {
       components.set(name.toLowerCase(), normComponent(name, src, extra))
       invalidate()
-      if (src instanceof View) view.on('$beforeDestroy', () => src.destroy())
+      if (src instanceof View && src !== view) view.on('$beforeDestroy', () => src.destroy())
       return view
     },
     directive(name, compile, affect) { directives.set(name, normDirective(compile, affect)); invalidate(); return view },
@@ -1182,7 +1190,8 @@ export function createView(html, initState = {}, tplEl = null, attrsExpr = null)
     },
     // ---- внутреннее ----
     __scope: () => scope,
-    __component: name => components.get(name),
+    __component: name => components.get(name) || (view.__parent && view.__parent.__component(name)) || globalComponents.get(name),
+    __comps: () => components,
     __setComponent(name, entry) { components.set(name, entry); invalidate() },
     __directive: name => directives.get(name),
     __tick: tick,
@@ -1192,11 +1201,21 @@ export function createView(html, initState = {}, tplEl = null, attrsExpr = null)
     __delegate: delegate,
     __setProp(key, value) { if (!state) { outside = outside || {}; outside[key] = value } else setProp(key, value) },
     __sig() {
-      if (sigCache === null) sigCache = Array.from(components.keys()).sort().join() + '|' + Array.from(directives.keys()).sort().join()
+      if (envVer !== globalVer) invalidate()
+      if (sigCache === null) sigCache = Array.from(view.__env().comps.keys()).sort().join() + '|' + Array.from(directives.keys()).sort().join()
       return sigCache
     },
     __env() {
-      return envCache || (envCache = { comps: new Map(components), dirs: new Map(directives) })
+      if (envVer !== globalVer) invalidate()
+      if (!envCache) {
+        // глобальные, затем родительские (от внешнего к внутреннему), затем свои
+        const comps = new Map(globalComponents)
+        const chain = []
+        for (let v = view; v; v = v.__parent) chain.unshift(v)
+        chain.forEach(v => v.__comps().forEach((e, k) => comps.set(k, e)))
+        envCache = { comps, dirs: new Map(directives) }
+      }
+      return envCache
     },
   })
   Object.defineProperties(view, {
@@ -1210,6 +1229,7 @@ export function createView(html, initState = {}, tplEl = null, attrsExpr = null)
     __outside: { get: () => outside, set: (v) => { outside = v } },
     __slot: { value: null, writable: true },
     __path: { value: null, writable: true },
+    __parent: { value: null, writable: true },
   })
   return view
 }

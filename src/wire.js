@@ -1,3 +1,5 @@
+import { ajax as builtinAjax } from './dollar.js'
+
 var strategies = {
   drop: function(serverState, key, incoming) {
     serverState[key] = incoming
@@ -14,8 +16,8 @@ var strategies = {
   error: function(serverState, key, incoming, failHandlers) {
     var current = serverState[key]
     var isEmpty = current === null || current === undefined
-      || (Array.isArray(current) && current.length === 0)
-      || (typeof current === 'object' && !Array.isArray(current) && Object.keys(current).length === 0)
+        || (Array.isArray(current) && current.length === 0)
+        || (typeof current === 'object' && !Array.isArray(current) && Object.keys(current).length === 0)
     if (!isEmpty) {
       var err = new Error('wire:error — ключ "' + key + '" уже содержит данные')
       err.strategy = 'error'
@@ -46,9 +48,11 @@ function noopAjax() {
   }
 }
 
+// Wex 3: jQuery больше не нужен. Если на странице настоящий jQuery, берём его $.ajax,
+// иначе встроенный ajax (XMLHttpRequest с тем же интерфейсом jqXHR: done / fail / always).
 function defaultAjax(options) {
-  if (typeof $ !== 'undefined' && $.ajax) return $.ajax(options)
-  throw new Error('$wire: jQuery не найден. Подключите jQuery или передайте ajax в опциях createWire.')
+  if (typeof $ !== 'undefined' && $.ajax && $.fn && $.fn.jquery && $.fn.jquery !== 'wex-$') return $.ajax(options)
+  return builtinAjax(options)
 }
 
 function createWire(options) {

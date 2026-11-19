@@ -15,6 +15,10 @@ Wex - это реактивный фронтенд фреймворк с выс�
 <script src="https://cdn.jsdelivr.net/gh/wemmbley/wex@oxc-compiler/dist/wex.min.js"></script>
 ```
 
+## Спецификация
+
+Полная спецификация движка находится в файле `SPEC.MD`.
+
 ## ToDo пример
 
 ```html 

@@ -12,7 +12,13 @@
 //            link { url, children }, linebreak
 //   meta:    { classes: ['text-sm', ...] }  необязательное, только для рендера в UI
 
-import { directive, report } from '../../wex.js'
+import * as Wex from '../../wex.js'
+
+const wexView = Wex.view || (window.Wex && window.Wex.view)
+const component = Wex.component
+
+const { directive } = Wex
+const report = Wex.report || ((msg) => console.error('[WexDoc]', msg))
 
 export const FORMATS = ['bold', 'italic', 'underline', 'strikethrough', 'code', 'subscript', 'superscript']
 const FORMAT_TAG = {
@@ -22,6 +28,27 @@ const FORMAT_TAG = {
 const ALIGNS = ['left', 'center', 'right', 'justify']
 
 // ---------- утилиты ----------
+
+export function docAffect($el, attrs) {
+    const el = $el[0]
+    const expr = attrs['w-doc']
+    let doc
+    try { doc = this.scope.parse(expr) }
+    catch (e) {
+        report(`w-doc: ошибка в выражении «${expr}»: ${e.message}`, { view: this.view, el, expr, level: 'error' })
+        return
+    }
+
+    el.classList.add('wxe-doc')
+    const key = stable(doc)
+    if (el.__wdocKey === undefined) protect(el)
+    if (el.__wdocKey !== key) {
+        el.__wdocKey = key
+        el.innerHTML = renderDoc(doc)
+    }
+}
+
+directive('w-doc', null, docAffect)
 
 export const esc = s => String(s).replace(/[&<>"']/g, c => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
@@ -63,16 +90,7 @@ export function addStyle(id, css) {
     document.head.appendChild(s)
 }
 
-// Wex при каждом рендере сверяет детей элемента с шаблоном и удаляет «лишних».
-// Эта заглушка заставляет diff пропустить содержимое элемента (см. diffAndPatchNode в wex.js:
-// ветка `current.__jQvmComponent`) и вызывает onDestroy, когда элемент убирают из DOM.
-export function protect(el, onDestroy) {
-    el.__jQvmComponent = {
-        __cancelled: false,
-        update() {},
-        unmount() { if (onDestroy) onDestroy() },
-    }
-}
+export function protect() {}
 
 // ---------- рендер ----------
 
@@ -148,24 +166,26 @@ html.dark :where(.wxe-doc) a{color:#60a5fa}
 // w-html не подходит: он чистит содержимое как SVG и вырежет ссылки.
 // HTML выставляется в фазе affect, уже после интерполяции {{ }}, поэтому текст статьи не вычисляется как выражение.
 
-directive('w-doc', null, function ($el, attrs) {
-    const el = $el[0]
-    const expr = attrs['w-doc']
-    let doc
-    try { doc = this.scope.parse(expr) }
-    catch (e) {
-        report(`w-doc: ошибка в выражении «${expr}»: ${e.message}`, { view: this.view, el, expr, level: 'error' })
-        return
-    }
-
+function paint(v, state) {
+    const el = v.root
+    if (!el) return
     el.classList.add('wxe-doc')
-    const key = stable(doc)
-    if (el.__wdocKey === undefined) protect(el)
+    const key = stable(state.doc)
     if (el.__wdocKey !== key) {
         el.__wdocKey = key
-        el.innerHTML = renderDoc(doc)
+        el.innerHTML = renderDoc(state.doc)   // после разбора шаблона: {{ }} в тексте не вычисляются
     }
-})
+}
+
+export function createDocView() {
+    return wexView('<!---->', () => ({ doc: null }))
+        .on('$init', function () { this.__subscribe() })
+        .on('$mount', function (state) { paint(this, state) })
+        .on('$change', function (state) { paint(this, state) })
+}
+
+export function registerDoc(name = 'wex-doc') { component(name, createDocView()) }
+registerDoc()
 
 if (typeof window !== 'undefined') {
     window.WexDoc = { renderDoc, registerNode, renderNode, renderNodes, safeUrl, esc }

@@ -23,7 +23,8 @@ const isPlain = (v) => {
     if (v === null || typeof v !== 'object') return false
     if (Array.isArray(v)) return true
     const p = Object.getPrototypeOf(v)
-    return p === Object.prototype || p === null
+    // второе условие: обычный объект из другого окружения (iframe, jsdom) имеет «чужой» Object.prototype
+    return p === Object.prototype || p === null || (p !== undefined && Object.getPrototypeOf(p) === null)
 }
 export const toRaw = (v) => (v && typeof v === 'object' && v[RAW]) || v
 export const isReactive = (v) => !!(v && typeof v === 'object' && v[RAW])

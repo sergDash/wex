@@ -25,6 +25,115 @@ class WEvent {
     isPropagationStopped() { return !!this._s || this.originalEvent.cancelBubble }
 }
 
+
+// ---------- ajax: XMLHttpRequest + интерфейс jqXHR (done / fail / always / then / abort) ----------
+const toQuery = (data) => {
+    if (data == null || typeof data === 'string') return data || ''
+    const sp = new URLSearchParams()
+    const add = (k, v) => {
+        if (v == null) return
+        if (Array.isArray(v)) v.forEach((x, i) => add(typeof x === 'object' ? k + '[' + i + ']' : k + '[]', x))
+        else if (typeof v === 'object') Object.keys(v).forEach(n => add(k + '[' + n + ']', v[n]))
+        else sp.append(k, v)
+    }
+    Object.keys(data).forEach(k => add(k, data[k]))
+    return sp.toString()
+}
+
+export function ajax(url, options) {
+    if (url && typeof url === 'object') { options = url; url = options.url }
+    const o = Object.assign({ method: 'GET', headers: {}, cache: true, timeout: 0 }, options || {})
+    const method = String(o.method || o.type || 'GET').toUpperCase()
+    const ctx = o.context || null
+    const lists = { done: [], fail: [], always: [] }
+    let status = 'pending'
+    let args = []
+    let nativePromise = null
+
+    const jq = {
+        readyState: 0, status: 0, statusText: '', responseText: '', responseJSON: undefined,
+        done(fn) { lists.done.push(fn); if (status === 'resolved') fn.apply(ctx, args); return jq },
+        fail(fn) { lists.fail.push(fn); if (status === 'rejected') fn.apply(ctx, args); return jq },
+        always(fn) { lists.always.push(fn); if (status !== 'pending') fn.apply(ctx, args); return jq },
+        state: () => status,
+        promise() {
+            return nativePromise || (nativePromise = new Promise((res, rej) => { lists.done.push((d) => res(d)); lists.fail.push((x, t, e) => rej(Object.assign(new Error(t + (e ? ': ' + e : '')), { jqXHR: x, textStatus: t }))); if (status === 'resolved') res(args[0]); if (status === 'rejected') rej(new Error(args[1])) }))
+        },
+        then(a, b) { return jq.promise().then(a, b) },
+        catch(b) { return jq.promise().catch(b) },
+        abort(text) { if (status === 'pending') { xhr.abort(); finish(false, 'abort', text || 'abort') } return jq },
+        getResponseHeader: name => xhr.getResponseHeader(name),
+        getAllResponseHeaders: () => xhr.getAllResponseHeaders(),
+        setRequestHeader(n, v) { o.headers[n] = v; return jq },
+    }
+
+    const finish = (ok, textStatus, errorOrData) => {
+        if (status !== 'pending') return
+        status = ok ? 'resolved' : 'rejected'
+        args = ok ? [errorOrData, textStatus, jq] : [jq, textStatus, errorOrData]
+        const run = (list) => list.slice().forEach((fn) => { try { fn.apply(ctx, args) } catch (e) { console.error(e) } })
+        run(ok ? lists.done : lists.fail)
+        run(lists.always)
+        const cb = ok ? o.success : o.error
+        if (typeof cb === 'function') cb.apply(ctx, args)
+        if (typeof o.complete === 'function') o.complete.call(ctx, jq, textStatus)
+    }
+
+    const xhr = new XMLHttpRequest()
+    let target = url == null ? o.url : url
+    let body = null
+    const hasBody = method !== 'GET' && method !== 'HEAD'
+    let contentType = o.contentType === false ? false : (o.contentType || (hasBody ? 'application/x-www-form-urlencoded; charset=UTF-8' : undefined))
+
+    if (o.data != null) {
+        if (!hasBody) { const q = toQuery(o.data); if (q) target += (target.indexOf('?') === -1 ? '?' : '&') + q }
+        else if (typeof o.data === 'string' || (typeof FormData !== 'undefined' && o.data instanceof FormData) || (typeof Blob !== 'undefined' && o.data instanceof Blob)) body = o.data
+        else if (contentType && contentType.indexOf('json') !== -1) body = JSON.stringify(o.data)
+        else body = toQuery(o.data)
+        if (typeof FormData !== 'undefined' && body instanceof FormData) contentType = false
+    }
+    if (o.cache === false && !hasBody) target += (target.indexOf('?') === -1 ? '?' : '&') + '_=' + Date.now()
+
+    xhr.open(method, target, true, o.username, o.password)
+    if (o.xhrFields) Object.assign(xhr, o.xhrFields)
+    if (o.withCredentials) xhr.withCredentials = true
+    const headers = Object.assign({}, o.headers)
+    const has = n => Object.keys(headers).some(k => k.toLowerCase() === n.toLowerCase())
+    if (contentType && body != null && !has('content-type')) headers['Content-Type'] = contentType
+    if (!has('accept')) headers.Accept = o.dataType === 'json' ? 'application/json, text/javascript, */*; q=0.01' : '*/*'
+    if (!has('x-requested-with') && !/^[a-z]+:\/\//i.test(target)) headers['X-Requested-With'] = 'XMLHttpRequest'
+    Object.keys(headers).forEach(k => xhr.setRequestHeader(k, headers[k]))
+    if (o.timeout) xhr.timeout = o.timeout
+
+    xhr.onload = () => {
+        jq.readyState = 4
+        jq.status = xhr.status
+        jq.statusText = xhr.statusText
+        jq.responseText = xhr.responseText
+        const ct = xhr.getResponseHeader('Content-Type') || ''
+        const ok = (xhr.status >= 200 && xhr.status < 300) || xhr.status === 304
+        let data = xhr.responseText
+        const type = o.dataType || (/json/.test(ct) ? 'json' : /xml/.test(ct) ? 'xml' : 'text')
+        if (type === 'json' || (!o.dataType && data && /^\s*[\[{]/.test(data) && /json/.test(ct))) {
+            if (data === '') data = undefined
+            else {
+                try { data = JSON.parse(data); jq.responseJSON = data }
+                catch (e) { if (ok) { finish(false, 'parsererror', e); return } data = undefined }
+            }
+        }
+        else if (xhr.status === 204) data = undefined
+        if (ok) finish(true, xhr.status === 204 ? 'nocontent' : xhr.status === 304 ? 'notmodified' : 'success', data)
+        else {
+            if (data !== undefined && jq.responseJSON === undefined && /json/.test(ct)) { try { jq.responseJSON = JSON.parse(xhr.responseText) } catch (e) { /* не JSON */ } }
+            finish(false, 'error', xhr.statusText)
+        }
+    }
+    xhr.onerror = () => { jq.readyState = 4; finish(false, 'error', '') }
+    xhr.ontimeout = () => { jq.readyState = 4; finish(false, 'timeout', 'timeout') }
+    xhr.send(body)
+    return jq
+}
+
 export function createDollar() {
     class W {
         constructor(nodes) {
@@ -268,12 +377,20 @@ export function createDollar() {
     })
 
     // ---------- статические ----------
+    $.ajax = ajax
+    $.get = (url, data, success, dataType) => (typeof data === 'function' ? ajax({ url, success: data, dataType: success }) : ajax({ url, data, success, dataType }))
+    $.getJSON = (url, data, success) => (typeof data === 'function' ? ajax({ url, success: data, dataType: 'json' }) : ajax({ url, data, success, dataType: 'json' }))
+    $.post = (url, data, success, dataType) => (typeof data === 'function' ? ajax({ url, method: 'POST', success: data, dataType: success }) : ajax({ url, method: 'POST', data, success, dataType }))
     $.event = { fix }
     $._data = (el, key) => (key === 'events' ? el.__wexEv : undefined)
     $.noop = () => {}
     $.isFunction = v => typeof v === 'function'
     $.isArray = Array.isArray
-    $.isPlainObject = v => !!v && typeof v === 'object' && (Object.getPrototypeOf(v) === Object.prototype || Object.getPrototypeOf(v) === null)
+    $.isPlainObject = (v) => {
+        if (!v || typeof v !== 'object') return false
+        const p = Object.getPrototypeOf(v)
+        return p === null || p === Object.prototype || Object.getPrototypeOf(p) === null
+    }
     $.trim = s => (s == null ? '' : String(s).trim())
     $.contains = (a, b) => a !== b && a.contains(b)
     $.parseHTML = html => parseHTML(html)

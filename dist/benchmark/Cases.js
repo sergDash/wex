@@ -257,6 +257,82 @@ window.WEX_CASES = async function (check, host, tick) {
         check('w-class снимает класс', !el.querySelector('#k').classList.contains('on'))
     })
 
+    const waitFor = async (cond, ms = 1500) => { const t0 = Date.now(); while (!cond() && Date.now() - t0 < ms) await new Promise(r => setTimeout(r, 10)); return cond() }
+
+    await run('w-for: пробел после запятой и w-key', async () => {
+        const el = host()
+        const v = mk('<ul><li w-for="todo, index in todos" w-key="todo.id">{{ index }}:{{ todo.t }}</li></ul>',
+            () => ({ todos: [{ id: 1, t: 'a' }, { id: 2, t: 'b' }, { id: 3, t: 'c' }] })).mount(el)
+        await tick()
+        const lis = [...el.querySelectorAll('li')]
+        check('строки с индексом', lis.map(l => l.textContent).join(',') === '0:a,1:b,2:c', el.innerHTML)
+        check('data-id берётся из w-key', lis[1].getAttribute('data-id') === '2')
+        check('w-key не остаётся в DOM', !lis[0].hasAttribute('w-key'))
+        lis.forEach((n, i) => { n.__m = i })
+        v.update(s => { s.todos.reverse() }); await tick()
+        const after = [...el.querySelectorAll('li')]
+        check('ключи работают: узлы переставлены, не пересозданы', after.every(n => n.__m !== undefined) && after[0].__m === 2)
+        check('индекс обновился', after.map(l => l.textContent).join(',') === '0:c,1:b,2:a', after.map(l => l.textContent))
+        const el2 = host()
+        mk('<i w-for="t,k in items traceby t.id">{{ k }}{{ t.n }}</i>', () => ({ items: [{ id: 1, n: 'x' }] })).mount(el2)
+        await tick()
+        check('traceby работает по-прежнему', el2.textContent === '0x', el2.innerHTML)
+    })
+
+    await run('рекурсивный компонент (View, зарегистрирован глобально)', async () => {
+        const tree = $('<template><div class="n">{{ node.name }}<wt-tree w-for="ch in node.children traceby ch.id" :node="ch"></wt-tree></div></template>').state(() => ({ node: { name: '', children: [] } }))
+        component('wt-tree', tree)
+        const el = host()
+        const v = mk('<wt-tree :node="root"></wt-tree>', () => ({
+            root: { name: 'A', children: [{ id: 1, name: 'B', children: [{ id: 3, name: 'D', children: [] }] }, { id: 2, name: 'C', children: [] }] },
+        })).mount(el)
+        await tick()
+        check('4 узла дерева', el.querySelectorAll('.n').length === 4, el.innerHTML)
+        check('порядок обхода', el.textContent.replace(/\s/g, '') === 'ABDC', el.textContent)
+        check('вложенность 3 уровня', !!el.querySelector('.n .n .n'))
+        v.update(s => { s.root.children[0].children.push({ id: 4, name: 'E', children: [] }) }); await tick()
+        check('добавление на глубине реактивно', el.querySelectorAll('.n').length === 5 && el.textContent.replace(/\s/g, '') === 'ABDEC', el.textContent)
+        v.update(s => { s.root.children[1].name = 'C2' }); await tick()
+        check('правка на глубине реактивна', el.textContent.indexOf('C2') !== -1)
+    })
+
+    await run('рекурсивный компонент, зарегистрированный у родительского view', async () => {
+        const t2 = $('<template><div class="m">{{ node.name }}<wt-m w-for="ch in node.children traceby ch.id" :node="ch"></wt-m></div></template>').state(() => ({ node: { name: '', children: [] } }))
+        const el = host()
+        const parent = mk('<wt-m :node="root"></wt-m>', () => ({ root: { name: 'X', children: [{ id: 1, name: 'Y', children: [{ id: 2, name: 'Z', children: [] }] }] } }))
+        parent.component('wt-m', t2)
+        parent.mount(el)
+        await tick()
+        check('компонент нашёл себя через родителя', el.querySelectorAll('.m').length === 3 && el.textContent.replace(/\s/g, '') === 'XYZ', el.innerHTML)
+    })
+
+    await run('рекурсивный remote-компонент (comment.html)', async () => {
+        const realFetch = window.fetch
+        const files = { '/comment.html': '<template><div class="c"><b>{{ comment.text }}</b><comment w-for="r in comment.replies traceby r.id" :comment="r"></comment></div></template>' }
+        window.fetch = async url => ({ ok: !!files[url], status: files[url] ? 200 : 404, text: async () => files[url] })
+        try {
+            component('comment', '/comment.html')
+            const el = host()
+            mk('<comment :comment="root"></comment>', () => ({
+                root: { text: 'root', replies: [{ id: 1, text: 'r1', replies: [{ id: 3, text: 'r1.1', replies: [] }] }, { id: 2, text: 'r2', replies: [] }] },
+            })).mount(el)
+            const ok = await waitFor(() => el.querySelectorAll('.c').length === 4)
+            check('все ответы отрисованы рекурсией из файла', ok, el.innerHTML)
+            check('порядок и вложенность', el.textContent.replace(/\s/g, '') === 'rootr1r1.1r2', el.textContent)
+            check('третий уровень вложенности', !!el.querySelector('.c .c .c'))
+        }
+        finally { window.fetch = realFetch }
+    })
+
+    await run('бесконечная рекурсия останавливается', async () => {
+        component('wt-loop', $('<template><i class="lp"><wt-loop></wt-loop></i></template>').state(() => ({})))
+        const el = host()
+        mk('<wt-loop></wt-loop>', () => ({})).mount(el)
+        await tick()
+        check('стоп по maxDepth', !!el.querySelector('[data-wex-error="max-depth"]'))
+        check('глубина ограничена', el.querySelectorAll('.lp').length <= window.Wex.config.maxDepth + 1, el.querySelectorAll('.lp').length)
+    })
+
     // ---------- замеры ----------
     const bench = {}
     await run('замеры', async () => {

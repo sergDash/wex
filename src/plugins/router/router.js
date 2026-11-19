@@ -1,15 +1,28 @@
-function rewriteHistory(type) {
-  const origin = window.history[type]
-  return function() {
-    const rv = origin.apply(this, arguments)
-    const e = new Event(type)
-    e.arguments = arguments
-    window.dispatchEvent(e)
-    return rv
+// ВАЖНО: ядро (wex.js) и wire.js здесь внешние: в сборке плагина они берутся из глобала jqvm.
+// Пути в import должны совпадать с ключами externals в rolldown.config.js.
+import { directive, component, preloadComponent } from '../../wex.js'
+import { $wire } from '../../wire.js'
+import { matchRoute, buildRoute } from './route-pattern.js'
+
+// Имя тега для комментария-заглушки (вместо импорта из utils.js: плагину не нужна копия утилит ядра)
+const getNodeName = el => (el && el.nodeName ? el.nodeName.toLowerCase() : 'node')
+
+// Патчим history один раз: при повторной загрузке модуля события не задвоятся
+if (!window.history.__wexPatched) {
+  const rewriteHistory = (type) => {
+    const origin = window.history[type]
+    return function () {
+      const rv = origin.apply(this, arguments)
+      const e = new Event(type)
+      e.arguments = arguments
+      window.dispatchEvent(e)
+      return rv
+    }
   }
+  window.history.pushState = rewriteHistory('pushState')
+  window.history.replaceState = rewriteHistory('replaceState')
+  Object.defineProperty(window.history, '__wexPatched', { value: true })
 }
-window.history.pushState = rewriteHistory('pushState')
-window.history.replaceState = rewriteHistory('replaceState')
 
 class Base {
   constructor(options) {
@@ -28,16 +41,14 @@ class Base {
   }
 
   off(e, fn) {
-    this.events.forEach((item, i) => {
-      if (item.e === e && item.fn === fn) {
-        this.events.splice(i, 1);
-      }
-    })
+    // новый массив: обработчик может снять себя прямо во время emit
+    this.events = this.events.filter(item => !(item.e === e && item.fn === fn))
     return this
   }
 
   emit(e, ...args) {
-    this.events.forEach((item) => {
+    // копия: on/off внутри обработчиков не должны сбивать обход
+    this.events.slice().forEach((item) => {
       if (item.e === e) {
         item.fn(...args)
       }
@@ -52,24 +63,25 @@ class Base {
 class Navigation extends Base {
   init() {
     this.actionType = ''
-    this.latestState = window.history.state
+    // Позиция в истории хранится числом в state.idx: структурное клонирование
+    // ломает сравнение объектов по ссылке, а цепочка prev росла с каждым push.
+    const initial = window.history.state?.idx
+    this.idx = typeof initial === 'number' ? initial : 0
 
     const onUrlChanged = (e) => {
-      this.actionType = e.type
-      const currentState = this.latestState
-      this.latestState = window.history.state
-      const nextState = this.latestState
+      let type = e.type
+      const idx = window.history.state?.idx
 
-      if (e.type === 'popstate') {
-        if (currentState?.prev === nextState) {
-          this.actionType = 'back'
+      if (typeof idx === 'number') {
+        if (type === 'popstate') {
+          if (idx < this.idx) type = 'back'
+          else if (idx > this.idx) type = 'forward'
         }
-        else if (currentState?.next === nextState) {
-          this.actionType = 'forward'
-        }
+        this.idx = idx
       }
 
-      this.emit(this.actionType, window.location.href)
+      this.actionType = type
+      this.emit(type, window.location.href)
       this.emit('change', window.location.href)
     }
 
@@ -108,23 +120,19 @@ class Navigation extends Base {
     window.history.forward()
   }
 
+  // url может быть относительным, а location.href всегда абсолютный
+  same(url) {
+    return new URL(url, window.location.href).href === window.location.href
+  }
+
   push(url) {
-    if (window.location.href === url) {
-      return
-    }
-    const { state } = window.history
-    const next = { prev: state, url }
-    window.history.pushState(next, null, url)
+    if (this.same(url)) return
+    window.history.pushState({ idx: this.idx + 1, url }, '', url)
   }
 
   replace(url) {
-    if (window.location.href === url) {
-      return
-    }
-    const { state } = window.history
-    const prev = state?.prev?.state
-    const next = { prev, url }
-    window.history.replaceState(next, null, url)
+    if (this.same(url)) return
+    window.history.replaceState({ idx: this.idx, url }, '', url)
   }
 
   open(url) {
@@ -134,20 +142,20 @@ class Navigation extends Base {
 
 const navigation = new Navigation()
 
-import { getNodeName } from '../../utils.js'
-import { directive, component, preloadComponent } from '../../wex.js'   // путь к ядру
-import { $wire } from '../../wire.js'
-import { matchRoute, buildRoute } from './route-pattern.js'
-
 let activeRouter = null
 
 const fill = (tpl, params) =>
     tpl.replace(/\{(\w+)\}/g, (_, k) => encodeURIComponent(params[k] ?? ''))
 
+const dec = (s) => {
+  try { return decodeURIComponent(s.replace(/\+/g, ' ')) }
+  catch { return s }
+}
+
 class Router extends Base {
   init(options) {
     this.options = options
-    this.routes = {}
+    this.routes = Object.create(null)   // чтобы ref вроде 'constructor' не находил прототип
     const table = options.routes || {}
     Object.keys(table).forEach((name) => {
       const r = table[name]
@@ -186,20 +194,31 @@ class Router extends Base {
   }
 
   getLocation() {
-    const [pathname, search = ''] = this.getUrl().split('?')
+    let raw = this.getUrl()
+    // в history-режиме в адресе может быть якорь (/post/5#comments), он не часть пути
+    if (this.options.mode === 'history') raw = raw.split('#')[0]
+
+    const q = raw.indexOf('?')
+    const pathname = q < 0 ? raw : raw.slice(0, q)
+    const search = q < 0 ? '' : raw.slice(q + 1)
+
     const query = {}
     search.split('&').filter(Boolean).forEach((item) => {
-      const [k, v = ''] = item.split('=')
-      query[decodeURIComponent(k)] = decodeURIComponent(v)
+      const i = item.indexOf('=')
+      const k = i < 0 ? item : item.slice(0, i)
+      const v = i < 0 ? '' : item.slice(i + 1)
+      query[dec(k)] = dec(v)
     })
     return { pathname, search, query }
   }
 
+  // undefined / null удаляют ключ из query
   setParams(params) {
     const { pathname, query } = this.getLocation()
     const next = { ...query, ...params }
     const search = Object.keys(next)
-        .map(k => next[k] === undefined ? k : encodeURIComponent(k) + '=' + encodeURIComponent(next[k]))
+        .filter(k => next[k] !== undefined && next[k] !== null)
+        .map(k => encodeURIComponent(k) + '=' + encodeURIComponent(next[k]))
         .join('&')
     this.navigate('push', pathname + (search ? '?' + search : ''))
   }
@@ -211,6 +230,8 @@ class Router extends Base {
   }
 
   register(pattern) {
+    // имя роута ('post.show') паттерном не является
+    if (this.routes[pattern]) return
     const known = Object.values(this.routes).some(r => r.path === pattern)
     if (!known) this.extra.add(pattern)
   }
@@ -266,6 +287,7 @@ class Router extends Base {
 }
 
 export function route(ref, params) {
+  if (!activeRouter) throw new Error('Wex: подключите createRouter() через .plugin(...)')
   return activeRouter.url2(ref, params)
 }
 
@@ -314,7 +336,7 @@ component('Link', function ($el, attrs, slot) {
   const leave = () => clearTimeout(timer)
   const click = (e) => {
     if (router.options.mode !== 'history') return   // в hash-режиме обычный <a href="#/..."> достаточно
-    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || a.target) return
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || a.target) return
     e.preventDefault()
     router.navigate('push', path)
   }
@@ -365,6 +387,7 @@ export function createRouter(options = {}) {
       $destroy: () => {
         router.off('change', routerChange)
         router.destroy()
+        if (activeRouter === router) activeRouter = null
       },
       $clone: (state, clonedView) => { clonedView.$router = router },
     }
