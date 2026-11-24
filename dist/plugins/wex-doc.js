@@ -2300,14 +2300,14 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 		postTask: () => postTask,
 		preloadComponent: () => preloadComponent,
 		reactive: () => reactive,
-		report: () => report,
+		report: () => report$1,
 		runPost: () => runPost,
 		setDollar: () => setDollar,
 		toRaw: () => toRaw,
 		untrack: () => untrack,
 		view: () => view
 	});
-	const WEX_VERSION = "3.0.0";
+	const WEX_VERSION = "3.1.1";
 	let $ = null;
 	const setDollar = (d) => {
 		$ = d;
@@ -2325,7 +2325,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 	} : null;
 	function View() {}
 	const reported = /* @__PURE__ */ new Set();
-	function report(title, ctx = {}) {
+	function report$1(title, ctx = {}) {
 		const level = ctx.level || "warn";
 		if (level !== "error" && !config.debug) return;
 		const path = ctx.view && ctx.view.__path || ["root"];
@@ -2523,7 +2523,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			return fn(data);
 		} catch (e) {
 			const expr = typeof h === "string" ? h : h.expr;
-			report(`Ошибка в выражении «${expr}»: ${e.message}`, {
+			report$1(`Ошибка в выражении «${expr}»: ${e.message}`, {
 				view,
 				attr: ctx && ctx.attr,
 				expr,
@@ -2706,7 +2706,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 					replace: !!def.compile
 				});
 			} else if (name.charCodeAt(0) !== 64 && name.charCodeAt(0) !== 58 && value.indexOf("{{") !== -1) {
-				if (config.debug && /^(src|href|srcset)$/.test(name)) report("«{{ }}» внутри src/href: браузер запросит сырую строку и получит 404", {
+				if (config.debug && /^(src|href|srcset)$/.test(name)) report$1("«{{ }}» внутри src/href: браузер запросит сырую строку и получит 404", {
 					level: "error",
 					attr: name,
 					hint: "Используйте w-src=\"выражение\""
@@ -2811,7 +2811,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			if (typeof p === "string") s += p;
 			else {
 				const v = ev(view, p, data, op);
-				if (config.debug && isNone(v)) report(`«{{ ${p.expr} }}» вернул ${v}`, {
+				if (config.debug && isNone(v)) report$1(`«{{ ${p.expr} }}» вернул ${v}`, {
 					view,
 					expr: p.expr
 				});
@@ -2951,7 +2951,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 				items = new Array(n);
 				for (let i = 0; i < n; i++) items[i] = src[kvs[i]];
 			} else items = [];
-			if (config.debug && n === 0 && Array.isArray(src)) report(`w-for «${op.list}»: массив пустой`, {
+			if (config.debug && n === 0 && Array.isArray(src)) report$1(`w-for «${op.list}»: массив пустой`, {
 				view,
 				expr: op.list
 			});
@@ -3111,7 +3111,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 	function mountComponent(proto, op, host, view, data, block) {
 		const parentPath = view.__path || ["root"];
 		if (parentPath.length > config.maxDepth) {
-			report(`Превышена глубина вложенности компонентов (${config.maxDepth}), «${op.name}» не создан`, {
+			report$1(`Превышена глубина вложенности компонентов (${config.maxDepth}), «${op.name}» не создан`, {
 				level: "error",
 				view,
 				hint: "Рекурсивный компонент без условия выхода: остановите рекурсию через w-if."
@@ -3132,7 +3132,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 				const key = camelCase(attr.slice(1));
 				effect(block, () => {
 					const v = ev(view, exp, data, { attr });
-					if (isNone(v)) report(`Проп «${attr.slice(1)}» компонента «${op.name}» получил ${v}`, {
+					if (isNone(v)) report$1(`Проп «${attr.slice(1)}» компонента «${op.name}» получил ${v}`, {
 						view,
 						attr,
 						expr: exp
@@ -3789,6 +3789,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 	const wexView = view || window.Wex && window.Wex.view;
 	const component = component$1;
 	const { directive } = wex_exports;
+	const report = report$1 || ((msg) => console.error("[WexDoc]", msg));
 	const FORMATS = [
 		"bold",
 		"italic",
@@ -3813,6 +3814,30 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 		"right",
 		"justify"
 	];
+	function docAffect($el, attrs) {
+		const el = $el[0];
+		const expr = attrs["w-doc"];
+		let doc;
+		try {
+			doc = this.scope.parse(expr);
+		} catch (e) {
+			report(`w-doc: ошибка в выражении «${expr}»: ${e.message}`, {
+				view: this.view,
+				el,
+				expr,
+				level: "error"
+			});
+			return;
+		}
+		el.classList.add("wxe-doc");
+		const key = stable(doc);
+		if (el.__wdocKey === void 0) /* @__PURE__ */ protect(el);
+		if (el.__wdocKey !== key) {
+			el.__wdocKey = key;
+			el.innerHTML = renderDoc(doc);
+		}
+	}
+	directive("w-doc", null, docAffect);
 	const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({
 		"&": "&amp;",
 		"<": "&lt;",
@@ -3935,6 +3960,7 @@ exports.addStyle = addStyle;
 exports.classOk = classOk;
 exports.clone = clone;
 exports.createDocView = createDocView;
+exports.docAffect = docAffect;
 exports.emptyDoc = emptyDoc;
 exports.esc = esc;
 exports.isDoc = isDoc;

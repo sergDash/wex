@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Highlighter demo</title>
+    <style>
+        body { margin: 0 auto; max-width: 54rem; padding: 1.5rem 1rem 4rem; font: 16px/1.55 system-ui, -apple-system, sans-serif; background: #fff; color: #1f2328; }
+        html.dark body { background: #010409; color: #e6edf3; }
+        h1 { font-size: 1.5rem; margin: 0 0 .25rem; }
+        h2 { font-size: 1.05rem; margin: 2rem 0 0; }
+        .hint { color: #6e7781; margin: 0 0 1rem; }
+        .theme { font: inherit; padding: .3rem .8rem; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<button class="theme" type="button" onclick="document.documentElement.classList.toggle('dark')">light / dark</button>
+<!--
+    Код передаётся строками из state (параметр code), а не лежит внутри <pre>:
+    иначе Wex попытается вычислить {{ ... }} из Blade-примеров как свои выражения.
+-->
+<template id="app">
+    <h1>Laravel Blade</h1>
+    <p class="hint">Аннотации: ++ / -- (diff), focus (остальное тускнеет, на hover возвращается), collapse:N и fold (клик по строке раскрывает).</p>
+
+    <h2>Controller</h2>
+    <pre w-code="{ lang: 'php', code: controller, title: 'app/Http/Controllers/UserController.php', numbers: true }"></pre>
+
+    <h2>View</h2>
+    <pre w-code="{ lang: 'blade', code: page, title: 'resources/views/users/index.blade.php', numbers: true }"></pre>
+
+    <h2>Component</h2>
+    <pre w-code="{ lang: 'blade', code: card, title: 'resources/views/components/user-card.blade.php' }"></pre>
+</template>
+
+<footer>
+    <script src="../../../dist/wex.js"></script>
+    <script src="../../../dist/plugins/wex-code.js"></script>
+    <script>
+        WexCode.install(Wex); // регистрирует директиву w-code; ДО создания view. CSS встроен
+
+        const controller = String.raw`<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\User;
+use Illuminate\Http\Request;
+
+class UserController extends Controller
+{
+    public function index(Request $request)
+    {
+        $users = User::latest()->paginate(15); // [tl! -- focus]
+        $users = User::latest()->paginate(25); // [tl! ++ focus]
+
+        return view('users.index', compact('users'));
+    }
+
+    public function export(Request $request) // [tl! fold]
+    {
+        $rows = User::query()->cursor();
+
+        return response()->streamDownload(function () use ($rows) {
+            foreach ($rows as $row) {
+                echo $row->email . "\n";
+            }
+        }, 'users.csv');
+    }
+}`;
+
+        const page = String.raw`@extends('layouts.app')
+
+{{-- [tl! collapse:2] --}}
+@section('title', 'Users')
+@section('description', 'All registered users')
+
+@section('content')
+    <div class="mx-auto max-w-3xl space-y-4">
+        @forelse ($users as $user)
+            <x-user-card :user="$user" /> {{-- [tl! -- focus] --}}
+            <x-user-card :user="$user" :editable="auth()->user()->can('update', $user)" /> {{-- [tl! ++ focus] --}}
+        @empty
+            <p class="text-gray-500">{{ __('users.none') }}</p>
+        @endforelse
+
+        {{ $users->links() }} {{-- [tl! highlight] --}}
+    </div>
+@endsection`;
+
+        const card = String.raw`@props(['user', 'editable' => false])
+
+<article @class(['rounded-lg border p-4', 'bg-amber-50' => $user->isAdmin()])>
+    <h3 class="font-semibold">{{ $user->name }}</h3>
+    <p>{!! nl2br(e($user->bio)) !!}</p>
+
+    @php
+        $joined = $user->created_at->diffForHumans();
+    @endphp
+
+    <small>{{ $joined }}</small>
+
+    @if ($editable)
+        <a href="{{ route('users.edit', $user) }}">Edit</a>
+    @endif
+</article>`;
+
+        $('#app')
+            .state({ controller, page, card })
+            .mount();
+    </script>
+</footer>
+</html>

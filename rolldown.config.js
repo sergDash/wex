@@ -132,6 +132,7 @@ module.exports = (env = {}) => {
     const select = createPluginConfigs('smart-select', 'wex-smart-select');
     const gallery = createPluginConfigs('carousel', 'wex-carousel');
     const dropzone = createPluginConfigs('dropzone', 'wex-dropzone');
+    const highlighter = createPluginConfigs('highlighter', 'wex-code', 'WexCode');
     const imageEditor = createPluginConfigs(
         'image-editor',
         'wex-image-editor',
@@ -161,6 +162,7 @@ module.exports = (env = {}) => {
         ...select,
         ...gallery,
         ...dropzone,
+        ...highlighter,
         ...imageEditor,
         ...draggable,
         ...monsterMenu,

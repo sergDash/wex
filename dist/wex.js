@@ -2279,7 +2279,7 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 	}
 
 // src/wex.js
-	const WEX_VERSION = "3.0.0";
+	const WEX_VERSION = "3.1.1";
 	let $$3 = null;
 	const setDollar = (d) => {
 		$$3 = d;
